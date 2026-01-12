@@ -1,0 +1,29 @@
+name: Feature Request
+description: Suggest an enhancement
+title: "[Feature] "
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem Statement
+      description: What problem does this solve?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposal
+      description: Proposed solution or approach
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives
+      description: Any alternatives considered
+  - type: textarea
+    id: scope
+    attributes:
+      label: Scope/Out of Scope
+      description: Clarify boundaries
