@@ -1,0 +1,34 @@
+name: Feature Request
+description: 기능 개선 또는 새로운 기능을 제안해주세요
+title: "[기능 요청] "
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: 문제 설명
+      description: 해결하고자 하는 문제를 구체적으로 작성해주세요
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: 제안 내용
+      description: 제안하는 해결 방법 또는 접근 방식을 작성해주세요
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: 대안
+      description: 고려했던 다른 대안이 있다면 작성해주세요
+  - type: textarea
+    id: impact
+    attributes:
+      label: 기대 효과
+      description: 이 기능이 적용되었을 때 예상되는 효과를 작성해주세요
+  - type: textarea
+    id: scope
+    attributes:
+      label: 범위 및 제외 사항
+      description: 이 기능 요청의 범위와 제외할 사항을 명확히 작성해주세요
