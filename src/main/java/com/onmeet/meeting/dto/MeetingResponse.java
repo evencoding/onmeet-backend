@@ -3,7 +3,7 @@ package com.onmeet.meeting.dto;
 import java.time.Instant;
 
 public record MeetingResponse(
-    Long id,
+    String id,
     Long teamId,
     Long hostUserId,
     String title,

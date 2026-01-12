@@ -28,7 +28,7 @@ public class MinutesController {
     }
 
     @GetMapping("/meeting/{meetingId}")
-    public ApiResponse<MinutesResponse> getByMeeting(@PathVariable Long meetingId) {
+    public ApiResponse<MinutesResponse> getByMeeting(@PathVariable String meetingId) {
         return ApiResponse.ok(minutesService.getByMeeting(meetingId));
     }
 }

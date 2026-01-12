@@ -39,7 +39,7 @@ public class MeetingService {
     }
 
     @Transactional(readOnly = true)
-    public MeetingResponse get(Long meetingId) {
+    public MeetingResponse get(String meetingId) {
         Meeting meeting = meetingRepository.findById(meetingId)
             .orElseThrow(() -> new BizException(ErrorCode.NOT_FOUND, "Meeting not found"));
         return toResponse(meeting);

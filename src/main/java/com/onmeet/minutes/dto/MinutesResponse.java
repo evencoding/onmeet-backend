@@ -5,7 +5,7 @@ import java.time.Instant;
 
 public record MinutesResponse(
     Long id,
-    Long meetingId,
+    String meetingId,
     MinutesStatus status,
     String summaryText,
     Instant createdAt,

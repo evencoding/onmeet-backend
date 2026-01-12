@@ -5,5 +5,5 @@ import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface MinutesRepository extends JpaRepository<Minutes, Long> {
-    Optional<Minutes> findByMeetingId(Long meetingId);
+    Optional<Minutes> findByMeetingId(String meetingId);
 }
