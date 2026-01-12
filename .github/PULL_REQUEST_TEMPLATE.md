@@ -1,17 +1,17 @@
-## Summary
+## PR 요약
 - 
 
-## Changes
+## 변경 사항
 - 
 
-## Checklist
-- [ ] I ran tests relevant to the change
-- [ ] I updated documentation if needed
-- [ ] I added/updated tests if needed
-- [ ] No sensitive data included
+## 체크리스트
+- [ ] 관련된 테스트를 실행했습니다.
+- [ ] 필요한 경우 문서를 작성하거나 업데이트했습니다.
+- [ ] 필요한 경우 새로운 테스트를 추가하거나 기존 테스트를 수정했습니다.
+- [ ] 민감한 데이터가 포함되지 않았습니다.
 
-## Testing
+## 테스트 방법
 - 
 
-## Related Issues
-- 
+## 연관된 이슈
+-
