@@ -31,7 +31,7 @@ public class MinutesService {
     }
 
     @Transactional(readOnly = true)
-    public MinutesResponse getByMeeting(Long meetingId) {
+    public MinutesResponse getByMeeting(String meetingId) {
         Minutes minutes = minutesRepository.findByMeetingId(meetingId)
             .orElseThrow(() -> new BizException(ErrorCode.NOT_FOUND, "Minutes not found"));
         return toResponse(minutes);

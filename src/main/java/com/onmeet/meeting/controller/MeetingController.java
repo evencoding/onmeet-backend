@@ -30,7 +30,7 @@ public class MeetingController {
     }
 
     @GetMapping("/{meetingId}")
-    public ApiResponse<MeetingResponse> get(@PathVariable Long meetingId) {
+    public ApiResponse<MeetingResponse> get(@PathVariable String meetingId) {
         return ApiResponse.ok(meetingService.get(meetingId));
     }
 
