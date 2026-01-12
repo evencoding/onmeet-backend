@@ -1,4 +1,4 @@
-package com.app.onmeet;
+package com.onmeet;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -9,5 +9,4 @@ class OnMeetApplicationTests {
     @Test
     void contextLoads() {
     }
-
 }
