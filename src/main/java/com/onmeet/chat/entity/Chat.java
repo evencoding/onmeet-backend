@@ -1,14 +1,12 @@
 package com.onmeet.chat.entity;
 
-import com.onmeet.chat.enums.MessageType;
-import com.onmeet.chat.enums.SenderType;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import org.hibernate.annotations.CreationTimestamp;
-import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
+import java.time.Instant;
 import java.time.LocalDateTime;
 
 @Getter
@@ -45,7 +43,23 @@ public class Chat {
     private MessageType messageType;
 
     @CreationTimestamp
-    @Column(name = "created_at", nullable = false)
-    private LocalDateTime createdAt;
+    @Column(nullable = false, updatable = false)
+    private Instant createdAt;
+
+    public static Chat create(
+            Long meetRoomId,
+            String senderName,
+            SenderType senderType,
+            String messageContent,
+            MessageType messageType
+    ) {
+        Chat chat = new Chat();
+        chat.meetRoomId = meetRoomId;
+        chat.senderName = senderName;
+        chat.senderType = senderType;
+        chat.messageContent = messageContent;
+        chat.messageType = messageType;
+        return chat;
+    }
 
 }

@@ -1,4 +1,4 @@
-package com.onmeet.chat.enums;
+package com.onmeet.chat.entity;
 
 public enum MessageType {
     NOTICE,
