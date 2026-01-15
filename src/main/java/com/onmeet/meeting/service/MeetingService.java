@@ -1,67 +1,73 @@
 package com.onmeet.meeting.service;
 
-import com.onmeet.common.exception.BizException;
-import com.onmeet.common.exception.ErrorCode;
 import com.onmeet.meeting.dto.MeetingCreateRequest;
-import com.onmeet.meeting.dto.MeetingResponse;
 import com.onmeet.meeting.entity.Meeting;
+import com.onmeet.meeting.entity.MeetingParticipant;
 import com.onmeet.meeting.repository.MeetingRepository;
-import com.onmeet.team.entity.Team;
-import com.onmeet.team.repository.TeamRepository;
-import com.onmeet.user.entity.User;
-import com.onmeet.user.repository.UserRepository;
-import java.util.List;
-import java.util.stream.Collectors;
+import com.onmeet.meeting.repository.ParticipantRepository;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
+
 @Service
+@RequiredArgsConstructor
 public class MeetingService {
-
     private final MeetingRepository meetingRepository;
-    private final TeamRepository teamRepository;
-    private final UserRepository userRepository;
-
-    public MeetingService(MeetingRepository meetingRepository, TeamRepository teamRepository, UserRepository userRepository) {
-        this.meetingRepository = meetingRepository;
-        this.teamRepository = teamRepository;
-        this.userRepository = userRepository;
-    }
+    private final ParticipantRepository participantRepository;
 
     @Transactional
-    public MeetingResponse create(MeetingCreateRequest request) {
-        Team team = teamRepository.findById(request.teamId())
-            .orElseThrow(() -> new BizException(ErrorCode.NOT_FOUND, "Team not found"));
-        User host = userRepository.findById(request.hostUserId())
-            .orElseThrow(() -> new BizException(ErrorCode.NOT_FOUND, "Host user not found"));
-        Meeting meeting = new Meeting(team, host, request.title(), request.scheduledAt());
-        return toResponse(meetingRepository.save(meeting));
+    public String createMeeting(MeetingCreateRequest dto) {
+        // 1. 회의방 엔티티 설정
+        Meeting meeting = new Meeting();
+        // meeting.setId(...) 제거: 엔티티의 @GeneratedValue가 자동으로 처리합니다.
+
+        meeting.setTitle(dto.getTitle());
+        meeting.setDescription(dto.getDescription());
+        meeting.setMeetTag(dto.getMeetTag());
+        meeting.setTeamId(dto.getTeamId());
+        meeting.setHostUserId(dto.getHostId());
+
+        // 날짜와 시간 결합 후 두 필드에 모두 저장
+        if (dto.getDate() != null && dto.getTime() != null) {
+            LocalDateTime dateTime = LocalDateTime.of(dto.getDate(), dto.getTime());
+            meeting.setScheduledAt(dateTime);
+            meeting.setStartedAt(dateTime); // 요청하신 대로 시작 시간에도 동일한 값 설정
+        }
+
+        // 회의 저장 (이 시점에 DB에 insert 되면서 ID가 생성됩니다)
+        Meeting savedMeeting = meetingRepository.save(meeting);
+
+        // 2. 호스트(생성자)를 참여자로 등록
+        saveParticipant(savedMeeting, dto.getHostId(),
+                MeetingParticipant.UserRole.HOST,
+                MeetingParticipant.JoinStatus.JOINED);
+
+        // 3. 초대된 팀원들 등록
+        if (dto.getInvitedUserIds() != null) {
+            for (String userId : dto.getInvitedUserIds()) {
+                saveParticipant(savedMeeting, userId,
+                        MeetingParticipant.UserRole.PARTICIPANT,
+                        MeetingParticipant.JoinStatus.INVITED);
+            }
+        }
+
+        // 저장된 회의의 자동 생성된 ID 반환
+        return savedMeeting.getId();
     }
 
-    @Transactional(readOnly = true)
-    public MeetingResponse get(String meetingId) {
-        Meeting meeting = meetingRepository.findById(meetingId)
-            .orElseThrow(() -> new BizException(ErrorCode.NOT_FOUND, "Meeting not found"));
-        return toResponse(meeting);
-    }
+    private void saveParticipant(Meeting meeting, String userId,
+                                 MeetingParticipant.UserRole role,
+                                 MeetingParticipant.JoinStatus status) {
+        MeetingParticipant mp = new MeetingParticipant();
+        // mp.setId(...) 제거: 엔티티의 @GeneratedValue가 자동으로 처리합니다.
 
-    @Transactional(readOnly = true)
-    public List<MeetingResponse> listByTeam(Long teamId) {
-        return meetingRepository.findByTeamId(teamId).stream()
-            .map(this::toResponse)
-            .collect(Collectors.toList());
-    }
+        mp.setMeeting(meeting);
+        mp.setUserId(userId);
+        mp.setRole(role);
+        mp.setJoinStatus(status);
 
-    private MeetingResponse toResponse(Meeting meeting) {
-        return new MeetingResponse(
-            meeting.getId(),
-            meeting.getTeam().getId(),
-            meeting.getHostUser().getId(),
-            meeting.getTitle(),
-            meeting.getScheduledAt(),
-            meeting.getStartedAt(),
-            meeting.getEndedAt(),
-            meeting.getCreatedAt()
-        );
+        participantRepository.save(mp);
     }
 }
