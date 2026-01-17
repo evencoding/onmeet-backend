@@ -29,7 +29,7 @@ public class UserController {
     }
 
     @GetMapping("/{userId}")
-    public ApiResponse<UserResponse> get(@PathVariable Long userId) {
+    public ApiResponse<UserResponse> get(@PathVariable String userId) {
         return ApiResponse.ok(userService.get(userId));
     }
 

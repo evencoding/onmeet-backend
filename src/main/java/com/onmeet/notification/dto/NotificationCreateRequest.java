@@ -14,6 +14,6 @@ public record NotificationCreateRequest(
     @NotNull UUID resourceId,
     @NotBlank String title,
     String body,
-    @NotEmpty List<Long> recipientUserIds
+    @NotEmpty List<String> recipientUserIds
 ) {
 }

@@ -1,6 +1,6 @@
-USE `onmeet`;
+USE `ONMEET`;
 
-CREATE DATABASE IF NOT EXISTS `onmeet`
+CREATE DATABASE IF NOT EXISTS `ONMEET`
     CHARACTER SET utf8mb4
     COLLATE utf8mb4_general_ci;
 
@@ -27,6 +27,7 @@ DROP TABLE IF EXISTS team_members;
 DROP TABLE IF EXISTS teams;
 
 DROP TABLE IF EXISTS employees;
+DROP TABLE IF EXISTS employee_invites;
 DROP TABLE IF EXISTS companies;
 
 DROP TABLE IF EXISTS users;
@@ -66,6 +67,27 @@ CREATE TABLE companies
     UNIQUE KEY uk_companies_domain (domain)
 ) ENGINE = InnoDB
   DEFAULT CHARSET = utf8mb4;
+
+CREATE TABLE employee_invites
+(
+    id          CHAR(36)                         NOT NULL,
+    company_id  CHAR(36)                         NOT NULL,
+    email       VARCHAR(255)                     NOT NULL,
+    role        ENUM ('OWNER','ADMIN','MEMBER')  NOT NULL DEFAULT 'MEMBER',
+    employee_no VARCHAR(50)                               DEFAULT NULL,
+    status      ENUM ('INVITED','ACCEPTED','REVOKED','EXPIRED') NOT NULL DEFAULT 'INVITED',
+    token       CHAR(36)                         NOT NULL,
+    created_at  DATETIME(3)                      NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    expires_at  DATETIME(3)                               DEFAULT NULL,
+    accepted_at DATETIME(3)                               DEFAULT NULL,
+    PRIMARY KEY (id),
+    UNIQUE KEY uk_employee_invites_token (token),
+    KEY idx_employee_invites_company (company_id),
+    CONSTRAINT fk_employee_invites_company
+        FOREIGN KEY (company_id) REFERENCES companies (id) ON DELETE CASCADE
+) ENGINE = InnoDB
+  DEFAULT CHARSET = utf8mb4;
+
 
 CREATE TABLE employees
 (

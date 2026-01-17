@@ -1,4 +1,4 @@
-package com.onmeet.user.entity;
+package com.onmeet.company.entity;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -20,30 +20,24 @@ import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Entity
-@Table(name = "users")
+@Table(name = "companies")
 @EntityListeners(AuditingEntityListener.class)
-public class User {
+public class Company {
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
     @Column(columnDefinition = "char(36)", updatable = false, nullable = false)
     private String id;
 
-    @Column(nullable = false, unique = true)
-    private String email;
-
-    @Column(name = "password_hash", nullable = false, length = 255)
-    private String passwordHash;
-
-    @Column(nullable = false, length = 100)
+    @Column(length = 255)
     private String name;
+
+    @Column(length = 255, unique = true)
+    private String domain;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
-    private UserStatus status;
-
-    @Column(name = "profile_image_url", length = 512)
-    private String profileImageUrl;
+    private CompanyStatus status;
 
     @CreatedDate
     @Column(name = "created_at", nullable = false, updatable = false)
@@ -53,11 +47,9 @@ public class User {
     @Column(name = "updated_at", nullable = false)
     private Instant updatedAt;
 
-    public User(String email, String name, String passwordHash, UserStatus status, String profileImageUrl) {
-        this.email = email;
+    public Company(String name, String domain, CompanyStatus status) {
         this.name = name;
-        this.passwordHash = passwordHash;
+        this.domain = domain;
         this.status = status;
-        this.profileImageUrl = profileImageUrl;
     }
 }

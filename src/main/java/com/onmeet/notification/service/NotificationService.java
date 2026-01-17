@@ -58,7 +58,7 @@ public class NotificationService {
             throw new BizException(ErrorCode.INVALID_REQUEST, "Invalid recipient user id");
         }
 
-        Map<Long, User> userMap = users.stream().collect(Collectors.toMap(User::getId, user -> user));
+        Map<String, User> userMap = users.stream().collect(Collectors.toMap(User::getId, user -> user));
         Instant deliveredAt = clockProvider.now();
         List<NotificationRecipient> recipients = request.recipientUserIds().stream()
             .map(userId -> {

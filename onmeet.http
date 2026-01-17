@@ -1,0 +1,74 @@
+@baseUrl = http://localhost:8080
+@companyId = YOUR_COMPANY_ID
+@companyDomain = example.com
+@inviterUserId = YOUR_INVITER_USER_ID
+@inviteToken = YOUR_INVITE_TOKEN
+
+### Company signup (대표자email + pw + companyname + domain)
+POST {{baseUrl}}/api/v1/auth/company-signup
+Content-Type: application/json
+
+{
+  "representativeEmail": "ceo@example.com",
+  "password": "ChangeMe123!",
+  "companyName": "OnMeet Co",
+  "domain": "example.com",
+  "employeeNo": "CEO-001"
+}
+
+### Company login
+POST {{baseUrl}}/api/v1/auth/company-login
+Content-Type: application/json
+
+{
+  "email": "ceo@example.com",
+  "password": "ChangeMe123!",
+  "companyDomain": "example.com"
+}
+
+### Employee signup (direct, no invite)
+POST {{baseUrl}}/api/v1/auth/employee-signup
+Content-Type: application/json
+
+{
+  "email": "staff1@example.com",
+  "password": "ChangeMe123!",
+  "name": "Staff One",
+  "companyId": "{{companyId}}",
+  "employeeNo": "EMP-001"
+}
+
+### Employee login
+POST {{baseUrl}}/api/v1/auth/employee-login
+Content-Type: application/json
+
+{
+  "email": "staff1@example.com",
+  "password": "ChangeMe123!",
+  "companyId": "{{companyId}}"
+}
+
+### Create employee invite (MASTER/ADMIN only)
+POST {{baseUrl}}/api/v1/auth/employee-invites
+Content-Type: application/json
+
+{
+  "companyId": "{{companyId}}",
+  "inviterUserId": "{{inviterUserId}}",
+  "email": "invitee@example.com",
+  "role": "MEMBER",
+  "employeeNo": "EMP-002"
+}
+
+### Invite-based employee signup
+POST {{baseUrl}}/api/v1/auth/employee-invite-signup
+Content-Type: application/json
+
+{
+  "token": "{{inviteToken}}",
+  "email": "invitee@example.com",
+  "name": "Invited User",
+  "employeeNo": "EMP-002",
+  "role": "MEMBER",
+  "password": "ChangeMe123!"
+}

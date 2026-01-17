@@ -7,17 +7,17 @@ import org.springframework.security.core.userdetails.UserDetails;
 
 public class AuthUserPrincipal implements UserDetails {
 
-    private final Long userId;
+    private final String userId;
     private final String email;
     private final String name;
 
-    public AuthUserPrincipal(Long userId, String email, String name) {
+    public AuthUserPrincipal(String userId, String email, String name) {
         this.userId = userId;
         this.email = email;
         this.name = name;
     }
 
-    public Long getUserId() {
+    public String getUserId() {
         return userId;
     }
 
