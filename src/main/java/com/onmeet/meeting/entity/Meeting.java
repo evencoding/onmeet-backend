@@ -1,64 +1,51 @@
 package com.onmeet.meeting.entity;
 
-import com.onmeet.team.entity.Team;
-import com.onmeet.user.entity.User;
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.EntityListeners;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
-import jakarta.persistence.JoinColumn;
-import jakarta.persistence.ManyToOne;
-import jakarta.persistence.Table;
-import java.time.Instant;
-import lombok.AccessLevel;
+import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-import org.hibernate.annotations.JdbcTypeCode;
-import org.hibernate.type.SqlTypes;
-import org.springframework.data.annotation.CreatedDate;
-import org.springframework.data.jpa.domain.support.AuditingEntityListener;
+import lombok.Setter;
+import java.time.LocalDateTime;
 
-@Getter
-@NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Entity
 @Table(name = "meetings")
-@EntityListeners(AuditingEntityListener.class)
+@Getter @Setter @NoArgsConstructor
 public class Meeting {
-
     @Id
-    @GeneratedValue(strategy = GenerationType.UUID)
-    @JdbcTypeCode(SqlTypes.CHAR)
-    @Column(length = 36, nullable = false, updatable = false)
+    @GeneratedValue(strategy = GenerationType.UUID) // 자동으로 UUID 생성
+    @Column(columnDefinition = "char(36)", updatable = false, nullable = false)
     private String id;
 
-    @ManyToOne(optional = false)
-    @JoinColumn(name = "team_id")
-    private Team team;
+    @Column(name = "team_id", columnDefinition = "char(36)", nullable = true)
+    private String teamId;
+//    host_user_id 나중에 not null 으로
+    @Column(name = "host_user_id", columnDefinition = "char(36)", nullable = true)
+    private String hostUserId;
 
-    @ManyToOne(optional = false)
-    @JoinColumn(name = "host_user_id")
-    private User hostUser;
-
-    @Column(nullable = false, length = 200)
+    @Column(length = 200)
     private String title;
 
-    @Column(nullable = false)
-    private Instant scheduledAt;
+    @Column(length = 1000)
+    private String description;
 
-    private Instant startedAt;
+    @Column(name = "meet_tag", length = 100)
+    private String meetTag;
 
-    private Instant endedAt;
+    private LocalDateTime scheduledAt;
+    private LocalDateTime startedAt;
+    private LocalDateTime endedAt;
 
-    @CreatedDate
-    @Column(nullable = false, updatable = false)
-    private Instant createdAt;
+    @Column(name = "is_recording", columnDefinition = "TINYINT(1)")
+    private boolean isRecording = false;
 
-    public Meeting(Team team, User hostUser, String title, Instant scheduledAt) {
-        this.team = team;
-        this.hostUser = hostUser;
-        this.title = title;
-        this.scheduledAt = scheduledAt;
-    }
+    @Enumerated(EnumType.STRING)
+    @Column(columnDefinition = "ENUM('SCHEDULED','IN_PROGRESS','ENDED','CANCELED')")
+    private MeetingStatus status = MeetingStatus.SCHEDULED;
+
+    @Column(name = "created_at", updatable = false)
+    private LocalDateTime createdAt = LocalDateTime.now();
+
+    @Column(name = "updated_at")
+    private LocalDateTime updatedAt = LocalDateTime.now();
+
+    public enum MeetingStatus { SCHEDULED, IN_PROGRESS, ENDED, CANCELED }
 }
