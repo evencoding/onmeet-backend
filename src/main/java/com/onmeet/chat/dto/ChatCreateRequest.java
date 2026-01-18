@@ -1,10 +1,11 @@
 package com.onmeet.chat.dto;
 
-import com.onmeet.chat.entity.MessageType;
 import com.onmeet.chat.entity.SenderType;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 
 public record ChatCreateRequest(
-        String senderName,
-        SenderType senderType,
-        String messageContent
+        @NotBlank String senderName,
+        @NotNull SenderType senderType,
+        @NotBlank String messageContent
 ) {}

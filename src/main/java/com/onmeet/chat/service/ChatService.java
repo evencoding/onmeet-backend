@@ -13,6 +13,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
@@ -22,7 +23,7 @@ public class ChatService {
     private final ChatRepository chatRepository;
 
     @Transactional
-    public ChatResponse save(Long meetRoomId, ChatCreateRequest req) {
+    public ChatResponse save(UUID meetRoomId, ChatCreateRequest req) {
 
         Chat chat = Chat.create(
                 meetRoomId,
@@ -38,7 +39,7 @@ public class ChatService {
 
     @Transactional
     public ChatResponse saveNotice(
-            Long meetRoomId,
+            UUID meetRoomId,
             SenderType senderType,
             String message
     ) {
@@ -52,7 +53,7 @@ public class ChatService {
         return ChatResponse.from(chatRepository.save(chat));
     }
 
-    public List<ChatResponse> getLatest(Long meetRoomId, int limit) {
+    public List<ChatResponse> getLatest(UUID meetRoomId, int limit) {
         int size = clampLimit(limit);
         var pageable = PageRequest.of(0, size);
 
@@ -63,7 +64,7 @@ public class ChatService {
                 .toList();
     }
 
-    public List<ChatResponse> getBefore(Long meetRoomId, Instant before, int limit) {
+    public List<ChatResponse> getBefore(UUID meetRoomId, Instant before, int limit) {
         int size = clampLimit(limit);
         var pageable = PageRequest.of(0, size);
 

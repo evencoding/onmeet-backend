@@ -124,70 +124,80 @@ CREATE TABLE team_members
   DEFAULT CHARSET = utf8mb4;
 
 -- =========================================================
--- 4) meetings / participants / guests
+-- 4) meetings / participants / guests  (REVISED)
 -- =========================================================
 CREATE TABLE meetings
 (
-    id           CHAR(36)                                            NOT NULL,
-    team_id      CHAR(36)                                            DEFAULT NULL,
-#     나중에 host_user_id not null로 바꾸고 fk도 걸어두기
-    host_user_id CHAR(36)                                            DEFAULT NULL,
-    title        VARCHAR(200)                                        NOT NULL,
-    description  VARCHAR(1000)                                                DEFAULT NULL,
-    meet_tag     VARCHAR(100)                                                 DEFAULT NULL,
-    scheduled_at DATETIME(3)                                                  DEFAULT NULL,
-    started_at   DATETIME(3)                                                  DEFAULT NULL,
-    ended_at     DATETIME(3)                                                  DEFAULT NULL,
-    is_recording TINYINT(1)                                          NOT NULL DEFAULT 0,
-    status       ENUM ('SCHEDULED','IN_PROGRESS','ENDED','CANCELED') NOT NULL DEFAULT 'SCHEDULED',
-    created_at   DATETIME(3)                                         NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
-    updated_at   DATETIME(3)                                         NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3),
+    id           CHAR(36)     NOT NULL,
+    team_id      CHAR(36)     DEFAULT NULL,
+    -- 나중에 NOT NULL + FK 권장
+    host_user_id CHAR(36)     DEFAULT NULL,
+
+    title        VARCHAR(200)  NOT NULL,
+    description  VARCHAR(1000) DEFAULT NULL,
+    meet_tag     VARCHAR(100)  DEFAULT NULL,
+
+    scheduled_at DATETIME(3)   DEFAULT NULL,
+    started_at   DATETIME(3)   DEFAULT NULL,
+    ended_at     DATETIME(3)   DEFAULT NULL,
+
+    is_recording TINYINT(1)    NOT NULL DEFAULT 0,
+
+    -- DB ENUM 제거: 자바 enum + STRING 저장
+    status       VARCHAR(20)   NOT NULL DEFAULT 'SCHEDULED',
+
+    created_at   DATETIME(3)   NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    updated_at   DATETIME(3)   NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3),
+
     PRIMARY KEY (id),
     KEY idx_meetings_team (team_id),
     KEY idx_meetings_host (host_user_id),
     KEY idx_meetings_scheduled_at (scheduled_at)
-#   team_id랑 host_user_id fk 나중에 걸어두기
-#     , CONSTRAINT fk_meetings_team
-#         FOREIGN KEY (team_id) REFERENCES teams (id) ON DELETE CASCADE,
-#     CONSTRAINT fk_meetings_host
-#         FOREIGN KEY (host_user_id) REFERENCES users (id) ON DELETE CASCADE
+
 ) ENGINE = InnoDB
   DEFAULT CHARSET = utf8mb4;
 
 CREATE TABLE meeting_participants
 (
-    id          CHAR(36)                    NOT NULL,
-    meeting_id  CHAR(36)                    NOT NULL,
-#     나중에 user_id not null로 해두기
-    user_id     CHAR(36)                    DEFAULT NULL,
-    role        ENUM ('HOST','PARTICIPANT') NOT NULL DEFAULT 'PARTICIPANT',
-    join_status ENUM ('INVITED','JOINED','ABSENT')    NOT NULL DEFAULT 'JOINED',
-    mic_on      TINYINT(1)                  NOT NULL DEFAULT 0,
-    cam_on      TINYINT(1)                  NOT NULL DEFAULT 0,
-    created_at  DATETIME(3)                 NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
-    PRIMARY KEY (id),
+    id          BIGINT AUTO_INCREMENT PRIMARY KEY,
+
+    meeting_id  CHAR(36)  NOT NULL,
+
+    -- guests는 별도 테이블이므로 participant는 회원만: NOT NULL 권장
+    user_id     CHAR(36)  NOT NULL,
+
+    join_status VARCHAR(20) NOT NULL DEFAULT 'INVITED',
+
+    mic_on      TINYINT(1) NOT NULL DEFAULT 0,
+    cam_on      TINYINT(1) NOT NULL DEFAULT 0,
+
+    created_at  DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+
     UNIQUE KEY uk_meeting_participants_meeting_user (meeting_id, user_id),
     KEY idx_meeting_participants_user (user_id),
+    KEY idx_meeting_participants_meeting_created (meeting_id, created_at),
 
     CONSTRAINT fk_meeting_participants_meeting
         FOREIGN KEY (meeting_id) REFERENCES meetings (id) ON DELETE CASCADE
-#   나중에 user_id랑
-# ,
-#     CONSTRAINT fk_meeting_participants_user
-#         FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
+
 ) ENGINE = InnoDB
   DEFAULT CHARSET = utf8mb4;
 
 CREATE TABLE meeting_guests
 (
-    id          CHAR(36)                 NOT NULL,
-    meeting_id  CHAR(36)                 NOT NULL,
-    name        VARCHAR(100)             NOT NULL,
-    description VARCHAR(300)                      DEFAULT NULL,
-    join_status ENUM ('JOINED','ABSENT') NOT NULL DEFAULT 'JOINED',
-    created_at  DATETIME(3)              NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    id          CHAR(36)      NOT NULL,
+    meeting_id  CHAR(36)      NOT NULL,
+    name        VARCHAR(100)  NOT NULL,
+    description VARCHAR(300)  DEFAULT NULL,
+
+    -- DB ENUM 제거
+    join_status VARCHAR(20)   NOT NULL DEFAULT 'JOINED',
+
+    created_at  DATETIME(3)   NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+
     PRIMARY KEY (id),
     KEY idx_meeting_guests_meeting (meeting_id),
+
     CONSTRAINT fk_meeting_guests_meeting
         FOREIGN KEY (meeting_id) REFERENCES meetings (id) ON DELETE CASCADE
 ) ENGINE = InnoDB
@@ -229,3 +239,14 @@ CREATE TABLE minutes_generation_jobs
         FOREIGN KEY (meeting_id) REFERENCES meetings (id) ON DELETE CASCADE
 ) ENGINE = InnoDB
   DEFAULT CHARSET = utf8mb4;
+
+CREATE TABLE chats (
+                       id BIGINT AUTO_INCREMENT PRIMARY KEY,
+                       meet_room_id CHAR(36) NOT NULL,
+                       sender_name VARCHAR(255) NOT NULL,
+                       sender_type VARCHAR(50) NOT NULL,
+                       message_content LONGTEXT NOT NULL,
+                       message_type VARCHAR(50) NOT NULL,
+                       created_at DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+                       KEY idx_chats_meetroom_createdat (meet_room_id, created_at)
+);

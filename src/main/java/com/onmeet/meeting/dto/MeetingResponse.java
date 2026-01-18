@@ -1,15 +1,20 @@
 package com.onmeet.meeting.dto;
 
-import java.time.Instant;
+import com.onmeet.meeting.entity.MeetingStatus;
+
+import java.time.LocalDateTime;
+import java.util.UUID;
 
 public record MeetingResponse(
-    String id,
-    Long teamId,
-    Long hostUserId,
-    String title,
-    Instant scheduledAt,
-    Instant startedAt,
-    Instant endedAt,
-    Instant createdAt
-) {
-}
+        UUID id,
+        UUID teamId,
+        UUID hostUserId,
+        String title,
+        String description,
+        String meetTag,
+        LocalDateTime scheduledAt,
+        MeetingStatus status,
+        boolean recording,
+        LocalDateTime createdAt,
+        LocalDateTime updatedAt
+) {}

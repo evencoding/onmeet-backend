@@ -1,73 +1,102 @@
 package com.onmeet.meeting.service;
 
 import com.onmeet.meeting.dto.MeetingCreateRequest;
+import com.onmeet.meeting.dto.MeetingResponse;
 import com.onmeet.meeting.entity.Meeting;
 import com.onmeet.meeting.entity.MeetingParticipant;
+import com.onmeet.meeting.repository.MeetingParticipantRepository;
 import com.onmeet.meeting.repository.MeetingRepository;
-import com.onmeet.meeting.repository.ParticipantRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.List;
+import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
+@Transactional(readOnly = true)
 public class MeetingService {
+
     private final MeetingRepository meetingRepository;
-    private final ParticipantRepository participantRepository;
+    private final MeetingParticipantRepository participantRepository;
 
     @Transactional
-    public String createMeeting(MeetingCreateRequest dto) {
-        // 1. 회의방 엔티티 설정
-        Meeting meeting = new Meeting();
-        // meeting.setId(...) 제거: 엔티티의 @GeneratedValue가 자동으로 처리합니다.
+    public UUID createMeeting(UUID hostUserId, MeetingCreateRequest req) {
+        // 1) 날짜/시간 합치기
+        LocalDateTime scheduledAt = LocalDateTime.of(req.date(), req.time());
 
-        meeting.setTitle(dto.getTitle());
-        meeting.setDescription(dto.getDescription());
-        meeting.setMeetTag(dto.getMeetTag());
-        meeting.setTeamId(dto.getTeamId());
-        meeting.setHostUserId(dto.getHostId());
+        // 2) Meeting 생성 + 저장
+        Meeting meeting = Meeting.builder()
+                .teamId(req.teamId())
+                .hostUserId(hostUserId)
+                .title(req.title())
+                .description(req.description())
+                .meetTag(req.meetTag())
+                .scheduledAt(scheduledAt)
+                .build();
 
-        // 날짜와 시간 결합 후 두 필드에 모두 저장
-        if (dto.getDate() != null && dto.getTime() != null) {
-            LocalDateTime dateTime = LocalDateTime.of(dto.getDate(), dto.getTime());
-            meeting.setScheduledAt(dateTime);
-            meeting.setStartedAt(dateTime); // 요청하신 대로 시작 시간에도 동일한 값 설정
-        }
+        Meeting saved = meetingRepository.save(meeting);
 
-        // 회의 저장 (이 시점에 DB에 insert 되면서 ID가 생성됩니다)
-        Meeting savedMeeting = meetingRepository.save(meeting);
+        // 3) host 참가자 자동 등록 (JOINED)
+        MeetingParticipant host = MeetingParticipant.create(saved, hostUserId);
+        host.join();
+        participantRepository.save(host);
 
-        // 2. 호스트(생성자)를 참여자로 등록
-        saveParticipant(savedMeeting, dto.getHostId(),
-                MeetingParticipant.UserRole.HOST,
-                MeetingParticipant.JoinStatus.JOINED);
+        // 4) 초대 이메일은 다음 단계에서 처리
 
-        // 3. 초대된 팀원들 등록
-        if (dto.getInvitedUserIds() != null) {
-            for (String userId : dto.getInvitedUserIds()) {
-                saveParticipant(savedMeeting, userId,
-                        MeetingParticipant.UserRole.PARTICIPANT,
-                        MeetingParticipant.JoinStatus.INVITED);
-            }
-        }
-
-        // 저장된 회의의 자동 생성된 ID 반환
-        return savedMeeting.getId();
+        return saved.getId();
     }
 
-    private void saveParticipant(Meeting meeting, String userId,
-                                 MeetingParticipant.UserRole role,
-                                 MeetingParticipant.JoinStatus status) {
-        MeetingParticipant mp = new MeetingParticipant();
-        // mp.setId(...) 제거: 엔티티의 @GeneratedValue가 자동으로 처리합니다.
+    // 오늘 회의 목록 (시간순)
+    public List<MeetingResponse> getTodayMeetings() {
+        LocalDate today = LocalDate.now();
+        LocalDateTime start = today.atStartOfDay();
+        LocalDateTime end = today.plusDays(1).atStartOfDay();
 
-        mp.setMeeting(meeting);
-        mp.setUserId(userId);
-        mp.setRole(role);
-        mp.setJoinStatus(status);
+        return meetingRepository
+                .findByScheduledAtBetweenOrderByScheduledAtAsc(start, end)
+                .stream()
+                .map(MeetingService::toResponse)
+                .toList();
+    }
 
-        participantRepository.save(mp);
+    // 이전 회의 목록 (커서 기반, 최근순)
+    public List<MeetingResponse> getPastMeetings(LocalDateTime cursor, int size) {
+        LocalDateTime baseTime = (cursor != null) ? cursor : LocalDateTime.now();
+        int pageSize = clampSize(size);
+
+        Pageable pageable = PageRequest.of(0, pageSize);
+
+        return meetingRepository
+                .findByScheduledAtBeforeOrderByScheduledAtDesc(baseTime, pageable)
+                .stream()
+                .map(MeetingService::toResponse)
+                .toList();
+    }
+
+    private int clampSize(int size) {
+        if (size <= 0) return 10;
+        return Math.min(size, 50);
+    }
+
+    private static MeetingResponse toResponse(Meeting m) {
+        return new MeetingResponse(
+                m.getId(),
+                m.getTeamId(),
+                m.getHostUserId(),
+                m.getTitle(),
+                m.getDescription(),
+                m.getMeetTag(),
+                m.getScheduledAt(),
+                m.getStatus(),
+                m.isRecording(),
+                m.getCreatedAt(),
+                m.getUpdatedAt()
+        );
     }
 }
