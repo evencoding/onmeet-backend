@@ -29,7 +29,7 @@ public class Minutes {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    private String id;
 
     @ManyToOne(optional = false)
     @JoinColumn(name = "meeting_id")
@@ -54,5 +54,10 @@ public class Minutes {
         this.meeting = meeting;
         this.status = status;
         this.summaryText = summaryText;
+    }
+
+    public void updateSummary(String summaryText) {
+        this.summaryText = summaryText;
+        this.status = MinutesStatus.COMPLETED;
     }
 }

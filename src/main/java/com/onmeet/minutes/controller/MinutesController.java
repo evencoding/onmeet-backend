@@ -1,8 +1,7 @@
 package com.onmeet.minutes.controller;
 
 import com.onmeet.common.response.ApiResponse;
-import com.onmeet.minutes.dto.MinutesCreateRequest;
-import com.onmeet.minutes.dto.MinutesResponse;
+import com.onmeet.minutes.dto.*;
 import com.onmeet.minutes.service.MinutesService;
 import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -13,7 +12,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-@RequestMapping("/api/v1/minutes")
+@RequestMapping("/api/v1/meetings/{meetingId}/minutes")
 public class MinutesController {
 
     private final MinutesService minutesService;
@@ -22,13 +21,27 @@ public class MinutesController {
         this.minutesService = minutesService;
     }
 
-    @PostMapping
-    public ApiResponse<MinutesResponse> create(@Valid @RequestBody MinutesCreateRequest request) {
-        return ApiResponse.ok(minutesService.create(request));
+    @GetMapping
+    public MinutesResponse getMinutesByMeeting(@PathVariable String meetingId) {
+        return minutesService.getMinutesByMeeting(meetingId);
     }
 
-    @GetMapping("/meeting/{meetingId}")
-    public ApiResponse<MinutesResponse> getByMeeting(@PathVariable String meetingId) {
-        return ApiResponse.ok(minutesService.getByMeeting(meetingId));
+    @GetMapping("/status")
+    public MinutesJobStatusResponse getJobStatusByMeetingId(@PathVariable String meetingId) {
+        return minutesService.getJobStatusByMeetingId(meetingId);
+    }
+
+    @PostMapping("/generate")
+    public MinutesGenerateResponse generate(
+            @PathVariable String meetingId,
+            @RequestBody(required = false) MinutesGenerateRequest request
+    ) {
+        if (request == null) request = new MinutesGenerateRequest(null, null);
+        return minutesService.generate(meetingId, request);
+    }
+
+    @PostMapping("/retry")
+    public MinutesGenerateResponse retry(@PathVariable String meetingId) {
+        return minutesService.retry(meetingId);
     }
 }

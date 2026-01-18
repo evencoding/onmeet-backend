@@ -4,9 +4,9 @@ import com.onmeet.minutes.entity.MinutesStatus;
 import java.time.Instant;
 
 public record MinutesResponse(
-    Long id,
+    String minutesId,
     String meetingId,
-    MinutesStatus status,
+    String status,      // MinutesStatus name()
     String summaryText,
     Instant createdAt,
     Instant updatedAt
