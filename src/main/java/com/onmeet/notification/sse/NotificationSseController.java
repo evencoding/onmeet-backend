@@ -17,7 +17,7 @@ public class NotificationSseController {
     }
 
     @GetMapping("/stream")
-    public SseEmitter stream(@RequestHeader("X-User-Id") Long userId) {
+    public SseEmitter stream(@RequestHeader("X-User-Id") String userId) {
         return emitterManager.add(userId);
     }
 }

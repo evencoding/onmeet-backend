@@ -13,14 +13,14 @@ public class SseEmitterManager {
 
     private static final Logger log = LoggerFactory.getLogger(SseEmitterManager.class);
 
-    private final Map<Long, SseEmitter> emitters = new ConcurrentHashMap<>();
+    private final Map<String, SseEmitter> emitters = new ConcurrentHashMap<>();
     private final Long sseTimeoutMillis;
 
     public SseEmitterManager(Long sseTimeoutMillis) {
         this.sseTimeoutMillis = sseTimeoutMillis;
     }
 
-    public SseEmitter add(Long userId) {
+    public SseEmitter add(String userId) {
         SseEmitter emitter = new SseEmitter(sseTimeoutMillis);
         emitters.put(userId, emitter);
         emitter.onCompletion(() -> emitters.remove(userId));
@@ -29,7 +29,7 @@ public class SseEmitterManager {
         return emitter;
     }
 
-    public void send(Long userId, Object data) {
+    public void send(String userId, Object data) {
         SseEmitter emitter = emitters.get(userId);
         if (emitter == null) {
             return;

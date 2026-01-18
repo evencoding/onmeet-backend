@@ -13,7 +13,7 @@ public class SseNotificationPublisher implements NotificationPublisher {
     }
 
     @Override
-    public void publish(Long userId, NotificationResponse response) {
+    public void publish(String userId, NotificationResponse response) {
         emitterManager.send(userId, response);
     }
 }

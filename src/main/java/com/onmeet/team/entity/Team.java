@@ -1,11 +1,14 @@
 package com.onmeet.team.entity;
 
+import com.onmeet.company.entity.company.Company;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EntityListeners;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import java.time.Instant;
 import lombok.AccessLevel;
@@ -23,8 +26,13 @@ import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 public class Team {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    @GeneratedValue(strategy = GenerationType.UUID)
+    @Column(columnDefinition = "char(36)", updatable = false, nullable = false)
+    private String id;
+
+    @ManyToOne(optional = false)
+    @JoinColumn(name = "company_id", columnDefinition = "char(36)")
+    private Company company;
 
     @Column(nullable = false, length = 200)
     private String name;
@@ -37,7 +45,8 @@ public class Team {
     @Column(nullable = false)
     private Instant updatedAt;
 
-    public Team(String name) {
+    public Team(Company company, String name) {
+        this.company = company;
         this.name = name;
     }
 }
