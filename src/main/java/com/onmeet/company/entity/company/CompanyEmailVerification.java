@@ -1,4 +1,4 @@
-package com.onmeet.company.entity;
+package com.onmeet.company.entity.company;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -8,8 +8,6 @@ import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
-import jakarta.persistence.JoinColumn;
-import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import java.time.Instant;
 import lombok.AccessLevel;
@@ -21,32 +19,31 @@ import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Entity
-@Table(name = "employee_invites")
+@Table(name = "company_email_verifications")
 @EntityListeners(AuditingEntityListener.class)
-public class EmployeeInvite {
+public class CompanyEmailVerification {
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
     @Column(columnDefinition = "char(36)", updatable = false, nullable = false)
     private String id;
 
-    @ManyToOne(optional = false)
-    @JoinColumn(name = "company_id", columnDefinition = "char(36)")
-    private Company company;
-
     @Column(nullable = false, length = 255)
     private String email;
 
+    @Column(name = "company_name", nullable = false, length = 255)
+    private String companyName;
+
+    @Column(nullable = false, length = 255)
+    private String domain;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "company_size", nullable = false, length = 20)
+    private CompanySize companySize;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
-    private EmployeeRole role;
-
-    @Column(name = "employee_no", length = 50)
-    private String employeeNo;
-
-    @Enumerated(EnumType.STRING)
-    @Column(nullable = false, length = 20)
-    private EmployeeInviteStatus status;
+    private CompanyEmailVerificationStatus status;
 
     @Column(nullable = false, length = 36, unique = true)
     private String token;
@@ -55,36 +52,41 @@ public class EmployeeInvite {
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
 
+    @Column(name = "verified_at")
+    private Instant verifiedAt;
+
     @Column(name = "expires_at")
     private Instant expiresAt;
 
-    @Column(name = "accepted_at")
-    private Instant acceptedAt;
-
-    public EmployeeInvite(
-        Company company,
+    public CompanyEmailVerification(
         String email,
-        EmployeeRole role,
-        String employeeNo,
+        String companyName,
+        String domain,
+        CompanySize companySize,
         String token,
         Instant expiresAt
     ) {
-        this.company = company;
         this.email = email;
-        this.role = role;
-        this.employeeNo = employeeNo;
+        this.companyName = companyName;
+        this.domain = domain;
+        this.companySize = companySize;
         this.token = token;
-        this.status = EmployeeInviteStatus.INVITED;
         this.expiresAt = expiresAt;
+        this.status = CompanyEmailVerificationStatus.PENDING;
     }
 
-    public void markAccepted(Instant acceptedAt) {
-        this.status = EmployeeInviteStatus.ACCEPTED;
-        this.acceptedAt = acceptedAt;
+    public void markVerified(Instant verifiedAt) {
+        this.status = CompanyEmailVerificationStatus.VERIFIED;
+        this.verifiedAt = verifiedAt;
     }
 
     public void markExpired(Instant expiredAt) {
-        this.status = EmployeeInviteStatus.EXPIRED;
+        this.status = CompanyEmailVerificationStatus.EXPIRED;
         this.expiresAt = expiredAt;
+    }
+
+    public void markConsumed(Instant consumedAt) {
+        this.status = CompanyEmailVerificationStatus.CONSUMED;
+        this.verifiedAt = consumedAt;
     }
 }

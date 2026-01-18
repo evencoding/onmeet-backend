@@ -1,16 +1,14 @@
 package com.onmeet.auth.dto;
 
+import com.onmeet.company.entity.company.CompanySize;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.Size;
+import jakarta.validation.constraints.NotNull;
 
-public record CompanySignupRequest(
+public record CompanyEmailVerificationRequest(
     @Email @NotBlank String representativeEmail,
-    @NotBlank String representativeName,
-    @NotBlank @Size(min = 8, max = 72) String password,
     @NotBlank String companyName,
     @NotBlank String domain,
-    @NotBlank String verificationToken,
-    String employeeNo
+    @NotNull CompanySize companySize
 ) {
 }

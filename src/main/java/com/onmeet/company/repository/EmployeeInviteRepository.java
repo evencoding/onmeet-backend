@@ -1,7 +1,7 @@
 package com.onmeet.company.repository;
 
-import com.onmeet.company.entity.EmployeeInvite;
-import com.onmeet.company.entity.EmployeeInviteStatus;
+import com.onmeet.company.entity.employee.EmployeeInvite;
+import com.onmeet.company.entity.employee.EmployeeInviteStatus;
 import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;
 

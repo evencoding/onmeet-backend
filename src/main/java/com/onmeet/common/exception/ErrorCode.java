@@ -1,7 +1,9 @@
 package com.onmeet.common.exception;
 
+import lombok.Getter;
 import org.springframework.http.HttpStatus;
 
+@Getter
 public enum ErrorCode {
     INVALID_REQUEST(HttpStatus.BAD_REQUEST, "Invalid request"),
     NOT_FOUND(HttpStatus.NOT_FOUND, "Resource not found"),
@@ -17,11 +19,4 @@ public enum ErrorCode {
         this.message = message;
     }
 
-    public HttpStatus getStatus() {
-        return status;
-    }
-
-    public String getMessage() {
-        return message;
-    }
 }

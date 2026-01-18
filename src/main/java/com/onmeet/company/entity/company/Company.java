@@ -1,4 +1,4 @@
-package com.onmeet.company.entity;
+package com.onmeet.company.entity.company;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -36,6 +36,10 @@ public class Company {
     private String domain;
 
     @Enumerated(EnumType.STRING)
+    @Column(name = "company_size", nullable = false, length = 20)
+    private CompanySize companySize;
+
+    @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
     private CompanyStatus status;
 
@@ -47,9 +51,10 @@ public class Company {
     @Column(name = "updated_at", nullable = false)
     private Instant updatedAt;
 
-    public Company(String name, String domain, CompanyStatus status) {
+    public Company(String name, String domain, CompanySize companySize, CompanyStatus status) {
         this.name = name;
         this.domain = domain;
+        this.companySize = companySize;
         this.status = status;
     }
 }

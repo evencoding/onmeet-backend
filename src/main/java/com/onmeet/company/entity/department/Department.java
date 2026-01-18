@@ -1,6 +1,6 @@
-package com.onmeet.company.entity;
+package com.onmeet.company.entity.department;
 
-import com.onmeet.user.entity.User;
+import com.onmeet.company.entity.company.Company;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EntityListeners;
@@ -17,16 +17,15 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import org.springframework.data.annotation.CreatedDate;
+import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Entity
-@Table(name = "employees", uniqueConstraints = {
-    @jakarta.persistence.UniqueConstraint(columnNames = { "user_id", "company_id" })
-})
+@Table(name = "departments")
 @EntityListeners(AuditingEntityListener.class)
-public class Employee {
+public class Department {
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
@@ -34,33 +33,27 @@ public class Employee {
     private String id;
 
     @ManyToOne(optional = false)
-    @JoinColumn(name = "user_id", columnDefinition = "char(36)")
-    private User user;
-
-    @ManyToOne(optional = false)
     @JoinColumn(name = "company_id", columnDefinition = "char(36)")
     private Company company;
 
-    @Enumerated(EnumType.STRING)
-    @Column(nullable = false, length = 20)
-    private EmployeeRole role;
-
-    @Column(name = "employee_no", length = 50)
-    private String employeeNo;
+    @Column(nullable = false, length = 150)
+    private String name;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
-    private EmployeeStatus status;
+    private DepartmentStatus status;
 
     @CreatedDate
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
 
-    public Employee(User user, Company company, EmployeeRole role, String employeeNo, EmployeeStatus status) {
-        this.user = user;
+    @LastModifiedDate
+    @Column(name = "updated_at", nullable = false)
+    private Instant updatedAt;
+
+    public Department(Company company, String name, DepartmentStatus status) {
         this.company = company;
-        this.role = role;
-        this.employeeNo = employeeNo;
+        this.name = name;
         this.status = status;
     }
 }

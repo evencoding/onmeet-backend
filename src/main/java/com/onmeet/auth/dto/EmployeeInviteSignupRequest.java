@@ -1,6 +1,6 @@
 package com.onmeet.auth.dto;
 
-import com.onmeet.company.entity.EmployeeRole;
+import com.onmeet.company.entity.employee.EmployeeRole;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -12,6 +12,8 @@ public record EmployeeInviteSignupRequest(
     @NotBlank String name,
     @NotBlank String employeeNo,
     @NotNull EmployeeRole role,
-    @NotBlank @Size(min = 8, max = 72) String password
+    @NotBlank @Size(min = 8, max = 72) String password,
+    String departmentId,
+    String positionId
 ) {
 }

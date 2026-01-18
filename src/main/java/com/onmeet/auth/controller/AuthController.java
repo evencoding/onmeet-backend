@@ -1,6 +1,9 @@
 package com.onmeet.auth.controller;
 
 import com.onmeet.auth.dto.AuthResponse;
+import com.onmeet.auth.dto.CompanyEmailVerificationConfirmRequest;
+import com.onmeet.auth.dto.CompanyEmailVerificationRequest;
+import com.onmeet.auth.dto.CompanyEmailVerificationResponse;
 import com.onmeet.auth.dto.CompanyLoginRequest;
 import com.onmeet.auth.dto.CompanySignupRequest;
 import com.onmeet.auth.dto.EmployeeInviteCreateRequest;
@@ -26,32 +29,46 @@ public class AuthController {
         this.authService = authService;
     }
 
-    @PostMapping("/company-signup")
+    @PostMapping("/signup/company")
     public ApiResponse<AuthResponse> companySignup(@Valid @RequestBody CompanySignupRequest request) {
         return ApiResponse.ok(authService.companySignup(request));
     }
 
-    @PostMapping("/employee-signup")
+    @PostMapping("/signup/company/email-verifications")
+    public ApiResponse<CompanyEmailVerificationResponse> requestCompanyEmailVerification(
+        @Valid @RequestBody CompanyEmailVerificationRequest request
+    ) {
+        return ApiResponse.ok(authService.requestCompanyEmailVerification(request));
+    }
+
+    @PostMapping("/signup/company/email-verifications/confirm")
+    public ApiResponse<CompanyEmailVerificationResponse> confirmCompanyEmailVerification(
+        @Valid @RequestBody CompanyEmailVerificationConfirmRequest request
+    ) {
+        return ApiResponse.ok(authService.confirmCompanyEmailVerification(request));
+    }
+
+    @PostMapping("/signup/employee")
     public ApiResponse<AuthResponse> employeeSignup(@Valid @RequestBody EmployeeSignupRequest request) {
         return ApiResponse.ok(authService.employeeSignup(request));
     }
 
-    @PostMapping("/company-login")
+    @PostMapping("/login/company")
     public ApiResponse<AuthResponse> companyLogin(@Valid @RequestBody CompanyLoginRequest request) {
         return ApiResponse.ok(authService.companyLogin(request));
     }
 
-    @PostMapping("/employee-login")
+    @PostMapping("/login/employee")
     public ApiResponse<AuthResponse> employeeLogin(@Valid @RequestBody EmployeeLoginRequest request) {
         return ApiResponse.ok(authService.employeeLogin(request));
     }
 
-    @PostMapping("/employee-invites")
+    @PostMapping("/invites/employee")
     public ApiResponse<EmployeeInviteResponse> createEmployeeInvite(@Valid @RequestBody EmployeeInviteCreateRequest request) {
         return ApiResponse.ok(authService.createEmployeeInvite(request));
     }
 
-    @PostMapping("/employee-invite-signup")
+    @PostMapping("/signup/employee/invite")
     public ApiResponse<AuthResponse> employeeInviteSignup(@Valid @RequestBody EmployeeInviteSignupRequest request) {
         return ApiResponse.ok(authService.employeeInviteSignup(request));
     }

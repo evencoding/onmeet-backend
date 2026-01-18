@@ -1,7 +1,7 @@
 package com.onmeet.auth.dto;
 
-import com.onmeet.company.entity.EmployeeRole;
-import com.onmeet.company.entity.EmployeeStatus;
+import com.onmeet.company.entity.employee.EmployeeRole;
+import com.onmeet.company.entity.employee.EmployeeStatus;
 import java.time.Instant;
 
 public record EmployeeResponse(
@@ -11,6 +11,8 @@ public record EmployeeResponse(
     EmployeeRole role,
     EmployeeStatus status,
     String employeeNo,
+    String departmentId,
+    String positionId,
     Instant createdAt
 ) {
 }

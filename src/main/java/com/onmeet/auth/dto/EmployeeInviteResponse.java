@@ -1,7 +1,7 @@
 package com.onmeet.auth.dto;
 
-import com.onmeet.company.entity.EmployeeInviteStatus;
-import com.onmeet.company.entity.EmployeeRole;
+import com.onmeet.company.entity.employee.EmployeeInviteStatus;
+import com.onmeet.company.entity.employee.EmployeeRole;
 import java.time.Instant;
 
 public record EmployeeInviteResponse(
@@ -10,6 +10,8 @@ public record EmployeeInviteResponse(
     String email,
     EmployeeRole role,
     String employeeNo,
+    String departmentId,
+    String positionId,
     EmployeeInviteStatus status,
     String token,
     Instant createdAt,

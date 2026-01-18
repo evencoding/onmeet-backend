@@ -1,6 +1,6 @@
 package com.onmeet.company.repository;
 
-import com.onmeet.company.entity.Company;
+import com.onmeet.company.entity.company.Company;
 import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;
 

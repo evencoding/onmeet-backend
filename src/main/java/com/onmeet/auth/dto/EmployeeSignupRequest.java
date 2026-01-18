@@ -10,6 +10,8 @@ public record EmployeeSignupRequest(
     @NotBlank String name,
     String companyId,
     String companyDomain,
-    String employeeNo
+    String employeeNo,
+    String departmentId,
+    String positionId
 ) {
 }

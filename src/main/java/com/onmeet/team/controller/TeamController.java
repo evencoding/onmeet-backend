@@ -1,5 +1,7 @@
 package com.onmeet.team.controller;
 
+import com.onmeet.common.exception.BizException;
+import com.onmeet.common.exception.ErrorCode;
 import com.onmeet.common.response.ApiResponse;
 import com.onmeet.team.dto.TeamCreateRequest;
 import com.onmeet.team.dto.TeamResponse;
@@ -30,15 +32,21 @@ public class TeamController {
     }
 
     @GetMapping("/{teamId}")
-    public ApiResponse<TeamResponse> get(@PathVariable Long teamId) {
+    public ApiResponse<TeamResponse> get(@PathVariable String teamId) {
         return ApiResponse.ok(teamService.get(teamId));
     }
 
     @GetMapping
-    public ApiResponse<List<TeamResponse>> list(@RequestParam(required = false) String keyword) {
-        if (keyword == null || keyword.isBlank()) {
-            return ApiResponse.ok(teamService.list());
+    public ApiResponse<List<TeamResponse>> list(
+        @RequestParam(required = false) String keyword,
+        @RequestParam(required = false) String companyId
+    ) {
+        if (keyword != null && !keyword.isBlank()) {
+            return ApiResponse.ok(teamService.search(keyword));
         }
-        return ApiResponse.ok(teamService.search(keyword));
+        if (companyId != null && !companyId.isBlank()) {
+            return ApiResponse.ok(teamService.listByCompany(companyId));
+        }
+        throw new BizException(ErrorCode.INVALID_REQUEST, "회사 ID가 필요합니다");
     }
 }

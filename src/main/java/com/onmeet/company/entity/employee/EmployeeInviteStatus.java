@@ -1,4 +1,4 @@
-package com.onmeet.company.entity;
+package com.onmeet.company.entity.employee;
 
 public enum EmployeeInviteStatus {
     INVITED,
