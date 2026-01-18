@@ -1,7 +1,7 @@
 package com.onmeet.auth.dto;
 
-import com.onmeet.company.entity.company.CompanyStatus;
 import com.onmeet.company.entity.company.CompanySize;
+import com.onmeet.company.entity.company.CompanyStatus;
 import java.time.Instant;
 
 public record CompanyResponse(

@@ -43,7 +43,9 @@ public class CompanyStructureService {
         if (departmentRepository.existsByCompanyIdAndNameIgnoreCase(companyId, request.name())) {
             throw new BizException(ErrorCode.INVALID_REQUEST, "이미 존재하는 부서명입니다");
         }
-        Department department = departmentRepository.save(new Department(company, request.name(), DepartmentStatus.ACTIVE));
+        Department department = departmentRepository.save(
+            new Department(company, request.name().trim(), DepartmentStatus.ACTIVE)
+        );
         return toDepartmentResponse(department);
     }
 
@@ -61,7 +63,9 @@ public class CompanyStructureService {
         if (positionRepository.existsByCompanyIdAndNameIgnoreCase(companyId, request.name())) {
             throw new BizException(ErrorCode.INVALID_REQUEST, "이미 존재하는 직급명입니다");
         }
-        Position position = positionRepository.save(new Position(company, request.name(), PositionStatus.ACTIVE));
+        Position position = positionRepository.save(
+            new Position(company, request.name().trim(), PositionStatus.ACTIVE)
+        );
         return toPositionResponse(position);
     }
 

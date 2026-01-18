@@ -24,6 +24,7 @@ public class SecurityConfig {
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers("/api-docs/**", "/swagger-ui/**", "/actuator/health").permitAll()
                 .requestMatchers("/api/v1/notifications/stream").permitAll()
+                .requestMatchers("/api/v1/admin/**").authenticated()
                 .anyRequest().permitAll()
             )
             .httpBasic(Customizer.withDefaults());
