@@ -1,0 +1,32 @@
+services:
+  mysql-notification:
+    image: mysql:9.0
+    container_name: mysql-notification
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: notification_db
+    ports:
+      - "3311:3306"
+    networks:
+      - msa-network
+
+  notification-service:
+    build:
+      context: ../
+      dockerfile: notification-service/Dockerfile
+    container_name: notification-service
+    ports:
+      - "8085:8085"
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:mysql://mysql-notification:3306/notification_db?useSSL=false&allowPublicKeyRetrieval=true&characterEncoding=UTF-8&serverTimezone=UTC
+      - SPRING_DATASOURCE_USERNAME=root
+      - SPRING_DATASOURCE_PASSWORD=root
+    depends_on:
+      - mysql-notification
+    networks:
+      - msa-network
+
+networks:
+  msa-network:
+    name: onmeet-network
+    external: true

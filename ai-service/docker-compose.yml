@@ -1,0 +1,32 @@
+services:
+  mysql-ai:
+    image: mysql:9.0
+    container_name: mysql-ai
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: ai_db
+    ports:
+      - "3308:3306"
+    networks:
+      - msa-network
+
+  ai-service:
+    build:
+      context: ../
+      dockerfile: ai-service/Dockerfile
+    container_name: ai-service
+    ports:
+      - "8082:8082"
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:mysql://mysql-ai:3306/ai_db?useSSL=false&allowPublicKeyRetrieval=true&characterEncoding=UTF-8&serverTimezone=UTC
+      - SPRING_DATASOURCE_USERNAME=root
+      - SPRING_DATASOURCE_PASSWORD=root
+    depends_on:
+      - mysql-ai
+    networks:
+      - msa-network
+
+networks:
+  msa-network:
+    name: onmeet-network
+    external: true
