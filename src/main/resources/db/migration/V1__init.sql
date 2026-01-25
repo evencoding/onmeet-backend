@@ -191,7 +191,7 @@ CREATE TABLE team_members
 );
 
 -- =========================================================
--- 4) meetings / participants / guests
+-- 4) meetings / participants / guests  (REVISED)
 -- =========================================================
 CREATE TABLE meetings
 (

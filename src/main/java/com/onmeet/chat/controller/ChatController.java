@@ -4,11 +4,13 @@ import com.onmeet.chat.dto.ChatCreateRequest;
 import com.onmeet.chat.dto.ChatResponse;
 import com.onmeet.chat.service.ChatService;
 import com.onmeet.common.response.ApiResponse;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.UUID;
 
 @RestController
 @RequiredArgsConstructor
@@ -19,15 +21,15 @@ public class ChatController {
 
     @PostMapping
     public ApiResponse<ChatResponse> save(
-            @PathVariable Long meetRoomId,
-            @RequestBody ChatCreateRequest request
+            @PathVariable UUID meetRoomId,
+            @Valid @RequestBody ChatCreateRequest request
     ) {
         return ApiResponse.ok(chatService.save(meetRoomId, request));
     }
 
     @GetMapping
     public ApiResponse<List<ChatResponse>> getChats(
-            @PathVariable Long meetRoomId,
+            @PathVariable UUID meetRoomId,
             @RequestParam(required = false) Instant before,
             @RequestParam(defaultValue = "50") int limit
     ) {

@@ -5,10 +5,11 @@ import com.onmeet.chat.entity.MessageType;
 import com.onmeet.chat.entity.SenderType;
 
 import java.time.Instant;
+import java.util.UUID;
 
 public record ChatResponse(
         Long id,
-        Long meetRoomId,
+        UUID meetRoomId,
         String senderName,
         SenderType senderType,
         String messageContent,

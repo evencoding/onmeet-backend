@@ -7,7 +7,7 @@ import lombok.NoArgsConstructor;
 import org.hibernate.annotations.CreationTimestamp;
 
 import java.time.Instant;
-import java.time.LocalDateTime;
+import java.util.UUID;
 
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
@@ -25,21 +25,21 @@ public class Chat {
     private Long id;
 
     @Column(name = "meet_room_id", nullable = false)
-    private Long meetRoomId;
+    private UUID meetRoomId;
 
     @Column(nullable = false)
     private String senderName;
 
-    @Column(nullable = false)
     @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 20)
     private SenderType senderType;
 
     @Lob
     @Column(nullable = false)
     private String messageContent;
 
-    @Column(nullable = false)
     @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 20)
     private MessageType messageType;
 
     @CreationTimestamp
@@ -47,7 +47,7 @@ public class Chat {
     private Instant createdAt;
 
     public static Chat create(
-            Long meetRoomId,
+            UUID meetRoomId,
             String senderName,
             SenderType senderType,
             String messageContent,

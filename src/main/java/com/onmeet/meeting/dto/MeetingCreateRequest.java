@@ -1,22 +1,21 @@
 package com.onmeet.meeting.dto;
 
-import lombok.Getter;
-import lombok.Setter;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.List;
+import java.util.UUID;
 
-@Getter
-@Setter
-public class MeetingCreateRequest {
-    private String title;
-    private String description;
-    private String meetTag;
-    private String teamId;
-    private String hostId;
-    private List<String> invitedUserIds;
+public record MeetingCreateRequest(
+        @NotBlank String title,
+        String description,
+        String meetTag,
+        UUID teamId,
 
-    // 날짜와 시간을 따로 받아 서버에서 합침
-    private LocalDate date;
-    private LocalTime time;
-}
+        List<String> invitedEmails,
+
+        @NotNull LocalDate date,
+        @NotNull LocalTime time
+) {}

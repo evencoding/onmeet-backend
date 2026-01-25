@@ -5,6 +5,7 @@ import com.onmeet.minutes.dto.MinutesCreateRequest;
 import com.onmeet.minutes.dto.MinutesResponse;
 import com.onmeet.minutes.service.MinutesService;
 import jakarta.validation.Valid;
+import org.springframework.context.annotation.Profile;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
