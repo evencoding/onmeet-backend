@@ -5,7 +5,7 @@ B2B 영상회의 + 회의록(AI 요약) + 알림(SSE) 서비스 ONMEET 백엔드
 ## Tech Stack
 - Java 21, Spring Boot 3.x, Gradle
 - Spring Web, Validation, Data JPA, Security, Actuator, Lombok
-- Querydsl, Flyway, Testcontainers
+- MySQL 9.0 , Flyway, Testcontainers
 - PostgreSQL (local 추천), H2 (test only)
 - springdoc OpenAPI/Swagger
 - MapStruct
