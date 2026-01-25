@@ -1,1 +1,9 @@
 rootProject.name = 'onMeet'
+
+include 'gateway-service'
+include 'auth-service'
+include 'ai-service'
+include 'video-service'
+include 'chat-service'
+include 'notification-service'
+include 'image-service'
