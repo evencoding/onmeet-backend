@@ -21,23 +21,16 @@ class AuthController(
 
     @PostMapping("/login")
     fun login(@RequestBody request: LoginRequest): ResponseEntity<TokenResponse> {
-        // Note: HttpServletResponse might not be easily injected if running on WebFlux unless on Servlet stack.
-        // onmeet-backend auth-service is likely MVC (Tomcat/Servlet).
-        // Using Spring's ResponseCookie is safer/cleaner.
-        println("DEBUG: Login request received for ${request.email}")
-
         val tokenResponse = authService.login(request)
-        println("DEBUG: Login successful, token generated: ${tokenResponse.accessToken.take(10)}...")
-        
+        // Removed sensitive token logging
+
         val cookie = org.springframework.http.ResponseCookie.from("accessToken", tokenResponse.accessToken)
             .httpOnly(true)
-            .secure(false) // Set to true in production (HTTPS)
+            .secure(false) // TODO: Set to true in production using properties
             .path("/")
             .maxAge(3600) // 1 hour
-            // .sameSite("Lax") // Removing SameSite for debugging localhost issues
+            // .sameSite("Strict") // Recommended for production
             .build()
-        
-        println("DEBUG: Generated Cookie: $cookie")
 
         return ResponseEntity.ok()
             .header(org.springframework.http.HttpHeaders.SET_COOKIE, cookie.toString())
