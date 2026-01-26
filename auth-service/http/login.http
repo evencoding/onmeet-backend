@@ -35,7 +35,7 @@ Content-Type: application/json
 X-XSRF-TOKEN: {{xsrf_token}}
 
 {
-  "email": "{{username}}",
+  "email": "{{username}}1",
   "password": "{{password}}"
 }
 
@@ -64,7 +64,7 @@ Content-Type: application/json
 X-XSRF-TOKEN: {{xsrf_token}}
 
 {
-  "email": "{{username}}",
+  "email": "{{username}}1",
   "password": "{{password}}"
 }
 

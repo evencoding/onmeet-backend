@@ -22,10 +22,14 @@ class JwtTokenProvider(
         val now = Date()
         val validity = Date(now.time + 3600000) // 1 hour
 
+        // Type cast principal to our User entity to get the ID
+        val principle = authentication.principal as com.onmeet.auth.entity.User
+
         // Build Claims
         val claimsSet = JWTClaimsSet.Builder()
             .subject(authentication.name)
             .claim("auth", authorities)
+            .claim("userId", principle.id) // Add sequence ID
             .issueTime(now)
             .expirationTime(validity)
             .jwtID(UUID.randomUUID().toString())

@@ -19,11 +19,11 @@ class UserHeaderFilter : AbstractGatewayFilterFactory<UserHeaderFilter.Config>(C
                 .filter { it is JwtAuthenticationToken }
                 .map { it as JwtAuthenticationToken }
                 .map { jwt ->
-                    val userId = jwt.token.subject
+                    val userId = jwt.token.claims["userId"]?.toString() ?: jwt.token.subject
                     println("UserHeaderFilter: Injecting X-User-Id=$userId")
                     val request = exchange.request.mutate()
                         .header("X-User-Id", userId)
-                        .header("X-User-Email", userId) // Assuming subject is email, or use claims
+                        .header("X-User-Email", jwt.token.subject) 
                         .header("X-User-Roles", jwt.authorities.joinToString(",") { it.authority })
                         .build()
                     exchange.mutate().request(request).build()
