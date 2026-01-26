@@ -3,9 +3,10 @@ package com.onmeet.gateway.filter
 import org.slf4j.LoggerFactory
 import org.springframework.cloud.gateway.filter.GatewayFilter
 import org.springframework.cloud.gateway.filter.factory.AbstractGatewayFilterFactory
+import org.springframework.http.HttpHeaders
 import org.springframework.http.HttpStatus
+import org.springframework.http.server.reactive.ServerHttpRequestDecorator
 import org.springframework.stereotype.Component
-import org.springframework.http.server.reactive.ServerHttpRequest
 
 @Component
 class TokenRelayFilter : AbstractGatewayFilterFactory<TokenRelayFilter.Config>(Config::class.java) {
@@ -19,30 +20,39 @@ class TokenRelayFilter : AbstractGatewayFilterFactory<TokenRelayFilter.Config>(C
             val request = exchange.request
             
             // Allow public auth endpoints pass-through without token check
-            // However, token relay might still be useful if they are authenticated, but usually login/signup don't have cookies yet.
-            if (request.uri.path.contains("/auth/login") || request.uri.path.contains("/auth/signup")) {
+            val path = request.uri.path
+            logger.info("Processing request path: $path")
+
+            if (path.contains("/auth/login") || 
+                path.contains("/auth/signup") || 
+                path.contains("/auth/check") ||
+                path.contains("/.well-known")) {
                return@GatewayFilter chain.filter(exchange)
             }
 
             // Extract Access Token from Cookie
-            val accessTokenCookie = request.cookies.getFirst("accessToken")
+            val cookies = request.cookies
+            logger.info("Available Cookies for $path: ${cookies.keys}")
+            
+            val accessTokenCookie = cookies.getFirst("accessToken")
             
             if (accessTokenCookie == null) {
-                logger.error("Missing accessToken cookie")
+                logger.error("Missing accessToken cookie. Full cookie map keys: ${cookies.keys}")
                 exchange.response.statusCode = HttpStatus.UNAUTHORIZED
                 return@GatewayFilter exchange.response.setComplete()
             }
 
             val token = accessTokenCookie.value
 
-            // validate generic JWT structure or signature here if needed (optional at gateway level if optimizing for speed)
-            // For rigorous security, we should validate it using the public key.
-            // For now, we relay it. The downstream service MUST also validate it or the gateway MUST validate it fully.
-            // Requirement says "Gateway relays...", let's mutate the request.
-
-            val modifiedRequest: ServerHttpRequest = request.mutate()
-                .header("Authorization", "Bearer \$token")
-                .build()
+            // Fix for ReadOnlyHttpHeaders: Use ServerHttpRequestDecorator
+            val modifiedRequest = object : ServerHttpRequestDecorator(request) {
+                override fun getHeaders(): HttpHeaders {
+                    val headers = HttpHeaders()
+                    headers.putAll(super.getHeaders())
+                    headers.add("Authorization", "Bearer $token")
+                    return headers
+                }
+            }
 
             return@GatewayFilter chain.filter(exchange.mutate().request(modifiedRequest).build())
         }
