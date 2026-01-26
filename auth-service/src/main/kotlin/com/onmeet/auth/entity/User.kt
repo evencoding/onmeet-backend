@@ -28,7 +28,7 @@ class User(
     }
 
     override fun getAuthorities(): MutableCollection<out GrantedAuthority> {
-        return mutableListOf(SimpleGrantedAuthority("ROLE_\${role.name}"))
+        return mutableListOf(SimpleGrantedAuthority("ROLE_${role.name}"))
     }
 
     override fun getPassword(): String = passwordHash

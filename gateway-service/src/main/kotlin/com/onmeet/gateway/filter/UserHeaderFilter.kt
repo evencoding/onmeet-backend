@@ -20,8 +20,15 @@ class UserHeaderFilter : AbstractGatewayFilterFactory<UserHeaderFilter.Config>(C
                 .map { it as JwtAuthenticationToken }
                 .map { jwt ->
                     val userId = jwt.token.claims["userId"]?.toString() ?: jwt.token.subject
-                    println("UserHeaderFilter: Injecting X-User-Id=$userId")
+                    // Removed sensitive log
+                    
+                    // PREVENT SPOOFING: Explicitly remove any user-supplied headers first
                     val request = exchange.request.mutate()
+                        .headers { httpHeaders ->
+                            httpHeaders.remove("X-User-Id")
+                            httpHeaders.remove("X-User-Email")
+                            httpHeaders.remove("X-User-Roles")
+                        }
                         .header("X-User-Id", userId)
                         .header("X-User-Email", jwt.token.subject) 
                         .header("X-User-Roles", jwt.authorities.joinToString(",") { it.authority })

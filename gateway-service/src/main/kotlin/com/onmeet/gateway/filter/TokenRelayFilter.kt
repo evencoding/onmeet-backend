@@ -21,7 +21,7 @@ class TokenRelayFilter : AbstractGatewayFilterFactory<TokenRelayFilter.Config>(C
             
             // Allow public auth endpoints pass-through without token check
             val path = request.uri.path
-            logger.info("Processing request path: $path")
+            logger.debug("Processing request path: $path")
 
             if (path.contains("/auth/login") || 
                 path.contains("/auth/signup") || 
@@ -32,7 +32,7 @@ class TokenRelayFilter : AbstractGatewayFilterFactory<TokenRelayFilter.Config>(C
 
             // Extract Access Token from Cookie
             val cookies = request.cookies
-            logger.info("Available Cookies for $path: ${cookies.keys}")
+            logger.debug("Available Cookies for $path: ${cookies.keys}")
             
             val accessTokenCookie = cookies.getFirst("accessToken")
             
