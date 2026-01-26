@@ -1,0 +1,151 @@
+### 0. CSRF 토큰 발급 (최초 1회 필수)
+GET {{host}}/auth/check
+
+> {%
+    // 1. 커스텀 헤더에서 우선 조회 (Gateway에서 X-CSRF-TOKEN 헤더로 내려줌)
+    var headerToken = response.headers.valueOf("X-CSRF-TOKEN");
+    var tokenToSave = "";
+
+    if (headerToken) {
+        tokenToSave = headerToken;
+        client.log("CSRF Token captured from Header: " + tokenToSave);
+    } else {
+        // 2. 헤더 없으면 쿠키 파싱 시도 (Fallback)
+        var setCookieHeader = response.headers.valuesOf("Set-Cookie");
+        if (setCookieHeader) {
+            for (var i = 0; i < setCookieHeader.length; i++) {
+               var cookie = setCookieHeader[i];
+               if (cookie.startsWith("XSRF-TOKEN=")) {
+                   tokenToSave = cookie.split(";")[0].split("=")[1];
+                   client.log("CSRF Token captured from Cookie: " + tokenToSave);
+               }
+            }
+        }
+    }
+
+    if (tokenToSave) {
+        client.global.set("xsrf_token", tokenToSave);
+    }
+%}
+
+### 0-1. 회원가입
+
+POST {{host}}/auth/signup
+Content-Type: application/json
+X-XSRF-TOKEN: {{xsrf_token}}
+
+{
+  "email": "{{username}}",
+  "password": "{{password}}"
+}
+
+> {%
+    // 회원가입 후 새로운 CSRF 토큰이 발급될 수 있으므로 캡처하여 갱신합니다.
+    var setCookieHeader = response.headers.valuesOf("Set-Cookie");
+    // valuesOf returns an array of strings
+
+    if (setCookieHeader) {
+        for (var i = 0; i < setCookieHeader.length; i++) {
+           var cookie = setCookieHeader[i];
+           if (cookie.startsWith("XSRF-TOKEN=")) {
+               var token = cookie.split(";")[0].split("=")[1];
+               client.global.set("xsrf_token", token);
+               client.log("CSRF Token updated from Signup: " + token);
+           }
+        }
+    }
+%}
+
+### 1. 로그인 요청
+# - 성공 시 서버는 'accessToken'(HttpOnly)과 'XSRF-TOKEN'(Not HttpOnly) 쿠키를 발급합니다.
+# - IntelliJ는 이 쿠키들을 자동으로 쿠키 저장소에 저장합니다.
+POST {{host}}/auth/login
+Content-Type: application/json
+X-XSRF-TOKEN: {{xsrf_token}}
+
+{
+  "email": "{{username}}",
+  "password": "{{password}}"
+}
+
+> {%
+    // 응답에서 XSRF-TOKEN 쿠키 값을 추출하여 글로벌 변수에 저장하는 스크립트
+    // Double Submit Cookie 패턴을 위해 필요합니다.
+
+    var setCookieHeader = response.headers.valueOf("Set-Cookie");
+    var xsrfToken = "";
+
+    if (setCookieHeader) {
+        // Set-Cookie 헤더가 여러 개일 수 있으므로 배열로 처리되거나 단일 문자열일 수 있음
+        // 단순화를 위해 문자열에서 정규식으로 XSRF-TOKEN 값 추출
+        // 예: XSRF-TOKEN=abcde12345; Path=/; Secure ...
+        var match = setCookieHeader.match(/XSRF-TOKEN=([^;]+)/);
+        if (match) {
+            xsrfToken = match[1];
+        }
+    }
+
+    // 다음 요청에서 {{xsrf_token}} 변수로 사용할 수 있게 저장
+    client.global.set("xsrf_token", xsrfToken);
+
+    client.log("Extracted CSRF Token: " + xsrfToken);
+
+    // 2. AccessToken 쿠키 추출 및 저장 (Manual Cookie Handling)
+    var accessToken = "";
+    if (setCookieHeader) {
+        var match = setCookieHeader.match(/accessToken=([^;]+)/);
+        if (match) {
+            accessToken = match[1];
+        }
+    }
+
+    if (accessToken) {
+        client.global.set("access_token", accessToken);
+        client.log("Extracted Access Token: " + accessToken.substring(0, 10) + "...");
+    } else {
+        client.log("WARNING: Access Access Token not found in Set-Cookie!");
+    }
+%}
+
+### 2. 보호된 리소스 요청 (API Call)
+# - Manual Cookie Sending: 쿠키 저장소 이슈 회피를 위해 명시적으로 보냅니다.
+GET {{host}}/auth/me
+Content-Type: application/json
+X-XSRF-TOKEN: {{xsrf_token}}
+Cookie: accessToken={{access_token}}; XSRF-TOKEN={{xsrf_token}}
+
+### 3. 채팅 서비스 요청 (Gateway Offloading Test)
+# - Gateway가 토큰을 검증하고, X-User-Id 헤더를 Chat 서비스로 전달합니다.
+GET {{host}}/chat/me
+Content-Type: application/json
+X-XSRF-TOKEN: {{xsrf_token}}
+Cookie: accessToken={{access_token}}; XSRF-TOKEN={{xsrf_token}}
+
+### AI 서비스 확인
+GET {{host}}/ai/me
+Content-Type: application/json
+X-XSRF-TOKEN: {{xsrf_token}}
+Cookie: accessToken={{access_token}}; XSRF-TOKEN={{xsrf_token}}
+
+### Video 서비스 확인
+GET {{host}}/video/me
+Content-Type: application/json
+X-XSRF-TOKEN: {{xsrf_token}}
+Cookie: accessToken={{access_token}}; XSRF-TOKEN={{xsrf_token}}
+
+### notification 서비스 확인
+GET {{host}}/notification/me
+Content-Type: application/json
+X-XSRF-TOKEN: {{xsrf_token}}
+Cookie: accessToken={{access_token}}; XSRF-TOKEN={{xsrf_token}}
+
+### Image 서비스 확인
+GET {{host}}/image/me
+Content-Type: application/json
+X-XSRF-TOKEN: {{xsrf_token}}
+Cookie: accessToken={{access_token}}; XSRF-TOKEN={{xsrf_token}}
+
+### 4. 로그아웃 요청
+POST {{host}}/auth/logout
+Content-Type: application/json
+X-XSRF-TOKEN: {{xsrf_token}}
