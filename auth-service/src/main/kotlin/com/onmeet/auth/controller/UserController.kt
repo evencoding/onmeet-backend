@@ -1,0 +1,32 @@
+package com.onmeet.auth.controller
+
+import com.onmeet.auth.dto.CompanySignupRequest
+import com.onmeet.auth.dto.JoinRequest
+import com.onmeet.auth.dto.UserResponseDto
+import com.onmeet.auth.service.AuthService
+import com.onmeet.auth.service.UserService
+import org.springframework.http.ResponseEntity
+import org.springframework.web.bind.annotation.*
+
+@RestController
+@RequestMapping("/users")
+class UserController(
+    private val userService: UserService
+) {
+
+    @GetMapping("/{id}")
+    fun getUserInfo(@PathVariable id: Long): ResponseEntity<UserResponseDto> {
+        return ResponseEntity.ok(userService.getUserInfo(id))
+    }
+}
+
+@RestController
+@RequestMapping("/internal/users")
+class InternalUserController(
+    private val userService: UserService
+) {
+    @GetMapping("/{id}")
+    fun getUserInfoInternal(@PathVariable id: Long): ResponseEntity<UserResponseDto> {
+        return ResponseEntity.ok(userService.getUserInfo(id))
+    }
+}

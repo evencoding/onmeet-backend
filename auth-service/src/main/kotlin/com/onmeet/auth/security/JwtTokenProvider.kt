@@ -35,6 +35,27 @@ class JwtTokenProvider(
             .jwtID(UUID.randomUUID().toString())
             .build()
 
+        return signJwt(claimsSet)
+    }
+
+    fun generateGuestToken(name: String, meetingId: String?): String {
+        val now = Date()
+        val validity = Date(now.time + 14400000) // 4 hours
+
+        val claimsSet = JWTClaimsSet.Builder()
+            .subject(name)
+            .claim("auth", "ROLE_GUEST")
+            .claim("userId", 0L) // Guest ID 0
+            .claim("meetingId", meetingId)
+            .issueTime(now)
+            .expirationTime(validity)
+            .jwtID(UUID.randomUUID().toString())
+            .build()
+
+        return signJwt(claimsSet)
+    }
+
+    private fun signJwt(claimsSet: JWTClaimsSet): String {
         // Create Signed JWT
         val header = JWSHeader.Builder(JWSAlgorithm.RS256)
             .keyID("onmeet-auth-key")

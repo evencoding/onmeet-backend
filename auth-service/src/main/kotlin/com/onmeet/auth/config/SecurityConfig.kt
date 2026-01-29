@@ -14,6 +14,7 @@ import com.onmeet.auth.security.JwtAuthenticationFilter
 
 @Configuration
 @EnableWebSecurity
+@org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity
 class SecurityConfig {
 
     @Bean
@@ -32,7 +33,7 @@ class SecurityConfig {
             .csrf { it.disable() } // Using JWT, CSRF disabled (stateless)
             .sessionManagement { it.sessionCreationPolicy(SessionCreationPolicy.STATELESS) }
             .authorizeHttpRequests {
-                it.requestMatchers("/auth/login", "/auth/signup", "/auth/check", "/.well-known/**").permitAll()
+                it.requestMatchers("/auth/login", "/auth/signup/**", "/auth/guest", "/auth/check", "/.well-known/**").permitAll()
                 it.anyRequest().authenticated()
             }
             .addFilterBefore(jwtAuthenticationFilter, org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter::class.java)
