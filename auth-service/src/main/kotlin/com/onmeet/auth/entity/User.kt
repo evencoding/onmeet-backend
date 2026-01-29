@@ -4,9 +4,14 @@ import jakarta.persistence.*
 import org.springframework.security.core.GrantedAuthority
 import org.springframework.security.core.authority.SimpleGrantedAuthority
 import org.springframework.security.core.userdetails.UserDetails
+import org.springframework.data.annotation.CreatedDate
+import org.springframework.data.annotation.LastModifiedDate
+import org.springframework.data.jpa.domain.support.AuditingEntityListener
+import java.time.LocalDateTime
 
 @Entity
 @Table(name = "users")
+@EntityListeners(AuditingEntityListener::class)
 class User(
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -18,13 +23,43 @@ class User(
     @Column(nullable = false)
     var passwordHash: String,
 
+    @Column(nullable = false)
+    var name: String,
+
+    @Column
+    var employeeId: String? = null, // 사번
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "company_id")
+    var company: Company? = null,
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "team_id")
+    var team: Team? = null,
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
-    var role: Role = Role.USER
+    var status: UserStatus = UserStatus.ACTIVE,
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    var role: Role = Role.USER,
+
+    @CreatedDate
+    @Column(nullable = false, updatable = false)
+    var createdAt: LocalDateTime? = null,
+
+    @LastModifiedDate
+    @Column(nullable = false)
+    var updatedAt: LocalDateTime? = null
 ) : UserDetails {
 
+    enum class UserStatus {
+        ACTIVE, INACTIVE, INVITED
+    }
+
     enum class Role {
-        USER, ADMIN
+        USER, ADMIN, MANAGER
     }
 
     override fun getAuthorities(): MutableCollection<out GrantedAuthority> {

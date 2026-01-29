@@ -1,7 +1,8 @@
 package com.onmeet.auth.controller
 
+import com.onmeet.auth.dto.CompanySignupRequest
+import com.onmeet.auth.dto.JoinRequest
 import com.onmeet.auth.dto.LoginRequest
-import com.onmeet.auth.dto.SignupRequest
 import com.onmeet.auth.dto.TokenResponse
 import com.onmeet.auth.service.AuthService
 import org.springframework.http.ResponseEntity
@@ -13,9 +14,15 @@ class AuthController(
     private val authService: AuthService
 ) {
 
-    @PostMapping("/signup")
-    fun signup(@RequestBody request: SignupRequest): ResponseEntity<Long> {
-        val userId = authService.signup(request)
+    @PostMapping("/signup/company")
+    fun signupCompany(@RequestBody request: CompanySignupRequest): ResponseEntity<Long> {
+        val userId = authService.signupCompany(request)
+        return ResponseEntity.ok(userId)
+    }
+
+    @PostMapping("/signup/join")
+    fun joinCompany(@RequestBody request: JoinRequest): ResponseEntity<Long> {
+        val userId = authService.joinCompany(request)
         return ResponseEntity.ok(userId)
     }
 
@@ -30,6 +37,22 @@ class AuthController(
             .path("/")
             .maxAge(3600) // 1 hour
             // .sameSite("Strict") // Recommended for production
+            .build()
+
+        return ResponseEntity.ok()
+            .header(org.springframework.http.HttpHeaders.SET_COOKIE, cookie.toString())
+            .body(tokenResponse)
+    }
+
+    @PostMapping("/guest")
+    fun guestLogin(@RequestBody request: com.onmeet.auth.dto.GuestLoginRequest): ResponseEntity<TokenResponse> {
+        val tokenResponse = authService.guestLogin(request)
+        
+        val cookie = org.springframework.http.ResponseCookie.from("accessToken", tokenResponse.accessToken)
+            .httpOnly(true)
+            .secure(false) // TODO: Set to true in production
+            .path("/")
+            .maxAge(14400) // 4 hours
             .build()
 
         return ResponseEntity.ok()

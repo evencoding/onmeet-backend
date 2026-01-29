@@ -12,5 +12,11 @@ data class LoginRequest(
 
 data class TokenResponse(
     val accessToken: String,
+    val refreshToken: String? = null,
     val tokenType: String = "Bearer"
+)
+
+data class GuestLoginRequest(
+    val name: String,
+    val meetingId: String? = null
 )

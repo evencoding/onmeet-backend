@@ -10,6 +10,14 @@ services:
     networks:
       - msa-network
 
+  redis-auth:
+    image: redis:alpine
+    container_name: redis-auth
+    ports:
+      - "6379:6379"
+    networks:
+      - msa-network
+
   auth-service:
     build:
       context: ../
@@ -21,8 +29,11 @@ services:
       - SPRING_DATASOURCE_URL=jdbc:mysql://mysql-auth:3306/auth_db?useSSL=false&allowPublicKeyRetrieval=true&characterEncoding=UTF-8&serverTimezone=UTC
       - SPRING_DATASOURCE_USERNAME=root
       - SPRING_DATASOURCE_PASSWORD=root
+      - SPRING_DATA_REDIS_HOST=redis-auth
+      - SPRING_DATA_REDIS_PORT=6379
     depends_on:
       - mysql-auth
+      - redis-auth
     networks:
       - msa-network
 

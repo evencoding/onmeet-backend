@@ -1,0 +1,64 @@
+package com.onmeet.auth.service
+
+import com.onmeet.auth.entity.Invitation
+import com.onmeet.auth.entity.User
+import com.onmeet.auth.repository.InvitationRepository
+import com.onmeet.auth.repository.CompanyRepository
+import org.springframework.stereotype.Service
+import org.springframework.transaction.annotation.Transactional
+import java.time.LocalDateTime
+import java.util.UUID
+
+@Service
+@Transactional
+class InvitationService(
+    private val invitationRepository: InvitationRepository,
+    private val companyRepository: CompanyRepository
+) {
+
+    fun createInvitation(companyId: Long, email: String, role: User.Role): Invitation {
+        val company = companyRepository.findById(companyId)
+            .orElseThrow { IllegalArgumentException("Company not found") }
+            
+        // Check for existing pending invitation
+        invitationRepository.findByEmail(email).ifPresent {
+             if (it.expiresAt.isAfter(LocalDateTime.now())) {
+                 throw IllegalArgumentException("Active invitation already exists")
+             } else {
+                 invitationRepository.delete(it)
+             }
+        }
+
+        val code = UUID.randomUUID().toString()
+        val invitation = Invitation(
+            email = email,
+            code = code,
+            role = role,
+            company = company,
+            expiresAt = LocalDateTime.now().plusDays(7) // 7 days expiry
+        )
+        
+        // TODO: Send Email Logic Here
+        
+        return invitationRepository.save(invitation)
+    }
+
+    fun validateInvitation(email: String, code: String): Invitation {
+        val invitation = invitationRepository.findByCode(code)
+            .orElseThrow { IllegalArgumentException("Invalid invitation code") }
+
+        if (invitation.email != email) {
+            throw IllegalArgumentException("Email mismatch")
+        }
+
+        if (invitation.expiresAt.isBefore(LocalDateTime.now())) {
+            throw IllegalArgumentException("Invitation expired")
+        }
+
+        return invitation
+    }
+    
+    fun deleteInvitation(id: Long) {
+        invitationRepository.deleteById(id)
+    }
+}
