@@ -22,21 +22,9 @@ bin/
 *.iws
 *.iml
 *.ipr
-*.yml
-out/
-!**/src/main/**/out/
-!**/src/test/**/out/
 
-### NetBeans ###
-/nbproject/private/
-/nbbuild/
-/dist/
-/nbdist/
-/.nb-gradle/
-
-### VS Code ###
-.vscode/
-
-/src/main/resources/application-local.yml
-/src/main/resources/application-test.yml
-/src/main/resources/application.yml
+# Ignore application config files
+**/src/main/resources/application.yml
+**/src/main/resources/application-*.yml
+!docker-compose.yml
+!**/.github/workflows/*.yml
