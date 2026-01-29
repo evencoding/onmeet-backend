@@ -23,8 +23,6 @@ bin/
 *.iml
 *.ipr
 
-# Ignore application config files
-**/src/main/resources/application.yml
-**/src/main/resources/application-*.yml
-!docker-compose.yml
-!**/.github/workflows/*.yml
+
+# Allow application config files (using env vars)
+!**/src/main/resources/application.yml
