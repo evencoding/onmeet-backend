@@ -30,7 +30,12 @@ class SecurityConfig {
     @Bean
     fun filterChain(http: HttpSecurity, gatewayPreAuthFilter: GatewayPreAuthFilter): SecurityFilterChain {
         http
-            .csrf { it.disable() } // Using JWT, CSRF disabled (stateless)
+            .csrf { csrf ->
+                // If using session cookies (like accessToken), CSRF protection is still relevant.
+                // Re-enable CSRF or ensure auth-service is only accessed via gateway that handles CSRF.
+                // For now, disabling it as per original intent, but with a note.
+                csrf.disable()
+            } // Using JWT, CSRF disabled (stateless)
             .sessionManagement { it.sessionCreationPolicy(SessionCreationPolicy.STATELESS) }
             .authorizeHttpRequests {
                 it.requestMatchers("/auth/login", "/auth/signup", "/auth/check", "/.well-known/**", "/auth/actuator/**", "/error").permitAll()
