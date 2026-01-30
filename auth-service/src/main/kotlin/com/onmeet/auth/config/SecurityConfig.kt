@@ -28,7 +28,7 @@ class SecurityConfig {
     }
 
     @Bean
-    fun filterChain(http: HttpSecurity, jwtAuthenticationFilter: JwtAuthenticationFilter, gatewayPreAuthFilter: GatewayPreAuthFilter): SecurityFilterChain {
+    fun filterChain(http: HttpSecurity, gatewayPreAuthFilter: GatewayPreAuthFilter): SecurityFilterChain {
         http
             .csrf { it.disable() } // Using JWT, CSRF disabled (stateless)
             .sessionManagement { it.sessionCreationPolicy(SessionCreationPolicy.STATELESS) }
@@ -37,7 +37,6 @@ class SecurityConfig {
                 it.anyRequest().authenticated()
             }
             .addFilterBefore(gatewayPreAuthFilter, org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter::class.java)
-            .addFilterAfter(jwtAuthenticationFilter, com.onmeet.auth.security.GatewayPreAuthFilter::class.java)
         
         return http.build()
     }
