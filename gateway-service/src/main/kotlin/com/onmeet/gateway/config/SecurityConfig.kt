@@ -25,7 +25,10 @@ class SecurityConfig(
     @Bean
     fun springSecurityFilterChain(http: ServerHttpSecurity): SecurityWebFilterChain {
         http
-            .csrf { it.disable() }
+            .csrf { csrf ->
+                csrf.csrfTokenRepository(CookieServerCsrfTokenRepository.withHttpOnlyFalse())
+                    .csrfTokenRequestHandler(ServerCsrfTokenRequestAttributeHandler())
+            }
             .authorizeExchange { exchanges ->
                 exchanges.pathMatchers("/auth/**", "/.well-known/**").permitAll()
                 exchanges.pathMatchers("/ai/actuator/**", "/chat/actuator/**", "/questions/actuator/**", "/videos/actuator/**", "/notifications/actuator/**", "/images/actuator/**", "/users/actuator/**", "/error").permitAll()
