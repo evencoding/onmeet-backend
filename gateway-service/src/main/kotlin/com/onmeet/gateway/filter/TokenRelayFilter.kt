@@ -34,20 +34,19 @@ class TokenRelayFilter : AbstractGatewayFilterFactory<TokenRelayFilter.Config>(C
             
             val accessTokenCookie = cookies.getFirst("accessToken")
             
-            if (accessTokenCookie == null) {
-                logger.debug("Missing accessToken cookie. Full cookie map keys: ${cookies.keys}")
-                exchange.response.statusCode = HttpStatus.UNAUTHORIZED
-                return@GatewayFilter exchange.response.setComplete()
+            if (accessTokenCookie != null) {
+                val token = accessTokenCookie.value
+
+                // Use mutate() for cleaner header modification
+                val modifiedRequest = exchange.request.mutate()
+                    .header("Authorization", "Bearer $token")
+                    .build()
+
+                return@GatewayFilter chain.filter(exchange.mutate().request(modifiedRequest).build())
             }
 
-            val token = accessTokenCookie.value
-
-            // Use mutate() for cleaner header modification
-            val modifiedRequest = exchange.request.mutate()
-                .header("Authorization", "Bearer $token")
-                .build()
-
-            return@GatewayFilter chain.filter(exchange.mutate().request(modifiedRequest).build())
+            // If no token, just pass through (let downstream or global security handle it)
+            return@GatewayFilter chain.filter(exchange)
         }
     }
 }
