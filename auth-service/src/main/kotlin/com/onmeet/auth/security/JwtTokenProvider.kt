@@ -12,17 +12,18 @@ import java.util.*
 
 @Component
 class JwtTokenProvider(
-    private val keyManager: KeyManager
+    private val keyManager: KeyManager,
+    @org.springframework.beans.factory.annotation.Value("\${jwt.validity-in-ms}") private val validityInMs: Long,
+    @org.springframework.beans.factory.annotation.Value("\${jwt.key-id}") private val keyId: String
 ) {
 
     private val logger = org.slf4j.LoggerFactory.getLogger(JwtTokenProvider::class.java)
-
 
     fun generateToken(authentication: Authentication): String {
         val authorities = authentication.authorities.joinToString(",") { it.authority }
 
         val now = Date()
-        val validity = Date(now.time + 3600000) // 1 hour
+        val validity = Date(now.time + validityInMs)
 
         // Type cast principal to our User entity to get the ID
         val principal = authentication.principal as com.onmeet.auth.entity.User
@@ -39,7 +40,7 @@ class JwtTokenProvider(
 
         // Create Signed JWT
         val header = JWSHeader.Builder(JWSAlgorithm.RS256)
-            .keyID("onmeet-auth-key")
+            .keyID(keyId)
             .build()
         val signedJWT = SignedJWT(header, claimsSet)
 
@@ -53,21 +54,23 @@ class JwtTokenProvider(
     fun validateToken(token: String): Boolean {
         try {
             val signedJWT = SignedJWT.parse(token)
-            val verifier = com.nimbusds.jose.crypto.RSASSAVerifier(keyManager.publicKey as java.security.interfaces.RSAPublicKey)
+            val verifier = com.nimbusds.jose.crypto.RSASSAVerifier(keyManager.publicKey)
             
             if (!signedJWT.verify(verifier)) {
+                logger.warn("Token verification failed for token: ${token.take(10)}...")
                 return false
             }
             
             val claims = signedJWT.jwtClaimsSet
             val now = Date()
             if (claims.expirationTime.before(now)) {
+                logger.debug("Token expired")
                 return false
             }
             
             return true
         } catch (e: Exception) {
-            logger.error("Error validating token", e)
+            logger.error("Error validating token: ${e.message}", e)
             return false
         }
     }
@@ -77,7 +80,7 @@ class JwtTokenProvider(
         val claims = signedJWT.jwtClaimsSet
         
         val username = claims.subject
-        val authClaim = (claims.getClaim("scope")) as String
+        val authClaim = claims.getClaim("scope")?.toString() ?: ""
         
         val authorities = if (authClaim.isBlank()) {
             emptyList()
