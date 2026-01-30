@@ -10,7 +10,9 @@ import org.springframework.web.bind.annotation.*
 @RestController
 @RequestMapping("/auth")
 class AuthController(
-    private val authService: AuthService
+    private val authService: AuthService,
+    @org.springframework.beans.factory.annotation.Value("\${jwt.cookie.secure}") private val cookieSecure: Boolean,
+    @org.springframework.beans.factory.annotation.Value("\${jwt.cookie.max-age}") private val cookieMaxAge: Long
 ) {
 
     @PostMapping("/signup")
@@ -22,14 +24,13 @@ class AuthController(
     @PostMapping("/login")
     fun login(@RequestBody request: LoginRequest): ResponseEntity<com.onmeet.auth.dto.LoginResponse> {
         val tokenResponse = authService.login(request)
-        // Removed sensitive token logging
-
+        
         val cookie = org.springframework.http.ResponseCookie.from("accessToken", tokenResponse.accessToken)
             .httpOnly(true)
-            .secure(true) // Should be configurable via properties for production
+            .secure(cookieSecure)
             .path("/")
-            .maxAge(3600)
-            .sameSite("Lax") // Set Lax for standard cross-site security
+            .maxAge(cookieMaxAge)
+            .sameSite("Lax")
             .build()
 
         return ResponseEntity.ok()

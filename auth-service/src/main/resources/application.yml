@@ -21,3 +21,11 @@ auth:
   encryption-key: ${AUTH_ENCRYPTION_KEY}
 gateway:
   shared-secret: ${GATEWAY_SHARED_SECRET}
+
+jwt:
+  validity-in-ms: 3600000 # 1 hour
+  key-id: onmeet-auth-key
+  cookie:
+    secure: ${COOKIE_SECURE:true}
+    max-age: 3600
+
