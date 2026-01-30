@@ -4,6 +4,7 @@ import com.onmeet.auth.entity.ServerKey
 import com.onmeet.auth.repository.ServerKeyRepository
 import jakarta.annotation.PostConstruct
 import org.springframework.stereotype.Component
+import org.springframework.beans.factory.annotation.Value
 import java.security.KeyFactory
 import java.security.KeyPair
 import java.security.KeyPairGenerator
@@ -15,7 +16,8 @@ import java.util.Base64
 
 @Component
 class KeyManager(
-    private val serverKeyRepository: ServerKeyRepository
+    private val serverKeyRepository: ServerKeyRepository,
+    @Value("\${auth.encryption-key}") private val encryptionKey: String
 ) {
 
     private lateinit var rsaKeyPair: KeyPair
@@ -30,7 +32,14 @@ class KeyManager(
     fun init() {
         val existingKey = serverKeyRepository.findTopByOrderByCreatedAtDesc()
         if (existingKey.isPresent) {
-            rsaKeyPair = loadKey(existingKey.get())
+            try {
+                rsaKeyPair = loadKey(existingKey.get())
+            } catch (e: Exception) {
+                // If decryption fails (e.g., key rotation or old plaintext key), generate a new one
+                // In production, you would want a migration strategy.
+                println("Failed to load existing key (possibly encryption mismatch). Generating new key. Error: ${e.message}")
+                rsaKeyPair = generateAndSaveKey()
+            }
         } else {
             rsaKeyPair = generateAndSaveKey()
         }
@@ -42,10 +51,11 @@ class KeyManager(
         val keyPair = keyPairGenerator.generateKeyPair()
 
         val pubKeyString = Base64.getEncoder().encodeToString(keyPair.public.encoded)
-        val privKeyString = Base64.getEncoder().encodeToString(keyPair.private.encoded)
+        val privKeyBytes = keyPair.private.encoded
+        
+        val encryptedPrivKey = encrypt(privKeyBytes)
 
-        // WARNING: Storing Private Key in DB as plaintext is insecure! Use KMS/Secrets Manager in production.
-        serverKeyRepository.save(ServerKey(publicKey = pubKeyString, privateKey = privKeyString))
+        serverKeyRepository.save(ServerKey(publicKey = pubKeyString, privateKey = encryptedPrivKey))
         
         return keyPair
     }
@@ -57,10 +67,52 @@ class KeyManager(
         val pubKeySpec = X509EncodedKeySpec(pubKeyBytes)
         val publicKey = keyFactory.generatePublic(pubKeySpec)
 
-        val privKeyBytes = Base64.getDecoder().decode(serverKey.privateKey)
-        val privKeySpec = PKCS8EncodedKeySpec(privKeyBytes)
+        val decryptedPrivKeyBytes = decrypt(serverKey.privateKey)
+        val privKeySpec = PKCS8EncodedKeySpec(decryptedPrivKeyBytes)
         val privateKey = keyFactory.generatePrivate(privKeySpec)
 
         return KeyPair(publicKey, privateKey)
+    }
+
+    private fun getSecretKey(): javax.crypto.SecretKey {
+        val keyBytes = encryptionKey.toByteArray(java.nio.charset.StandardCharsets.UTF_8)
+        val digest = java.security.MessageDigest.getInstance("SHA-256")
+        val hashedBytes = digest.digest(keyBytes)
+        return javax.crypto.spec.SecretKeySpec(hashedBytes, "AES")
+    }
+
+    private fun encrypt(data: ByteArray): String {
+        val cipher = javax.crypto.Cipher.getInstance("AES/GCM/NoPadding")
+        val secretKey = getSecretKey()
+        val iv = ByteArray(12) // GCM standard IV length
+        java.security.SecureRandom().nextBytes(iv)
+        val spec = javax.crypto.spec.GCMParameterSpec(128, iv)
+        cipher.init(javax.crypto.Cipher.ENCRYPT_MODE, secretKey, spec)
+
+        val cipherText = cipher.doFinal(data)
+        val combined = ByteArray(iv.size + cipherText.size)
+        System.arraycopy(iv, 0, combined, 0, iv.size)
+        System.arraycopy(cipherText, 0, combined, iv.size, cipherText.size)
+
+        return Base64.getEncoder().encodeToString(combined)
+    }
+
+    private fun decrypt(encryptedString: String): ByteArray {
+        val decoded = Base64.getDecoder().decode(encryptedString)
+        
+        // Extract IV
+        val iv = ByteArray(12)
+        System.arraycopy(decoded, 0, iv, 0, 12)
+        
+        // Extract Ciphertext
+        val cipherText = ByteArray(decoded.size - 12)
+        System.arraycopy(decoded, 12, cipherText, 0, cipherText.size)
+
+        val cipher = javax.crypto.Cipher.getInstance("AES/GCM/NoPadding")
+        val secretKey = getSecretKey()
+        val spec = javax.crypto.spec.GCMParameterSpec(128, iv)
+        cipher.init(javax.crypto.Cipher.DECRYPT_MODE, secretKey, spec)
+
+        return cipher.doFinal(cipherText)
     }
 }
