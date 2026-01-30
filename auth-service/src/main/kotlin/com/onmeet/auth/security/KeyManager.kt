@@ -76,12 +76,14 @@ class KeyManager(
     }
 
     private fun getSecretKey(): javax.crypto.SecretKey {
-        val keyBytes = encryptionKey.toByteArray(java.nio.charset.StandardCharsets.UTF_8)
-        // For stronger key derivation, consider using a PBKDF (e.g., PBKDF2WithHmacSHA256)
-        // with a salt and iteration count instead of a direct SHA-256 hash.
-        val digest = java.security.MessageDigest.getInstance("SHA-256")
-        val hashedBytes = digest.digest(keyBytes)
-        return javax.crypto.spec.SecretKeySpec(hashedBytes, "AES")
+        // Use PBKDF2 for stronger key derivation
+        val factory = javax.crypto.SecretKeyFactory.getInstance("PBKDF2WithHmacSHA256")
+        // Using a fixed salt here for deterministic key generation from the simpler encryptionKey.
+        // In a real production system, use a random salt stored with the encrypted data.
+        val salt = byteArrayOf(0x4F, 0x6E, 0x4D, 0x65, 0x65, 0x74, 0x53, 0x61, 0x6C, 0x74) // "OnMeetSalt"
+        val spec = javax.crypto.spec.PBEKeySpec(encryptionKey.toCharArray(), salt, 65536, 256)
+        val tmp = factory.generateSecret(spec)
+        return javax.crypto.spec.SecretKeySpec(tmp.encoded, "AES")
     }
 
     private fun encrypt(data: ByteArray): String {
