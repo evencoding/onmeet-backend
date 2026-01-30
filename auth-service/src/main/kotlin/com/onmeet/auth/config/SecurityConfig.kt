@@ -12,6 +12,8 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder
 import org.springframework.security.crypto.password.PasswordEncoder
 import org.springframework.security.web.SecurityFilterChain
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter
+import org.springframework.security.web.csrf.CookieCsrfTokenRepository
+import org.springframework.security.web.csrf.CsrfTokenRequestAttributeHandler
 
 @Configuration
 @EnableWebSecurity
@@ -34,11 +36,9 @@ class SecurityConfig(
     fun filterChain(http: HttpSecurity): SecurityFilterChain {
         http
             .csrf { csrf ->
-                // If using session cookies (like accessToken), CSRF protection is still relevant.
-                // Re-enable CSRF or ensure auth-service is only accessed via gateway that handles CSRF.
-                // For now, disabling it as per original intent, but with a note.
-                csrf.disable()
-            } // Using JWT, CSRF disabled (stateless)
+                csrf.csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())
+                csrf.csrfTokenRequestHandler(CsrfTokenRequestAttributeHandler())
+            }
             .sessionManagement { it.sessionCreationPolicy(SessionCreationPolicy.STATELESS) }
             .authorizeHttpRequests { auth ->
                 auth.requestMatchers("/auth/signup", "/auth/login", "/auth/actuator/**", "/.well-known/jwks.json").permitAll()

@@ -1,38 +1,32 @@
 package com.onmeet.chat.config;
 
-import com.onmeet.common.security.GatewayPreAuthFilter;
 import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Import;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
-import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
-import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.SecurityFilterChain;
-import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
+import org.springframework.security.web.csrf.CsrfTokenRequestAttributeHandler;
 
 @Configuration
 @EnableWebSecurity
-@Import(GatewayPreAuthFilter.class)
 public class SecurityConfig {
-
-    private final GatewayPreAuthFilter gatewayPreAuthFilter;
-
-    public SecurityConfig(GatewayPreAuthFilter gatewayPreAuthFilter) {
-        this.gatewayPreAuthFilter = gatewayPreAuthFilter;
-    }
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
-            .csrf(AbstractHttpConfigurer::disable)
-            .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+            .csrf(csrf -> csrf
+                .csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())
+                .csrfTokenRequestHandler(new CsrfTokenRequestAttributeHandler())
+            )
             .authorizeHttpRequests(auth -> auth
-                .requestMatchers("/chat/actuator/**", "/error").permitAll()
+                .requestMatchers("/chat/actuator/**").permitAll()
                 .anyRequest().authenticated()
             )
-            .addFilterBefore(gatewayPreAuthFilter, UsernamePasswordAuthenticationFilter.class);
-        
+            .oauth2ResourceServer(oauth2 -> oauth2
+                .jwt(jwt -> {})
+            );
+
         return http.build();
     }
 }
