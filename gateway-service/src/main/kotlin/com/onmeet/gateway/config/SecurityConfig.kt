@@ -30,7 +30,7 @@ class SecurityConfig(
                     .csrfTokenRequestHandler(ServerCsrfTokenRequestAttributeHandler())
             }
             .authorizeExchange { exchanges ->
-                exchanges.pathMatchers("/auth/**", "/.well-known/**").permitAll()
+                exchanges.pathMatchers("/auth/**", "/.well-known/**", "/actuator/**").permitAll()
                 exchanges.pathMatchers("/ai/actuator/**", "/chat/actuator/**", "/questions/actuator/**", "/videos/actuator/**", "/notifications/actuator/**", "/images/actuator/**", "/users/actuator/**", "/error").permitAll()
                 exchanges.anyExchange().authenticated()
             }
