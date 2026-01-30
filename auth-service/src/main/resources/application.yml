@@ -1,18 +1,43 @@
 server:
-  port: 8081
+  port: ${SERVER_PORT:8081}
+
 spring:
   application:
     name: auth-service
   datasource:
-    url: ${SPRING_DATASOURCE_URL:jdbc:mysql://localhost:3307/auth_db?useSSL=false&allowPublicKeyRetrieval=true&characterEncoding=UTF-8&serverTimezone=UTC}
-    username: ${SPRING_DATASOURCE_USERNAME:root}
-    password: ${SPRING_DATASOURCE_PASSWORD:root}
+    url: ${SPRING_DATASOURCE_URL}
+    username: ${SPRING_DATASOURCE_USERNAME}
+    password: ${SPRING_DATASOURCE_PASSWORD}
     driver-class-name: com.mysql.cj.jdbc.Driver
   jpa:
     hibernate:
       ddl-auto: update
+    show-sql: true
     properties:
       hibernate:
-        format_sql: true
-        show_sql: true
-        dialect: org.hibernate.dialect.MySQLDialect
+        format-sql: true
+
+auth:
+  encryption-key: ${AUTH_ENCRYPTION_KEY}
+gateway:
+  shared-secret: ${GATEWAY_SHARED_SECRET}
+
+jwt:
+  validity-in-ms: 3600000 # 1 hour
+  key-id: onmeet-auth-key
+  cookie:
+    secure: ${COOKIE_SECURE:true}
+    max-age: 3600
+
+management:
+  endpoints:
+    web:
+      base-path: /auth/actuator
+      exposure:
+        include: health
+
+logging:
+  level:
+    root: INFO
+    com.onmeet: INFO
+

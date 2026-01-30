@@ -10,16 +10,16 @@ import org.springframework.web.bind.annotation.RestController
 
 @RestController
 class JwkController(
-    private val keyManager: KeyManager
+    private val keyManager: KeyManager,
+    @org.springframework.beans.factory.annotation.Value("\${jwt.key-id}") private val keyId: String
 ) {
 
     @GetMapping("/.well-known/jwks.json")
     fun keys(): Map<String, Any> {
         val rsaKey = RSAKey.Builder(keyManager.publicKey)
-            .privateKey(keyManager.privateKey)
             .keyUse(KeyUse.SIGNATURE)
             .algorithm(JWSAlgorithm.RS256)
-            .keyID("onmeet-auth-key") // Ideally, handle rotation with IDs
+            .keyID(keyId)
             .build()
 
         return JWKSet(rsaKey.toPublicJWK()).toJSONObject()

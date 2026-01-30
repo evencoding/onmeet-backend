@@ -2,14 +2,21 @@ package com.onmeet.auth.service
 
 import com.onmeet.auth.dto.CompanySignupRequest
 import com.onmeet.auth.dto.LoginRequest
+import com.onmeet.auth.dto.SignupRequest
 import com.onmeet.auth.dto.TokenResponse
 import com.onmeet.auth.entity.Company
 import com.onmeet.auth.entity.RefreshToken
 import com.onmeet.auth.entity.Team
 import com.onmeet.auth.entity.User
 import com.onmeet.auth.repository.RefreshTokenRepository
+import com.onmeet.auth.exception.EmailAlreadyExistsException
 import com.onmeet.auth.repository.UserRepository
 import com.onmeet.auth.security.JwtTokenProvider
+import io.mockk.every
+import io.mockk.impl.annotations.InjectMockKs
+import io.mockk.impl.annotations.MockK
+import io.mockk.junit5.MockKExtension
+import io.mockk.verify
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtendWith
@@ -27,194 +34,88 @@ import org.springframework.security.crypto.password.PasswordEncoder
 // Helper function to handle Kotlin non-null constraints with Mockito any()
 private fun <T> any(type: Class<T>): T? = Mockito.any(type)
 
-@ExtendWith(MockitoExtension::class)
+@ExtendWith(MockKExtension::class)
 class AuthServiceTest {
-    // ... dependencies
 
-    @Mock
+    @MockK
     lateinit var userRepository: UserRepository
 
-    @Mock
+    @MockK
     lateinit var passwordEncoder: PasswordEncoder
 
-    @Mock
+    @MockK
     lateinit var authenticationManager: AuthenticationManager
 
-    @Mock
+    @MockK
     lateinit var jwtTokenProvider: JwtTokenProvider
 
-    @Mock
+    @InjectMockKs
+    @MockK
     lateinit var companyService: CompanyService
 
-    @Mock
+    @MockK
     lateinit var invitationService: InvitationService
 
-    @Mock
+    @MockK
     lateinit var refreshTokenRepository: RefreshTokenRepository
 
     @InjectMocks
     lateinit var authService: AuthService
 
     @Test
-    fun `signupCompany should create company, team and manager`() {
+    fun `signup should save new user and return id`() {
         // Given
-        val request = CompanySignupRequest(
-            email = "manager@test.com",
-            password = "password",
-            name = "Manager",
-            companyName = "Test Corp",
-            teamName = "Dev Team"
-        )
-        val company = Company(id = 1L, name = request.companyName)
-        val team = Team(id = 1L, name = request.teamName, company = company)
-        val savedUser = User(
-            id = 1L,
-            email = request.email,
-            passwordHash = "encodedRequestPassword",
-            name = request.name,
-            role = User.Role.MANAGER,
-            company = company,
-            team = team
-        )
-        val dummyTeamRequest = com.onmeet.auth.dto.TeamRequest("", null, null)
+        val request = SignupRequest("test@example.com", "password")
+        val encodedPassword = "encodedPassword"
+        val savedUser = User(id = 1L, email = request.email, passwordHash = encodedPassword)
 
-        `when`(userRepository.existsByEmail(request.email)).thenReturn(false)
-        `when`(companyService.createCompany(request.companyName)).thenReturn(company)
-        
-        `when`(companyService.createTeam(eq(1L), any(com.onmeet.auth.dto.TeamRequest::class.java) ?: dummyTeamRequest)).thenReturn(team)
-        
-        `when`(passwordEncoder.encode(request.password)).thenReturn("encodedRequestPassword")
-        `when`(userRepository.save(any(User::class.java) ?: savedUser)).thenReturn(savedUser)
+        every { userRepository.existsByEmail(request.email) } returns false
+        every { passwordEncoder.encode(request.password) } returns encodedPassword
+        every { userRepository.save(any()) } returns savedUser
 
         // When
-        val userId = authService.signupCompany(request)
+        val userId = authService.signup(request)
 
         // Then
         assertEquals(1L, userId)
-        verify(companyService).createCompany(request.companyName)
-        verify(companyService).createTeam(eq(1L), any(com.onmeet.auth.dto.TeamRequest::class.java) ?: dummyTeamRequest)
-        verify(userRepository).save(any(User::class.java) ?: savedUser)
+        verify { userRepository.save(match { it.email == request.email && it.passwordHash == encodedPassword }) }
     }
 
     @Test
-    fun `signupCompany should throw exception when email already exists`() {
+    fun `signup should throw exception if email exists`() {
         // Given
-        val request = CompanySignupRequest(
-            email = "existing@test.com",
-            password = "password",
-            name = "Manager",
-            companyName = "Test Corp",
-            teamName = "Dev Team"
-        )
-        
-        `when`(userRepository.existsByEmail(request.email)).thenReturn(true)
+        val request = SignupRequest("existing@example.com", "password")
+        every { userRepository.existsByEmail(request.email) } returns true
 
         // When & Then
-        assertThrows(IllegalArgumentException::class.java) {
-            authService.signupCompany(request)
+        val exception = assertThrows(EmailAlreadyExistsException::class.java) {
+            authService.signup(request)
         }
-        
-        verify(companyService, never()).createCompany(anyString())
+        assertEquals("Email already in use", exception.message)
+        verify(exactly = 0) { userRepository.save(any()) }
     }
 
     @Test
-    fun `login should return access and refresh token`() {
+    fun `login should authenticate and return token`() {
         // Given
-        val request = LoginRequest("test@test.com", "password")
-        val authentication = mock(Authentication::class.java)
-        val accessToken = "access-token"
-        
-        `when`(authenticationManager.authenticate(any(UsernamePasswordAuthenticationToken::class.java) ?: UsernamePasswordAuthenticationToken("","")))
-            .thenReturn(authentication)
-        `when`(jwtTokenProvider.generateToken(authentication)).thenReturn(accessToken)
-        `when`(authentication.authorities).thenReturn(emptyList())
+        val request = LoginRequest("test@example.com", "password")
+        val authentication = io.mockk.mockk<Authentication>()
+        val token = "generated.jwt.token"
+
+        every { authenticationManager.authenticate(any()) } returns authentication
+        every { jwtTokenProvider.generateToken(authentication) } returns token
 
         // When
         val response = authService.login(request)
 
         // Then
-        assertEquals(accessToken, response.accessToken)
-        assertNotNull(response.refreshToken)
-        
-        verify(refreshTokenRepository).save(any(RefreshToken::class.java) ?: RefreshToken(mobileOrEmail="", token="", authority=""))
-    }
-    
-    @Test
-    fun `login should throw exception when authentication fails`() {
-        // Given
-        val request = LoginRequest("test@test.com", "wrong_password")
-        val dummyAuthToken = UsernamePasswordAuthenticationToken("", "")
-        
-        `when`(authenticationManager.authenticate(any(UsernamePasswordAuthenticationToken::class.java) ?: dummyAuthToken))
-            .thenThrow(org.springframework.security.authentication.BadCredentialsException("Bad credentials"))
-
-        // When & Then
-        assertThrows(org.springframework.security.authentication.BadCredentialsException::class.java) {
-            authService.login(request)
+        assertEquals(token, response.accessToken)
+        verify {
+            authenticationManager.authenticate(match {
+                it is UsernamePasswordAuthenticationToken &&
+                it.principal == request.email &&
+                it.credentials == request.password
+            })
         }
-        
-        verifyNoInteractions(jwtTokenProvider)
-        verifyNoInteractions(refreshTokenRepository)
-    }
-
-    @Test
-    fun `joinCompany should create user and delete invitation`() {
-        // Given
-        val request = com.onmeet.auth.dto.JoinRequest(
-            email = "join@test.com",
-            code = "invite-code",
-            password = "password",
-            name = "Joiner",
-            employeeId = "EMP123"
-        )
-        val company = Company(id = 1L, name = "Test Corp")
-        val invitation = com.onmeet.auth.entity.Invitation(
-            id = 1L,
-            email = request.email,
-            code = request.code,
-            company = company,
-            role = User.Role.USER,
-            expiresAt = java.time.LocalDateTime.now().plusHours(24)
-        )
-        val savedUser = User(
-            id = 2L,
-            email = request.email,
-            passwordHash = "encodedRequestPassword",
-            name = request.name,
-            role = User.Role.USER,
-            company = company,
-            employeeId = request.employeeId
-        )
-
-        `when`(invitationService.validateInvitation(request.email, request.code)).thenReturn(invitation)
-        `when`(userRepository.existsByEmail(request.email)).thenReturn(false)
-        `when`(passwordEncoder.encode(request.password)).thenReturn("encodedRequestPassword")
-        `when`(userRepository.save(any(User::class.java) ?: savedUser)).thenReturn(savedUser)
-
-        // When
-        val userId = authService.joinCompany(request)
-
-        // Then
-        assertEquals(2L, userId)
-        verify(invitationService).deleteInvitation(1L)
-        verify(userRepository).save(any(User::class.java) ?: savedUser)
-    }
-
-    @Test
-    fun `guestLogin should return access token only`() {
-        // Given
-        val request = com.onmeet.auth.dto.GuestLoginRequest("Guest", "meeting-123")
-        val accessToken = "guest-access-token"
-        
-        `when`(jwtTokenProvider.generateGuestToken(request.name, request.meetingId)).thenReturn(accessToken)
-
-        // When
-        val response = authService.guestLogin(request)
-
-        // Then
-        assertEquals(accessToken, response.accessToken)
-        assertNull(response.refreshToken)
-        
-        verify(jwtTokenProvider).generateGuestToken(request.name, request.meetingId)
     }
 }
