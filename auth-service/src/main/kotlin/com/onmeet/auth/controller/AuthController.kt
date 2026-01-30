@@ -68,7 +68,7 @@ class AuthController(
 
     @PostMapping("/logout")
     fun logout(principal: java.security.Principal?): ResponseEntity<Void> {
-        principal?.let { authService.logout(it.name) }
+        principal?.name?.toLongOrNull()?.let { authService.logout(it) }
 
         val accessCookie = ResponseCookie.from(JwtConstants.ACCESS_TOKEN_COOKIE_NAME, "")
             .httpOnly(true)
