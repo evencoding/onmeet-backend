@@ -15,6 +15,10 @@ import org.springframework.security.crypto.password.PasswordEncoder
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 
+import com.onmeet.auth.repository.RefreshTokenRepository
+import com.onmeet.auth.entity.RefreshToken
+import java.util.UUID
+
 @Service
 class AuthService(
     private val userRepository: UserRepository,
@@ -23,7 +27,7 @@ class AuthService(
     private val jwtTokenProvider: JwtTokenProvider,
     private val companyService: CompanyService,
     private val invitationService: InvitationService,
-    private val refreshTokenRepository: com.onmeet.auth.repository.RefreshTokenRepository
+    private val refreshTokenRepository: RefreshTokenRepository
 ) {
 
     @Transactional
@@ -34,7 +38,8 @@ class AuthService(
 
         val user = User(
             email = request.email,
-            passwordHash = passwordEncoder.encode(request.password)
+            passwordHash = passwordEncoder.encode(request.password),
+            name = request.name
         )
         return userRepository.save(user).id ?: throw IllegalStateException("User ID not generated after save")
     }
@@ -61,7 +66,7 @@ class AuthService(
             name = request.name,
             role = User.Role.MANAGER,
             company = company,
-            team = defaultTeam, // Assign to default team
+            team = defaultTeam,
             status = User.UserStatus.ACTIVE
         )
 
@@ -83,14 +88,14 @@ class AuthService(
             passwordHash = passwordEncoder.encode(request.password),
             name = request.name,
             employeeId = request.employeeId,
-            role = invitation.role, // Inherit role from invitation (usually USER)
+            role = invitation.role,
             company = invitation.company,
             status = User.UserStatus.ACTIVE
         )
 
         val savedUser = userRepository.save(user)
 
-        // 3. Mark Invitation as used (or delete)
+        // 3. Mark Invitation as used
         invitationService.deleteInvitation(invitation.id!!)
 
         return savedUser.id!!
@@ -102,13 +107,54 @@ class AuthService(
             UsernamePasswordAuthenticationToken(request.email, request.password)
         )
 
-        // Generate Token
-        val token = jwtTokenProvider.generateToken(authentication)
-        return TokenResponse(token)
+        // Generate Access Token
+        val accessToken = jwtTokenProvider.generateToken(authentication)
+
+        // Generate Refresh Token
+        val refreshTokenStr = UUID.randomUUID().toString()
+        val authorities = authentication.authorities.joinToString(",") { it.authority }
+
+        // Save to Redis
+        val refreshToken = RefreshToken(
+            mobileOrEmail = request.email,
+            token = refreshTokenStr,
+            authority = authorities
+        )
+        refreshTokenRepository.save(refreshToken)
+
+        return TokenResponse(accessToken, refreshTokenStr)
     }
 
     fun guestLogin(request: com.onmeet.auth.dto.GuestLoginRequest): TokenResponse {
         val accessToken = jwtTokenProvider.generateGuestToken(request.name, request.meetingId)
         return TokenResponse(accessToken, null)
+    }
+
+    @Transactional
+    fun refresh(token: String): TokenResponse {
+        val refreshTokenEntity = refreshTokenRepository.findByToken(token)
+            ?: throw IllegalArgumentException("Invalid refresh token")
+
+        val user = userRepository.findByEmail(refreshTokenEntity.mobileOrEmail)
+            .orElseThrow { IllegalArgumentException("User not found") }
+
+        val authentication = UsernamePasswordAuthenticationToken(user, null, user.authorities)
+        val newAccessToken = jwtTokenProvider.generateToken(authentication)
+
+        // Rotate Refresh Token
+        val newRefreshTokenStr = UUID.randomUUID().toString()
+        val newRefreshTokenEntity = RefreshToken(
+            mobileOrEmail = user.email,
+            token = newRefreshTokenStr,
+            authority = refreshTokenEntity.authority
+        )
+        refreshTokenRepository.save(newRefreshTokenEntity)
+
+        return TokenResponse(newAccessToken, newRefreshTokenStr)
+    }
+
+    @Transactional
+    fun logout(email: String) {
+        refreshTokenRepository.deleteById(email)
     }
 }

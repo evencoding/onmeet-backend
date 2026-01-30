@@ -20,19 +20,12 @@ import io.mockk.verify
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtendWith
-import org.mockito.InjectMocks
-import org.mockito.Mock
-import org.mockito.Mockito
-import org.mockito.Mockito.*
-import java.util.*
-import org.mockito.junit.jupiter.MockitoExtension
 import org.springframework.security.authentication.AuthenticationManager
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken
 import org.springframework.security.core.Authentication
 import org.springframework.security.crypto.password.PasswordEncoder
 
-// Helper function to handle Kotlin non-null constraints with Mockito any()
-private fun <T> any(type: Class<T>): T? = Mockito.any(type)
+// Removed unused Mockito helper
 
 @ExtendWith(MockKExtension::class)
 class AuthServiceTest {
@@ -59,15 +52,15 @@ class AuthServiceTest {
     @MockK
     lateinit var refreshTokenRepository: RefreshTokenRepository
 
-    @InjectMocks
+    @InjectMockKs
     lateinit var authService: AuthService
 
     @Test
     fun `signup should save new user and return id`() {
         // Given
-        val request = SignupRequest("test@example.com", "password")
+        val request = SignupRequest("test@example.com", "password", "Test User")
         val encodedPassword = "encodedPassword"
-        val savedUser = User(id = 1L, email = request.email, passwordHash = encodedPassword)
+        val savedUser = User(id = 1L, email = request.email, passwordHash = encodedPassword, name = request.name)
 
         every { userRepository.existsByEmail(request.email) } returns false
         every { passwordEncoder.encode(request.password) } returns encodedPassword
@@ -78,13 +71,13 @@ class AuthServiceTest {
 
         // Then
         assertEquals(1L, userId)
-        verify { userRepository.save(match { it.email == request.email && it.passwordHash == encodedPassword }) }
+        verify { userRepository.save(match { it.email == request.email && it.passwordHash == encodedPassword && it.name == request.name }) }
     }
 
     @Test
     fun `signup should throw exception if email exists`() {
         // Given
-        val request = SignupRequest("existing@example.com", "password")
+        val request = SignupRequest("existing@example.com", "password", "Test User")
         every { userRepository.existsByEmail(request.email) } returns true
 
         // When & Then

@@ -1,11 +1,6 @@
 package com.onmeet.auth.controller
 
-import com.onmeet.auth.dto.CompanySignupRequest
-import com.onmeet.auth.dto.JoinRequest
-import com.onmeet.auth.dto.LoginRequest
-import com.onmeet.auth.dto.LoginResponse
-import com.onmeet.auth.dto.SignupRequest
-import com.onmeet.auth.dto.TokenResponse
+import com.onmeet.auth.dto.*
 import com.onmeet.auth.service.AuthService
 import com.onmeet.common.security.JwtConstants
 import org.springframework.beans.factory.annotation.Value
@@ -28,11 +23,23 @@ class AuthController(
         return ResponseEntity.ok(userId)
     }
 
+    @PostMapping("/signup/company")
+    fun signupCompany(@RequestBody request: CompanySignupRequest): ResponseEntity<Long> {
+        val userId = authService.signupCompany(request)
+        return ResponseEntity.ok(userId)
+    }
+
+    @PostMapping("/join")
+    fun joinCompany(@RequestBody request: JoinRequest): ResponseEntity<Long> {
+        val userId = authService.joinCompany(request)
+        return ResponseEntity.ok(userId)
+    }
+
     @PostMapping("/login")
     fun login(@RequestBody request: LoginRequest): ResponseEntity<LoginResponse> {
         val tokenResponse = authService.login(request)
 
-        val cookie = ResponseCookie.from(JwtConstants.ACCESS_TOKEN_COOKIE_NAME, tokenResponse.accessToken)
+        val accessCookie = ResponseCookie.from(JwtConstants.ACCESS_TOKEN_COOKIE_NAME, tokenResponse.accessToken)
             .httpOnly(true)
             .secure(cookieSecure)
             .path("/")
@@ -40,37 +47,81 @@ class AuthController(
             .sameSite("Lax")
             .build()
 
-        return ResponseEntity.ok()
-            .header(HttpHeaders.SET_COOKIE, cookie.toString())
-            .body(LoginResponse())
-    }
-
-    @PostMapping("/guest")
-    fun guestLogin(@RequestBody request: com.onmeet.auth.dto.GuestLoginRequest): ResponseEntity<TokenResponse> {
-        val tokenResponse = authService.guestLogin(request)
-
-        val cookie = ResponseCookie.from("accessToken", tokenResponse.accessToken)
+        val refreshCookie = ResponseCookie.from("refreshToken", tokenResponse.refreshToken ?: "")
             .httpOnly(true)
-            .secure(false) // TODO: Set to true in production
+            .secure(cookieSecure)
             .path("/")
-            .maxAge(14400) // 4 hours
+            .maxAge(60 * 60 * 24 * 7) // 7 days
+            .sameSite("Lax")
             .build()
 
         return ResponseEntity.ok()
-            .header(HttpHeaders.SET_COOKIE, cookie.toString())
+            .header(HttpHeaders.SET_COOKIE, accessCookie.toString())
+            .header(HttpHeaders.SET_COOKIE, refreshCookie.toString())
+            .body(LoginResponse("Login successful"))
+    }
+
+    @PostMapping("/guest/login")
+    fun guestLogin(@RequestBody request: com.onmeet.auth.dto.GuestLoginRequest): ResponseEntity<TokenResponse> {
+        return ResponseEntity.ok(authService.guestLogin(request))
+    }
+
+    @PostMapping("/logout")
+    fun logout(principal: java.security.Principal): ResponseEntity<Void> {
+        authService.logout(principal.name)
+
+        val accessCookie = ResponseCookie.from(JwtConstants.ACCESS_TOKEN_COOKIE_NAME, "")
+            .httpOnly(true)
+            .secure(cookieSecure)
+            .path("/")
+            .maxAge(0)
+            .sameSite("Lax")
+            .build()
+
+        val refreshCookie = ResponseCookie.from("refreshToken", "")
+            .httpOnly(true)
+            .secure(cookieSecure)
+            .path("/")
+            .maxAge(0)
+            .sameSite("Lax")
+            .build()
+
+        return ResponseEntity.ok()
+            .header(HttpHeaders.SET_COOKIE, accessCookie.toString())
+            .header(HttpHeaders.SET_COOKIE, refreshCookie.toString())
+            .build()
+    }
+
+    @PostMapping("/refresh")
+    fun refresh(
+        @CookieValue(name = "refreshToken", required = false) cookieRefreshToken: String?,
+        @RequestBody(required = false) request: RefreshRequest?
+    ): ResponseEntity<TokenResponse> {
+        val refreshToken = cookieRefreshToken ?: request?.refreshToken
+            ?: throw IllegalArgumentException("Refresh token is missing")
+
+        val tokenResponse = authService.refresh(refreshToken)
+
+        val accessCookie = ResponseCookie.from(JwtConstants.ACCESS_TOKEN_COOKIE_NAME, tokenResponse.accessToken)
+            .httpOnly(true)
+            .secure(cookieSecure)
+            .path("/")
+            .maxAge(cookieMaxAge)
+            .sameSite("Lax")
+            .build()
+
+        val refreshCookie = ResponseCookie.from("refreshToken", tokenResponse.refreshToken ?: "")
+            .httpOnly(true)
+            .secure(cookieSecure)
+            .path("/")
+            .maxAge(60 * 60 * 24 * 7) // 7 days
+            .sameSite("Lax")
+            .build()
+
+        return ResponseEntity.ok()
+            .header(HttpHeaders.SET_COOKIE, accessCookie.toString())
+            .header(HttpHeaders.SET_COOKIE, refreshCookie.toString())
             .body(tokenResponse)
-    }
-
-    @PostMapping("/signup/company")
-    fun signupCompany(@RequestBody request: CompanySignupRequest): ResponseEntity<Long> {
-        val userId = authService.signupCompany(request)
-        return ResponseEntity.ok(userId)
-    }
-
-    @PostMapping("/signup/join")
-    fun joinCompany(@RequestBody request: JoinRequest): ResponseEntity<Long> {
-        val userId = authService.joinCompany(request)
-        return ResponseEntity.ok(userId)
     }
 
     @GetMapping("/me")

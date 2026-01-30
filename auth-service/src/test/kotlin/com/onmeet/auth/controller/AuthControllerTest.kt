@@ -46,7 +46,7 @@ class AuthControllerTest(@Autowired val mockMvc: MockMvc) {
 
     @Test
     fun `signup should return user id`() {
-        val request = SignupRequest("test@example.com", "password")
+        val request = SignupRequest("test@example.com", "password", "Test User")
         every { authService.signup(any()) } returns 1L
 
         mockMvc.perform(post("/auth/signup")
