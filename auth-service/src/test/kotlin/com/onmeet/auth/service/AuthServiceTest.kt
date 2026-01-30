@@ -63,7 +63,7 @@ class AuthServiceTest {
         every { userRepository.existsByEmail(request.email) } returns true
 
         // When & Then
-        val exception = assertThrows(IllegalArgumentException::class.java) {
+        val exception = assertThrows(EmailAlreadyExistsException::class.java) {
             authService.signup(request)
         }
         assertEquals("Email already in use", exception.message)

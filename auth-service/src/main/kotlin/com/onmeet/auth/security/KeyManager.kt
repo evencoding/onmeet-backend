@@ -75,29 +75,31 @@ class KeyManager(
         return KeyPair(publicKey, privateKey)
     }
 
-    private fun getSecretKey(): javax.crypto.SecretKey {
-        // Use PBKDF2 for stronger key derivation
+    private fun getSecretKey(salt: ByteArray): javax.crypto.SecretKey {
         val factory = javax.crypto.SecretKeyFactory.getInstance("PBKDF2WithHmacSHA256")
-        // Using a fixed salt here for deterministic key generation from the simpler encryptionKey.
-        // In a real production system, use a random salt stored with the encrypted data.
-        val salt = byteArrayOf(0x4F, 0x6E, 0x4D, 0x65, 0x65, 0x74, 0x53, 0x61, 0x6C, 0x74) // "OnMeetSalt"
+        // Use provided random salt
         val spec = javax.crypto.spec.PBEKeySpec(encryptionKey.toCharArray(), salt, 65536, 256)
         val tmp = factory.generateSecret(spec)
         return javax.crypto.spec.SecretKeySpec(tmp.encoded, "AES")
     }
 
     private fun encrypt(data: ByteArray): String {
+        val salt = ByteArray(16)
+        java.security.SecureRandom().nextBytes(salt)
+        
         val cipher = javax.crypto.Cipher.getInstance("AES/GCM/NoPadding")
-        val secretKey = getSecretKey()
+        val secretKey = getSecretKey(salt)
         val iv = ByteArray(12) // GCM standard IV length
         java.security.SecureRandom().nextBytes(iv)
         val spec = javax.crypto.spec.GCMParameterSpec(128, iv)
         cipher.init(javax.crypto.Cipher.ENCRYPT_MODE, secretKey, spec)
 
         val cipherText = cipher.doFinal(data)
-        val combined = ByteArray(iv.size + cipherText.size)
-        System.arraycopy(iv, 0, combined, 0, iv.size)
-        System.arraycopy(cipherText, 0, combined, iv.size, cipherText.size)
+        // Format: Salt (16) + IV (12) + CipherText
+        val combined = ByteArray(salt.size + iv.size + cipherText.size)
+        System.arraycopy(salt, 0, combined, 0, salt.size)
+        System.arraycopy(iv, 0, combined, salt.size, iv.size)
+        System.arraycopy(cipherText, 0, combined, salt.size + iv.size, cipherText.size)
 
         return Base64.getEncoder().encodeToString(combined)
     }
@@ -105,16 +107,20 @@ class KeyManager(
     private fun decrypt(encryptedString: String): ByteArray {
         val decoded = Base64.getDecoder().decode(encryptedString)
         
+        // Extract Salt
+        val salt = ByteArray(16)
+        System.arraycopy(decoded, 0, salt, 0, 16)
+
         // Extract IV
         val iv = ByteArray(12)
-        System.arraycopy(decoded, 0, iv, 0, 12)
+        System.arraycopy(decoded, 16, iv, 0, 12)
         
         // Extract Ciphertext
-        val cipherText = ByteArray(decoded.size - 12)
-        System.arraycopy(decoded, 12, cipherText, 0, cipherText.size)
+        val cipherText = ByteArray(decoded.size - 28) // 16 + 12
+        System.arraycopy(decoded, 28, cipherText, 0, cipherText.size)
 
         val cipher = javax.crypto.Cipher.getInstance("AES/GCM/NoPadding")
-        val secretKey = getSecretKey()
+        val secretKey = getSecretKey(salt)
         val spec = javax.crypto.spec.GCMParameterSpec(128, iv)
         cipher.init(javax.crypto.Cipher.DECRYPT_MODE, secretKey, spec)
 

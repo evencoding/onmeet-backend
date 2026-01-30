@@ -33,7 +33,7 @@ class AuthService(
             email = request.email,
             passwordHash = passwordEncoder.encode(request.password)
         )
-        return userRepository.save(user).id!!
+        return userRepository.save(user).id ?: throw IllegalStateException("User ID not generated after save")
     }
 
     @Transactional

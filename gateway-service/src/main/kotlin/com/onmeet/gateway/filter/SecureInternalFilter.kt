@@ -21,19 +21,12 @@ class SecureInternalFilter(
 
     override fun filter(exchange: ServerWebExchange, chain: GatewayFilterChain): Mono<Void> {
         logger.debug("Applying X-Gateway-Secret to request: ${exchange.request.uri.path}")
-        
-        // Use ServerHttpRequestDecorator to ensure mutable headers
-        // The reviewer suggested mutate(), but it causes ReadOnlyHttpHeaders modification error in this context
-        val decoratedRequest = object : ServerHttpRequestDecorator(exchange.request) {
-            override fun getHeaders(): HttpHeaders {
-                val headers = HttpHeaders()
-                headers.putAll(super.getHeaders())
-                headers.set("X-Gateway-Secret", gatewaySharedSecret)
-                return headers
-            }
-        }
 
-        return chain.filter(exchange.mutate().request(decoratedRequest).build())
+        val request = exchange.request.mutate()
+            .header("X-Gateway-Secret", gatewaySharedSecret)
+            .build()
+
+        return chain.filter(exchange.mutate().request(request).build())
     }
 
     override fun getOrder(): Int {
