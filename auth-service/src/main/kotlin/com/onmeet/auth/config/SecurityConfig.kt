@@ -16,7 +16,8 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 @Configuration
 @EnableWebSecurity
 class SecurityConfig(
-    private val authGatewayPreAuthFilter: AuthGatewayPreAuthFilter
+    private val authGatewayPreAuthFilter: AuthGatewayPreAuthFilter,
+    private val jwtAuthenticationFilter: com.onmeet.auth.security.JwtAuthenticationFilter
 ) {
 
     @Bean
@@ -44,6 +45,7 @@ class SecurityConfig(
                 auth.anyRequest().authenticated()
             }
             .addFilterBefore(authGatewayPreAuthFilter, UsernamePasswordAuthenticationFilter::class.java)
+            .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter::class.java)
         
         return http.build()
     }
