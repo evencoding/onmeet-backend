@@ -26,9 +26,15 @@ public class GatewayPreAuthFilter extends OncePerRequestFilter {
     }
 
     @Override
+    protected boolean shouldNotFilter(HttpServletRequest request) throws ServletException {
+        String path = request.getRequestURI();
+        return path.contains("/actuator/");
+    }
+
+    @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
             throws ServletException, IOException {
-        
+
         // Validate Gateway Shared Secret to prevent spoofing
         String gatewaySecret = request.getHeader("X-Gateway-Secret");
         if (gatewaySecret == null || !java.security.MessageDigest.isEqual(gatewaySecret.getBytes(java.nio.charset.StandardCharsets.UTF_8), gatewaySharedSecret.getBytes(java.nio.charset.StandardCharsets.UTF_8))) {
