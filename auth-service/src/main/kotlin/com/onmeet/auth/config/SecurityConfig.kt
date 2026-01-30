@@ -33,7 +33,7 @@ class SecurityConfig {
             .csrf { it.disable() } // Using JWT, CSRF disabled (stateless)
             .sessionManagement { it.sessionCreationPolicy(SessionCreationPolicy.STATELESS) }
             .authorizeHttpRequests {
-                it.requestMatchers("/auth/login", "/auth/signup", "/auth/check", "/.well-known/**").permitAll()
+                it.requestMatchers("/auth/login", "/auth/signup", "/auth/check", "/.well-known/**", "/auth/actuator/**", "/error").permitAll()
                 it.anyRequest().authenticated()
             }
             .addFilterBefore(gatewayPreAuthFilter, org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter::class.java)

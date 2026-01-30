@@ -5,7 +5,6 @@ import org.springframework.cloud.gateway.filter.GatewayFilter
 import org.springframework.cloud.gateway.filter.factory.AbstractGatewayFilterFactory
 import org.springframework.http.HttpHeaders
 import org.springframework.http.HttpStatus
-import org.springframework.http.server.reactive.ServerHttpRequestDecorator
 import org.springframework.stereotype.Component
 
 @Component
@@ -24,7 +23,8 @@ class TokenRelayFilter : AbstractGatewayFilterFactory<TokenRelayFilter.Config>(C
             logger.debug("Processing request path: $path")
 
             if (path.startsWith("/auth/") ||
-                path.startsWith("/.well-known")) {
+                path.startsWith("/.well-known") ||
+                path.contains("/actuator/")) {
                return@GatewayFilter chain.filter(exchange)
             }
 
@@ -42,15 +42,10 @@ class TokenRelayFilter : AbstractGatewayFilterFactory<TokenRelayFilter.Config>(C
 
             val token = accessTokenCookie.value
 
-            // Fix for ReadOnlyHttpHeaders: Use ServerHttpRequestDecorator
-            val modifiedRequest = object : ServerHttpRequestDecorator(request) {
-                override fun getHeaders(): HttpHeaders {
-                    val headers = HttpHeaders()
-                    headers.putAll(super.getHeaders())
-                    headers.add("Authorization", "Bearer $token")
-                    return headers
-                }
-            }
+            // Use mutate() for cleaner header modification
+            val modifiedRequest = exchange.request.mutate()
+                .header("Authorization", "Bearer $token")
+                .build()
 
             return@GatewayFilter chain.filter(exchange.mutate().request(modifiedRequest).build())
         }

@@ -22,6 +22,8 @@ services:
       - SPRING_DATASOURCE_USERNAME=${DB_USERNAME}
       - SPRING_DATASOURCE_PASSWORD=${DB_ROOT_PASSWORD}
       - GATEWAY_SHARED_SECRET=${GATEWAY_SHARED_SECRET}
+      - SERVER_PORT=8084
+      - MANAGEMENT_ENDPOINTS_WEB_BASE_PATH=/chat/actuator
     depends_on:
       - mysql-chat
     networks:

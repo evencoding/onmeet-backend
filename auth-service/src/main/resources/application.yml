@@ -15,7 +15,7 @@ spring:
     show-sql: true
     properties:
       hibernate:
-        format_sql: true
+        format-sql: true
 
 auth:
   encryption-key: ${AUTH_ENCRYPTION_KEY}
@@ -28,4 +28,16 @@ jwt:
   cookie:
     secure: ${COOKIE_SECURE:true}
     max-age: 3600
+
+management:
+  endpoints:
+    web:
+      base-path: /auth/actuator
+      exposure:
+        include: health
+
+logging:
+  level:
+    root: INFO
+    com.onmeet: INFO
 
