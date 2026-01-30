@@ -88,8 +88,8 @@ class JwtTokenProvider(
             authClaim.split(",").map { org.springframework.security.core.authority.SimpleGrantedAuthority(it) }
         }
         
-        val principal = org.springframework.security.core.userdetails.User(username, "", authorities)
+        val userId = claims.getClaim("userId")?.toString() ?: username
         
-        return org.springframework.security.authentication.UsernamePasswordAuthenticationToken(principal, token, authorities)
+        return org.springframework.security.authentication.UsernamePasswordAuthenticationToken(userId, token, authorities)
     }
 }

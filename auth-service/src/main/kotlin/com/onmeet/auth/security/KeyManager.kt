@@ -3,6 +3,7 @@ package com.onmeet.auth.security
 import com.onmeet.auth.entity.ServerKey
 import com.onmeet.auth.repository.ServerKeyRepository
 import jakarta.annotation.PostConstruct
+import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Component
 import org.springframework.beans.factory.annotation.Value
 import java.security.KeyFactory
@@ -19,7 +20,7 @@ class KeyManager(
     private val serverKeyRepository: ServerKeyRepository,
     @Value("\${auth.encryption-key}") private val encryptionKey: String
 ) {
-
+    private val log = LoggerFactory.getLogger(KeyManager::class.java)
     private lateinit var rsaKeyPair: KeyPair
 
     val publicKey: RSAPublicKey
@@ -37,7 +38,7 @@ class KeyManager(
             } catch (e: Exception) {
                 // If decryption fails (e.g., key rotation or old plaintext key), generate a new one
                 // In production, you would want a migration strategy.
-                println("Failed to load existing key (possibly encryption mismatch). Generating new key. Error: ${e.message}")
+                log.warn("Failed to load existing key (possibly encryption mismatch). Generating new key.", e)
                 rsaKeyPair = generateAndSaveKey()
             }
         } else {
@@ -55,7 +56,7 @@ class KeyManager(
         
         val encryptedPrivKey = encrypt(privKeyBytes)
 
-        serverKeyRepository.save(ServerKey(publicKey = pubKeyString, privateKey = encryptedPrivKey))
+        serverKeyRepository.save(ServerKey(publicKey = pubKeyString, encryptedPrivateKey = encryptedPrivKey))
         
         return keyPair
     }
@@ -67,7 +68,7 @@ class KeyManager(
         val pubKeySpec = X509EncodedKeySpec(pubKeyBytes)
         val publicKey = keyFactory.generatePublic(pubKeySpec)
 
-        val decryptedPrivKeyBytes = decrypt(serverKey.privateKey)
+        val decryptedPrivKeyBytes = decrypt(serverKey.encryptedPrivateKey)
         val privKeySpec = PKCS8EncodedKeySpec(decryptedPrivKeyBytes)
         val privateKey = keyFactory.generatePrivate(privKeySpec)
 
