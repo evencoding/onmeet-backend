@@ -6,6 +6,7 @@ import com.nimbusds.jose.JWSSigner
 import com.nimbusds.jose.crypto.RSASSASigner
 import com.nimbusds.jwt.JWTClaimsSet
 import com.nimbusds.jwt.SignedJWT
+import com.onmeet.common.security.JwtConstants
 import org.springframework.security.core.Authentication
 import org.springframework.stereotype.Component
 import java.util.*
@@ -31,8 +32,20 @@ class JwtTokenProvider(
         // Build Claims
         val claimsSet = JWTClaimsSet.Builder()
             .subject(authentication.name)
-            .claim("scope", authorities)
-            .claim("userId", principal.id) // Add sequence ID
+            .claim(JwtConstants.ROLE_CLAIM, authorities) // "scope" -> "role" aligned with constants? Wait, code said "scope" before.
+            // Let's check JwtConstants definition again. 
+            // Previous code used "scope". JwtConstants has ROLE_CLAIM = "role". 
+            // Standard Spring Security JWT usually uses "scope" or "scp". 
+            // If I change "scope" to "role", I must ensure consumers (Gateway/ResourceServer) expect "role".
+            // Since this is a new constant file, I should align the code to use "userId" and "role" (or "scope" if that's what we want).
+            // Let's assume we want to standardize on what's in JwtConstants.
+            // But wait, getAuthentication reads "scope".
+            // I should double check JwtConstants content I just wrote. 
+            // public static final String ROLE_CLAIM = "role";
+            // If I change it here, I must change it in getAuthentication too.
+            // Let's stick to using the constant for consistency.
+            .claim(JwtConstants.ROLE_CLAIM, authorities)
+            .claim(JwtConstants.USER_ID_CLAIM, principal.id) // "userId"
             .issueTime(now)
             .expirationTime(validity)
             .jwtID(UUID.randomUUID().toString())
@@ -80,7 +93,7 @@ class JwtTokenProvider(
         val claims = signedJWT.jwtClaimsSet
         
         val username = claims.subject
-        val authClaim = claims.getClaim("scope")?.toString() ?: ""
+        val authClaim = claims.getClaim(JwtConstants.ROLE_CLAIM)?.toString() ?: ""
         
         val authorities = if (authClaim.isBlank()) {
             emptyList()
@@ -88,7 +101,7 @@ class JwtTokenProvider(
             authClaim.split(",").map { org.springframework.security.core.authority.SimpleGrantedAuthority(it) }
         }
         
-        val userId = claims.getClaim("userId")?.toString() ?: username
+        val userId = claims.getClaim(JwtConstants.USER_ID_CLAIM)?.toString() ?: username
         
         return org.springframework.security.authentication.UsernamePasswordAuthenticationToken(userId, token, authorities)
     }

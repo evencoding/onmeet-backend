@@ -5,6 +5,7 @@ import com.onmeet.auth.dto.LoginResponse
 import com.onmeet.auth.dto.SignupRequest
 import com.onmeet.auth.dto.TokenResponse
 import com.onmeet.auth.service.AuthService
+import com.onmeet.common.security.JwtConstants
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.http.HttpHeaders
 import org.springframework.http.ResponseCookie
@@ -29,7 +30,7 @@ class AuthController(
     fun login(@RequestBody request: LoginRequest): ResponseEntity<LoginResponse> {
         val tokenResponse = authService.login(request)
         
-        val cookie = ResponseCookie.from("accessToken", tokenResponse.accessToken)
+        val cookie = ResponseCookie.from(JwtConstants.ACCESS_TOKEN_COOKIE_NAME, tokenResponse.accessToken)
             .httpOnly(true)
             .secure(cookieSecure)
             .path("/")

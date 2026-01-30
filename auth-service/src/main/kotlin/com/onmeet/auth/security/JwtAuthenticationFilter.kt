@@ -1,5 +1,6 @@
 package com.onmeet.auth.security
 
+import com.onmeet.common.security.JwtConstants
 import jakarta.servlet.FilterChain
 import jakarta.servlet.http.HttpServletRequest
 import jakarta.servlet.http.HttpServletResponse
@@ -28,10 +29,10 @@ class JwtAuthenticationFilter(
     }
 
     private fun resolveToken(request: HttpServletRequest): String? {
-        val bearerToken = request.getHeader("Authorization")
-        if (bearerToken != null && bearerToken.startsWith("Bearer ")) {
-            return bearerToken.substring(7)
+        val bearerToken = request.getHeader(JwtConstants.AUTHORIZATION_HEADER)
+        if (bearerToken != null && bearerToken.startsWith(JwtConstants.BEARER_PREFIX)) {
+            return bearerToken.substring(JwtConstants.BEARER_PREFIX.length)
         }
-        return request.cookies?.find { it.name == "accessToken" }?.value
+        return request.cookies?.find { it.name == JwtConstants.ACCESS_TOKEN_COOKIE_NAME }?.value
     }
 }
