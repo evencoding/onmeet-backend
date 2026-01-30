@@ -10,8 +10,7 @@ import org.springframework.web.bind.annotation.RestController;
 public class AiController {
 
     @GetMapping("/me")
-    public String me(@AuthenticationPrincipal Object principal) {
-        String userId = principal != null ? principal.toString() : "Unknown";
-        return "Hello from AI Service! User ID: " + userId;
+    public String me(@AuthenticationPrincipal String userId) {
+        return "Hello from AI Service! User ID: " + (userId != null ? userId : "Unknown");
     }
 }
