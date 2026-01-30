@@ -23,18 +23,20 @@ services:
       - SPRING_DATASOURCE_PASSWORD=${DB_ROOT_PASSWORD}
       - GATEWAY_SHARED_SECRET=${GATEWAY_SHARED_SECRET}
       - AUTH_ENCRYPTION_KEY=${AUTH_ENCRYPTION_KEY}
+      - SPRING_DATA_REDIS_HOST=redis-auth
       - SERVER_PORT=8081
+      - MANAGEMENT_ENDPOINTS_WEB_BASE_PATH=/auth/actuator
+    depends_on:
+      - mysql-auth
+      - redis-auth
+    networks:
+      - msa-network
+
   redis-auth:
     image: redis:alpine
     container_name: redis-auth
     ports:
       - "6379:6379"
-    networks:
-      - msa-network
-
-    depends_on:
-      - mysql-auth
-      - redis-auth
     networks:
       - msa-network
 
