@@ -22,17 +22,11 @@ class SecureInternalFilter(
     override fun filter(exchange: ServerWebExchange, chain: GatewayFilterChain): Mono<Void> {
         logger.debug("Applying X-Gateway-Secret to request: ${exchange.request.uri.path}")
         
-        val decoratedRequest = object : ServerHttpRequestDecorator(exchange.request) {
-            override fun getHeaders(): HttpHeaders {
-                val headers = HttpHeaders()
-                headers.putAll(super.getHeaders())
-                headers.set("X-Gateway-Secret", gatewaySharedSecret)
-                // Return mutable headers to allow downstream filters to modify them if needed
-                return headers
-            }
-        }
-
-        return chain.filter(exchange.mutate().request(decoratedRequest).build())
+        val request = exchange.request.mutate()
+            .header("X-Gateway-Secret", gatewaySharedSecret)
+            .build()
+        
+        return chain.filter(exchange.mutate().request(request).build())
     }
 
     override fun getOrder(): Int {
