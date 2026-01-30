@@ -47,7 +47,7 @@ class AuthService(
     @Transactional
     fun signupCompany(request: CompanySignupRequest): Long {
         if (userRepository.existsByEmail(request.email)) {
-            throw IllegalArgumentException("Email already in use")
+            throw EmailAlreadyExistsException("Email already in use")
         }
 
         // 1. Create Company
