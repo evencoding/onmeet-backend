@@ -23,7 +23,7 @@ class AuthService(
     @Transactional
     fun signup(request: SignupRequest): Long {
         if (userRepository.existsByEmail(request.email)) {
-            throw IllegalArgumentException("Email already in use")
+            throw org.springframework.web.server.ResponseStatusException(org.springframework.http.HttpStatus.CONFLICT, "Email already in use")
         }
 
         val user = User(
