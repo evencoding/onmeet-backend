@@ -67,8 +67,8 @@ class AuthController(
     }
 
     @PostMapping("/logout")
-    fun logout(principal: java.security.Principal): ResponseEntity<Void> {
-        authService.logout(principal.name)
+    fun logout(principal: java.security.Principal?): ResponseEntity<Void> {
+        principal?.let { authService.logout(it.name) }
 
         val accessCookie = ResponseCookie.from(JwtConstants.ACCESS_TOKEN_COOKIE_NAME, "")
             .httpOnly(true)
@@ -127,5 +127,10 @@ class AuthController(
     @GetMapping("/me")
     fun me(principal: java.security.Principal): ResponseEntity<String> {
         return ResponseEntity.ok("Hello, ${principal.name}! You are authenticated.")
+    }
+
+    @GetMapping("/check")
+    fun check(): ResponseEntity<Void> {
+        return ResponseEntity.ok().build()
     }
 }
