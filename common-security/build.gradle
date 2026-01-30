@@ -22,3 +22,11 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-web'
     compileOnly 'jakarta.servlet:jakarta.servlet-api'
 }
+
+bootJar {
+    enabled = false
+}
+
+jar {
+    enabled = true
+}
