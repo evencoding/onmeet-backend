@@ -30,7 +30,7 @@ public class GatewayPreAuthFilter extends OncePerRequestFilter {
         
         // Validate Gateway Shared Secret to prevent spoofing
         String gatewaySecret = request.getHeader("X-Gateway-Secret");
-        if (gatewaySecret == null || !gatewaySecret.equals(gatewaySharedSecret)) {
+        if (gatewaySecret == null || !java.security.MessageDigest.isEqual(gatewaySecret.getBytes(java.nio.charset.StandardCharsets.UTF_8), gatewaySharedSecret.getBytes(java.nio.charset.StandardCharsets.UTF_8))) {
             response.sendError(HttpServletResponse.SC_FORBIDDEN, "Invalid Gateway Secret");
             return;
         }
