@@ -1,7 +1,8 @@
 package com.onmeet.chat.config;
 
-import com.onmeet.chat.security.GatewayPreAuthFilter;
+import com.onmeet.common.security.GatewayPreAuthFilter;
 import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Import;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
@@ -12,6 +13,7 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 
 @Configuration
 @EnableWebSecurity
+@Import(GatewayPreAuthFilter.class)
 public class SecurityConfig {
 
     private final GatewayPreAuthFilter gatewayPreAuthFilter;
