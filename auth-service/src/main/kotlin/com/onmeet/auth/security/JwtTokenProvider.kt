@@ -6,21 +6,25 @@ import com.nimbusds.jose.JWSSigner
 import com.nimbusds.jose.crypto.RSASSASigner
 import com.nimbusds.jwt.JWTClaimsSet
 import com.nimbusds.jwt.SignedJWT
+import com.onmeet.common.security.JwtConstants
 import org.springframework.security.core.Authentication
-import org.springframework.security.core.GrantedAuthority
 import org.springframework.stereotype.Component
 import java.util.*
 
 @Component
 class JwtTokenProvider(
-    private val keyManager: KeyManager
+    private val keyManager: KeyManager,
+    @org.springframework.beans.factory.annotation.Value("\${jwt.validity-in-ms}") private val validityInMs: Long,
+    @org.springframework.beans.factory.annotation.Value("\${jwt.key-id}") private val keyId: String
 ) {
+
+    private val logger = org.slf4j.LoggerFactory.getLogger(JwtTokenProvider::class.java)
 
     fun generateToken(authentication: Authentication): String {
         val authorities = authentication.authorities.joinToString(",") { it.authority }
 
         val now = Date()
-        val validity = Date(now.time + 3600000) // 1 hour
+        val validity = Date(now.time + validityInMs)
 
         // Type cast principal to our User entity to get the ID
         val principal = authentication.principal as com.onmeet.auth.entity.User
@@ -28,8 +32,8 @@ class JwtTokenProvider(
         // Build Claims
         val claimsSet = JWTClaimsSet.Builder()
             .subject(authentication.name)
-            .claim("auth", authorities)
-            .claim("userId", principal.id) // Add sequence ID
+            .claim(JwtConstants.ROLE_CLAIM, authorities)
+            .claim(JwtConstants.USER_ID_CLAIM, principal.id)
             .issueTime(now)
             .expirationTime(validity)
             .jwtID(UUID.randomUUID().toString())
@@ -58,7 +62,7 @@ class JwtTokenProvider(
     private fun signJwt(claimsSet: JWTClaimsSet): String {
         // Create Signed JWT
         val header = JWSHeader.Builder(JWSAlgorithm.RS256)
-            .keyID("onmeet-auth-key")
+            .keyID(keyId)
             .build()
         val signedJWT = SignedJWT(header, claimsSet)
 
@@ -72,21 +76,23 @@ class JwtTokenProvider(
     fun validateToken(token: String): Boolean {
         try {
             val signedJWT = SignedJWT.parse(token)
-            val verifier = com.nimbusds.jose.crypto.RSASSAVerifier(keyManager.publicKey as java.security.interfaces.RSAPublicKey)
+            val verifier = com.nimbusds.jose.crypto.RSASSAVerifier(keyManager.publicKey)
             
             if (!signedJWT.verify(verifier)) {
+                logger.warn("Token verification failed for token: ${token.take(10)}...")
                 return false
             }
             
             val claims = signedJWT.jwtClaimsSet
             val now = Date()
             if (claims.expirationTime.before(now)) {
+                logger.debug("Token expired")
                 return false
             }
             
             return true
         } catch (e: Exception) {
-            e.printStackTrace()
+            logger.error("Error validating token: ${e.message}", e)
             return false
         }
     }
@@ -96,7 +102,7 @@ class JwtTokenProvider(
         val claims = signedJWT.jwtClaimsSet
         
         val username = claims.subject
-        val authClaim = claims.getClaim("auth") as String
+        val authClaim = claims.getClaim(JwtConstants.ROLE_CLAIM)?.toString() ?: ""
         
         val authorities = if (authClaim.isBlank()) {
             emptyList()
@@ -104,8 +110,8 @@ class JwtTokenProvider(
             authClaim.split(",").map { org.springframework.security.core.authority.SimpleGrantedAuthority(it) }
         }
         
-        val principal = org.springframework.security.core.userdetails.User(username, "", authorities)
+        val userId = claims.getClaim(JwtConstants.USER_ID_CLAIM)?.toString() ?: username
         
-        return org.springframework.security.authentication.UsernamePasswordAuthenticationToken(principal, token, authorities)
+        return org.springframework.security.authentication.UsernamePasswordAuthenticationToken(userId, token, authorities)
     }
 }

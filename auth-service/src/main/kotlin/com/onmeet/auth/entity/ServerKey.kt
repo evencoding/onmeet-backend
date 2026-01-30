@@ -14,7 +14,7 @@ class ServerKey(
     val publicKey: String,
 
     @Column(nullable = false, length = 4096)
-    val privateKey: String,
+    val encryptedPrivateKey: String,
 
     @Column(nullable = false)
     val createdAt: LocalDateTime = LocalDateTime.now()

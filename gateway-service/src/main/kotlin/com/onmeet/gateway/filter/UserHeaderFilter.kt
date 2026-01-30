@@ -2,7 +2,6 @@ package com.onmeet.gateway.filter
 
 import org.springframework.cloud.gateway.filter.GatewayFilter
 import org.springframework.cloud.gateway.filter.factory.AbstractGatewayFilterFactory
-import org.springframework.http.server.reactive.ServerHttpRequestDecorator
 import org.springframework.security.core.context.ReactiveSecurityContextHolder
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken
 import org.springframework.stereotype.Component
@@ -20,15 +19,8 @@ class UserHeaderFilter : AbstractGatewayFilterFactory<UserHeaderFilter.Config>(C
                 .map { it as JwtAuthenticationToken }
                 .map { jwt ->
                     val userId = jwt.token.claims["userId"]?.toString() ?: jwt.token.subject
-                    // Removed sensitive log
                     
-                    // PREVENT SPOOFING: Explicitly remove any user-supplied headers first
                     val request = exchange.request.mutate()
-                        .headers { httpHeaders ->
-                            httpHeaders.remove("X-User-Id")
-                            httpHeaders.remove("X-User-Email")
-                            httpHeaders.remove("X-User-Roles")
-                        }
                         .header("X-User-Id", userId)
                         .header("X-User-Email", jwt.token.subject) 
                         .header("X-User-Roles", jwt.authorities.joinToString(",") { it.authority })

@@ -2,7 +2,7 @@ package com.onmeet.gateway.security
 
 import org.springframework.http.HttpCookie
 import org.springframework.security.core.Authentication
-import org.springframework.security.oauth2.core.OAuth2AccessToken
+
 import org.springframework.security.oauth2.server.resource.authentication.BearerTokenAuthenticationToken
 import org.springframework.security.web.server.authentication.ServerAuthenticationConverter
 import org.springframework.stereotype.Component

@@ -22,7 +22,25 @@ bin/
 *.iws
 *.iml
 *.ipr
+*.yml
+out/
+!**/src/main/**/out/
+!**/src/test/**/out/
 
+### NetBeans ###
+/nbproject/private/
+/nbbuild/
+/dist/
+/nbdist/
+/.nb-gradle/
 
-# Allow application config files (using env vars)
-!**/src/main/resources/application.yml
+### VS Code ###
+.vscode/
+
+/src/main/resources/application-local.yml
+/src/main/resources/application-test.yml
+/src/main/resources/application.yml
+
+# Secrets
+.env
+auth-service/http/http-client.env.json

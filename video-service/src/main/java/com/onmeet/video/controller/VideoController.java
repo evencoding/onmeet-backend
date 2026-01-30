@@ -6,12 +6,11 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-@RequestMapping("/video")
+@RequestMapping("/videos")
 public class VideoController {
 
     @GetMapping("/me")
-    public String me(@AuthenticationPrincipal Object principal) {
-        String userId = principal != null ? principal.toString() : "Unknown";
-        return "Hello from Video Service! User ID: " + userId;
+    public String me(@AuthenticationPrincipal String userId) {
+        return "Hello from Video Service! User ID: " + (userId != null ? userId : "Unknown");
     }
 }

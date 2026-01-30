@@ -3,8 +3,10 @@ package com.onmeet.auth.service
 import com.onmeet.auth.dto.CompanySignupRequest
 import com.onmeet.auth.dto.JoinRequest
 import com.onmeet.auth.dto.LoginRequest
+import com.onmeet.auth.dto.SignupRequest
 import com.onmeet.auth.dto.TokenResponse
 import com.onmeet.auth.entity.User
+import com.onmeet.auth.exception.EmailAlreadyExistsException
 import com.onmeet.auth.repository.UserRepository
 import com.onmeet.auth.security.JwtTokenProvider
 import org.springframework.security.authentication.AuthenticationManager
@@ -24,7 +26,18 @@ class AuthService(
     private val refreshTokenRepository: com.onmeet.auth.repository.RefreshTokenRepository
 ) {
 
-    // ... (signup methods remain same)
+    @Transactional
+    fun signup(request: SignupRequest): Long {
+        if (userRepository.existsByEmail(request.email)) {
+            throw EmailAlreadyExistsException("Email already in use")
+        }
+
+        val user = User(
+            email = request.email,
+            passwordHash = passwordEncoder.encode(request.password)
+        )
+        return userRepository.save(user).id ?: throw IllegalStateException("User ID not generated after save")
+    }
 
     @Transactional
     fun signupCompany(request: CompanySignupRequest): Long {
@@ -37,7 +50,7 @@ class AuthService(
 
         // 2. Create Initial Team (from request)
         val defaultTeam = companyService.createTeam(
-            company.id!!, 
+            company.id!!,
             com.onmeet.auth.dto.TeamRequest(request.teamName, "Initial team", "#FFFFFF")
         )
 
@@ -51,7 +64,7 @@ class AuthService(
             team = defaultTeam, // Assign to default team
             status = User.UserStatus.ACTIVE
         )
-        
+
         return userRepository.save(user).id!!
     }
 
@@ -88,23 +101,10 @@ class AuthService(
         val authentication = authenticationManager.authenticate(
             UsernamePasswordAuthenticationToken(request.email, request.password)
         )
-        
-        // Generate Access Token
-        val accessToken = jwtTokenProvider.generateToken(authentication)
 
-        // Generate Refresh Token
-        val refreshTokenStr = java.util.UUID.randomUUID().toString()
-        val authorities = authentication.authorities.joinToString(",") { it.authority }
-
-        // Save to Redis
-        val refreshToken = com.onmeet.auth.entity.RefreshToken(
-            mobileOrEmail = request.email,
-            token = refreshTokenStr,
-            authority = authorities
-        )
-        refreshTokenRepository.save(refreshToken)
-        
-        return TokenResponse(accessToken, refreshTokenStr)
+        // Generate Token
+        val token = jwtTokenProvider.generateToken(authentication)
+        return TokenResponse(token)
     }
 
     fun guestLogin(request: com.onmeet.auth.dto.GuestLoginRequest): TokenResponse {

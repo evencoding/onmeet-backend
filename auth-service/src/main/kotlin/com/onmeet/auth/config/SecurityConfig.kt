@@ -1,5 +1,6 @@
 package com.onmeet.auth.config
 
+import com.onmeet.auth.security.AuthGatewayPreAuthFilter
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 import org.springframework.security.authentication.AuthenticationManager
@@ -10,12 +11,17 @@ import org.springframework.security.config.http.SessionCreationPolicy
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder
 import org.springframework.security.crypto.password.PasswordEncoder
 import org.springframework.security.web.SecurityFilterChain
-import com.onmeet.auth.security.JwtAuthenticationFilter
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter
+import org.springframework.security.web.csrf.CookieCsrfTokenRepository
+import org.springframework.security.web.csrf.CsrfTokenRequestAttributeHandler
 
 @Configuration
 @EnableWebSecurity
 @org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity
-class SecurityConfig {
+class SecurityConfig(
+    private val authGatewayPreAuthFilter: AuthGatewayPreAuthFilter,
+    private val jwtAuthenticationFilter: com.onmeet.auth.security.JwtAuthenticationFilter
+) {
 
     @Bean
     fun passwordEncoder(): PasswordEncoder {
@@ -28,16 +34,20 @@ class SecurityConfig {
     }
 
     @Bean
-    fun filterChain(http: HttpSecurity, jwtAuthenticationFilter: JwtAuthenticationFilter): SecurityFilterChain {
+    fun filterChain(http: HttpSecurity): SecurityFilterChain {
         http
-            .csrf { it.disable() } // Using JWT, CSRF disabled (stateless)
-            .sessionManagement { it.sessionCreationPolicy(SessionCreationPolicy.STATELESS) }
-            .authorizeHttpRequests {
-                it.requestMatchers("/auth/login", "/auth/signup/**", "/auth/guest", "/auth/check", "/.well-known/**").permitAll()
-                it.anyRequest().authenticated()
+            .csrf { csrf ->
+                csrf.csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())
+                csrf.csrfTokenRequestHandler(CsrfTokenRequestAttributeHandler())
             }
-            .addFilterBefore(jwtAuthenticationFilter, org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter::class.java)
-        
+            .sessionManagement { it.sessionCreationPolicy(SessionCreationPolicy.STATELESS) }
+            .authorizeHttpRequests { auth ->
+                auth.requestMatchers("/auth/signup", "/auth/login", "/auth/actuator/**", "/.well-known/jwks.json").permitAll()
+                auth.anyRequest().authenticated()
+            }
+            .addFilterBefore(authGatewayPreAuthFilter, UsernamePasswordAuthenticationFilter::class.java)
+            .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter::class.java)
+
         return http.build()
     }
 }

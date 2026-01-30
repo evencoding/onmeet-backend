@@ -2,6 +2,7 @@ plugins {
     id 'org.jetbrains.kotlin.jvm' version '1.9.25'
     id 'org.jetbrains.kotlin.plugin.spring' version '1.9.25'
     id 'org.jetbrains.kotlin.plugin.jpa' version '1.9.25'
+    id 'org.jetbrains.kotlin.kapt'
     id 'org.springframework.boot' version '3.3.5'
     id 'io.spring.dependency-management' version '1.1.6'
 }
@@ -19,11 +20,18 @@ repositories {
     mavenCentral()
 }
 
+ext {
+    set('mapstructVersion', "1.5.5.Final")
+}
+
 dependencies {
     // Kotlin
     implementation 'org.jetbrains.kotlin:kotlin-reflect'
     implementation 'org.jetbrains.kotlin:kotlin-stdlib'
     implementation 'com.fasterxml.jackson.module:jackson-module-kotlin'
+
+    // Modules
+    implementation project(':common-security')
 
     // Spring Boot
     implementation 'org.springframework.boot:spring-boot-starter-web'
@@ -31,7 +39,7 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
     implementation 'org.springframework.boot:spring-boot-starter-security'
     implementation 'org.springframework.boot:spring-boot-starter-actuator'
-    implementation 'org.springframework.boot:spring-boot-starter-data-redis'
+    kapt 'org.springframework.boot:spring-boot-configuration-processor'
 
     // JWT (OAuth2 Resource Server / JOSE)
     implementation 'org.springframework.security:spring-security-oauth2-resource-server'
@@ -48,6 +56,13 @@ dependencies {
     testImplementation 'org.springframework.boot:spring-boot-testcontainers'
     testImplementation 'org.testcontainers:junit-jupiter'
     testImplementation 'org.testcontainers:mysql'
+
+    // MockK
+    testImplementation 'com.ninja-squad:springmockk:4.0.2'
+    testImplementation 'io.mockk:mockk:1.13.10'
+
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+    implementation 'org.springframework.boot:spring-boot-starter-data-redis'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 }
 

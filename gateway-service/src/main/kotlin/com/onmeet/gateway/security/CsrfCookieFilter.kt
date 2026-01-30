@@ -10,11 +10,10 @@ import reactor.core.publisher.Mono
 @Component
 class CsrfCookieFilter : WebFilter {
     override fun filter(exchange: ServerWebExchange, chain: WebFilterChain): Mono<Void> {
-        val csrfTokenProxy = exchange.getAttribute<Mono<CsrfToken>>(CsrfToken::class.java.name) ?: Mono.empty()
+        val csrfToken: Mono<CsrfToken> = exchange.getAttribute<Mono<CsrfToken>>(CsrfToken::class.java.name) ?: Mono.empty()
         
-        return csrfTokenProxy.doOnSuccess { token -> 
-            exchange.response.headers.add("X-CSRF-TOKEN", token.token)
-        }
-            .then(chain.filter(exchange))
+        return csrfToken.doOnNext { _ ->
+            // Subscribing to CsrfToken ensures it's generated and added to the response cookie by the repository
+        }.then(chain.filter(exchange))
     }
 }
