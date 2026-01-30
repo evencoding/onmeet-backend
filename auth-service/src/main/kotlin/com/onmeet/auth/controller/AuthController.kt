@@ -15,8 +15,8 @@ import org.springframework.web.bind.annotation.*
 @RequestMapping("/auth")
 class AuthController(
     private val authService: AuthService,
-    @org.springframework.beans.factory.annotation.Value("\${jwt.cookie.secure}") private val cookieSecure: Boolean,
-    @org.springframework.beans.factory.annotation.Value("\${jwt.cookie.max-age}") private val cookieMaxAge: Long
+    @Value("\${jwt.cookie.secure}") private val cookieSecure: Boolean,
+    @Value("\${jwt.cookie.max-age}") private val cookieMaxAge: Long
 ) {
 
     @PostMapping("/signup")
@@ -26,10 +26,10 @@ class AuthController(
     }
 
     @PostMapping("/login")
-    fun login(@RequestBody request: LoginRequest): ResponseEntity<com.onmeet.auth.dto.LoginResponse> {
+    fun login(@RequestBody request: LoginRequest): ResponseEntity<LoginResponse> {
         val tokenResponse = authService.login(request)
         
-        val cookie = org.springframework.http.ResponseCookie.from("accessToken", tokenResponse.accessToken)
+        val cookie = ResponseCookie.from("accessToken", tokenResponse.accessToken)
             .httpOnly(true)
             .secure(cookieSecure)
             .path("/")
@@ -38,8 +38,8 @@ class AuthController(
             .build()
 
         return ResponseEntity.ok()
-            .header(org.springframework.http.HttpHeaders.SET_COOKIE, cookie.toString())
-            .body(com.onmeet.auth.dto.LoginResponse())
+            .header(HttpHeaders.SET_COOKIE, cookie.toString())
+            .body(LoginResponse(tokenResponse.accessToken))
     }
 
     @GetMapping("/me")
