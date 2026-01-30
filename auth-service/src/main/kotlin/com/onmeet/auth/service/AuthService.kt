@@ -24,8 +24,6 @@ class AuthService(
     @Transactional
     fun signup(request: SignupRequest): Long {
         if (userRepository.existsByEmail(request.email)) {
-             // Consider throwing a domain-specific exception (e.g., EmailAlreadyExistsException)
-             // and handling it with a global @ControllerAdvice for better separation of concerns.
             throw EmailAlreadyExistsException("Email already in use")
         }
 
