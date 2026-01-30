@@ -9,6 +9,7 @@ services:
     environment:
       # No DB Config needed
       - SERVER_PORT=8080
+      - GATEWAY_SHARED_SECRET=my-super-secure-gateway-secret
     networks:
       - msa-network
 

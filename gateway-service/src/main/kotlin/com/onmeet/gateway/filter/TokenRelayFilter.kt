@@ -23,10 +23,8 @@ class TokenRelayFilter : AbstractGatewayFilterFactory<TokenRelayFilter.Config>(C
             val path = request.uri.path
             logger.debug("Processing request path: $path")
 
-            if (path.contains("/auth/login") || 
-                path.contains("/auth/signup") || 
-                path.contains("/auth/check") ||
-                path.contains("/.well-known")) {
+            if (path.startsWith("/auth/") ||
+                path.startsWith("/.well-known")) {
                return@GatewayFilter chain.filter(exchange)
             }
 
@@ -37,7 +35,7 @@ class TokenRelayFilter : AbstractGatewayFilterFactory<TokenRelayFilter.Config>(C
             val accessTokenCookie = cookies.getFirst("accessToken")
             
             if (accessTokenCookie == null) {
-                logger.error("Missing accessToken cookie. Full cookie map keys: ${cookies.keys}")
+                logger.debug("Missing accessToken cookie. Full cookie map keys: ${cookies.keys}")
                 exchange.response.statusCode = HttpStatus.UNAUTHORIZED
                 return@GatewayFilter exchange.response.setComplete()
             }

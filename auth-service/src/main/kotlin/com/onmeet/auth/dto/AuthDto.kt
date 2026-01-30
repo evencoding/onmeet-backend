@@ -14,3 +14,8 @@ data class TokenResponse(
     val accessToken: String,
     val tokenType: String = "Bearer"
 )
+
+data class LoginResponse(
+    val message: String = "Login successful",
+    val tokenType: String = "Bearer"
+)
