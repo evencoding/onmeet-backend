@@ -21,10 +21,20 @@ import jakarta.servlet.http.HttpServletResponse;
 @Component
 public class GatewayPreAuthFilter extends OncePerRequestFilter {
 
+    @org.springframework.beans.factory.annotation.Value("${gateway.shared-secret}")
+    private String gatewaySharedSecret;
+
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
             throws ServletException, IOException {
         
+        // Validate Gateway Shared Secret to prevent spoofing
+        String gatewaySecret = request.getHeader("X-Gateway-Secret");
+        if (gatewaySecret == null || !gatewaySecret.equals(gatewaySharedSecret)) {
+            response.sendError(HttpServletResponse.SC_FORBIDDEN, "Invalid Gateway Secret");
+            return;
+        }
+
         String userId = request.getHeader("X-User-Id");
         String userRoles = request.getHeader("X-User-Roles");
 

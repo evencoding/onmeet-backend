@@ -2,13 +2,18 @@ package com.onmeet.gateway.filter
 
 import org.springframework.cloud.gateway.filter.GatewayFilter
 import org.springframework.cloud.gateway.filter.factory.AbstractGatewayFilterFactory
-import org.springframework.http.server.reactive.ServerHttpRequestDecorator
+
 import org.springframework.security.core.context.ReactiveSecurityContextHolder
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken
 import org.springframework.stereotype.Component
 
+import org.springframework.beans.factory.annotation.Value
+
 @Component
 class UserHeaderFilter : AbstractGatewayFilterFactory<UserHeaderFilter.Config>(Config::class.java) {
+
+    @Value("\${gateway.shared-secret}")
+    private lateinit var gatewaySharedSecret: String
 
     class Config
 
@@ -32,6 +37,7 @@ class UserHeaderFilter : AbstractGatewayFilterFactory<UserHeaderFilter.Config>(C
                         .header("X-User-Id", userId)
                         .header("X-User-Email", jwt.token.subject) 
                         .header("X-User-Roles", jwt.authorities.joinToString(",") { it.authority })
+                        .header("X-Gateway-Secret", gatewaySharedSecret)
                         .build()
                     exchange.mutate().request(request).build()
                 }

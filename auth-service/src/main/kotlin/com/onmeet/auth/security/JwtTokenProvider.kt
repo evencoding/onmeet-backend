@@ -7,7 +7,6 @@ import com.nimbusds.jose.crypto.RSASSASigner
 import com.nimbusds.jwt.JWTClaimsSet
 import com.nimbusds.jwt.SignedJWT
 import org.springframework.security.core.Authentication
-import org.springframework.security.core.GrantedAuthority
 import org.springframework.stereotype.Component
 import java.util.*
 
@@ -15,6 +14,9 @@ import java.util.*
 class JwtTokenProvider(
     private val keyManager: KeyManager
 ) {
+
+    private val logger = org.slf4j.LoggerFactory.getLogger(JwtTokenProvider::class.java)
+
 
     fun generateToken(authentication: Authentication): String {
         val authorities = authentication.authorities.joinToString(",") { it.authority }
@@ -28,7 +30,7 @@ class JwtTokenProvider(
         // Build Claims
         val claimsSet = JWTClaimsSet.Builder()
             .subject(authentication.name)
-            .claim("auth", authorities)
+            .claim("scope", authorities)
             .claim("userId", principal.id) // Add sequence ID
             .issueTime(now)
             .expirationTime(validity)
@@ -65,7 +67,7 @@ class JwtTokenProvider(
             
             return true
         } catch (e: Exception) {
-            e.printStackTrace()
+            logger.error("Error validating token", e)
             return false
         }
     }
@@ -75,7 +77,7 @@ class JwtTokenProvider(
         val claims = signedJWT.jwtClaimsSet
         
         val username = claims.subject
-        val authClaim = claims.getClaim("auth") as String
+        val authClaim = (claims.getClaim("scope")) as String
         
         val authorities = if (authClaim.isBlank()) {
             emptyList()

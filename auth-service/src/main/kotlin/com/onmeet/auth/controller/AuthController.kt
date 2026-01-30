@@ -20,21 +20,21 @@ class AuthController(
     }
 
     @PostMapping("/login")
-    fun login(@RequestBody request: LoginRequest): ResponseEntity<TokenResponse> {
+    fun login(@RequestBody request: LoginRequest): ResponseEntity<com.onmeet.auth.dto.LoginResponse> {
         val tokenResponse = authService.login(request)
         // Removed sensitive token logging
 
         val cookie = org.springframework.http.ResponseCookie.from("accessToken", tokenResponse.accessToken)
             .httpOnly(true)
-            .secure(false) // TODO: Set to true in production using properties
+            .secure(true) // Should be configurable via properties for production
             .path("/")
-            .maxAge(3600) // 1 hour
-            // .sameSite("Strict") // Recommended for production
+            .maxAge(3600)
+            .sameSite("Lax") // Set Lax for standard cross-site security
             .build()
 
         return ResponseEntity.ok()
             .header(org.springframework.http.HttpHeaders.SET_COOKIE, cookie.toString())
-            .body(tokenResponse)
+            .body(com.onmeet.auth.dto.LoginResponse())
     }
 
     @GetMapping("/me")

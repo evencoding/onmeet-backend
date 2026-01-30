@@ -16,7 +16,6 @@ class JwkController(
     @GetMapping("/.well-known/jwks.json")
     fun keys(): Map<String, Any> {
         val rsaKey = RSAKey.Builder(keyManager.publicKey)
-            .privateKey(keyManager.privateKey)
             .keyUse(KeyUse.SIGNATURE)
             .algorithm(JWSAlgorithm.RS256)
             .keyID("onmeet-auth-key") // Ideally, handle rotation with IDs

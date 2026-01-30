@@ -44,6 +44,7 @@ class KeyManager(
         val pubKeyString = Base64.getEncoder().encodeToString(keyPair.public.encoded)
         val privKeyString = Base64.getEncoder().encodeToString(keyPair.private.encoded)
 
+        // WARNING: Storing Private Key in DB as plaintext is insecure! Use KMS/Secrets Manager in production.
         serverKeyRepository.save(ServerKey(publicKey = pubKeyString, privateKey = privKeyString))
         
         return keyPair
