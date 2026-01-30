@@ -29,6 +29,9 @@ dependencies {
     implementation 'org.jetbrains.kotlin:kotlin-reflect'
     implementation 'org.jetbrains.kotlin:kotlin-stdlib'
     implementation 'com.fasterxml.jackson.module:jackson-module-kotlin'
+    
+    // Modules
+    implementation project(':common-security')
 
     // Spring Boot
     implementation 'org.springframework.boot:spring-boot-starter-web'

@@ -4,6 +4,7 @@ import com.onmeet.auth.dto.LoginRequest
 import com.onmeet.auth.dto.SignupRequest
 import com.onmeet.auth.dto.TokenResponse
 import com.onmeet.auth.entity.User
+import com.onmeet.auth.exception.EmailAlreadyExistsException
 import com.onmeet.auth.repository.UserRepository
 import com.onmeet.auth.security.JwtTokenProvider
 import io.mockk.every
