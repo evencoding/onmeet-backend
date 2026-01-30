@@ -4,6 +4,7 @@ import com.onmeet.auth.dto.LoginRequest
 import com.onmeet.auth.dto.SignupRequest
 import com.onmeet.auth.dto.TokenResponse
 import com.onmeet.auth.entity.User
+import com.onmeet.auth.exception.EmailAlreadyExistsException
 import com.onmeet.auth.repository.UserRepository
 import com.onmeet.auth.security.JwtTokenProvider
 import org.springframework.security.authentication.AuthenticationManager
@@ -25,7 +26,7 @@ class AuthService(
         if (userRepository.existsByEmail(request.email)) {
              // Consider throwing a domain-specific exception (e.g., EmailAlreadyExistsException)
              // and handling it with a global @ControllerAdvice for better separation of concerns.
-            throw org.springframework.web.server.ResponseStatusException(org.springframework.http.HttpStatus.CONFLICT, "Email already in use")
+            throw EmailAlreadyExistsException("Email already in use")
         }
 
         val user = User(
