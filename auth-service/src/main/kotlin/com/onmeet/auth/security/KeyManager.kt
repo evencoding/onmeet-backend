@@ -36,8 +36,8 @@ class KeyManager(
             try {
                 rsaKeyPair = loadKey(existingKey.get())
             } catch (e: Exception) {
-                // If decryption fails (e.g., key rotation or old plaintext key), generate a new one
-                // In production, you would want a migration strategy.
+                // If decryption fails, generating a new key will make previously encrypted private keys unrecoverable.
+                // Consider a more robust key rotation/migration strategy or fail startup if decryption fails.
                 log.warn("Failed to load existing key (possibly encryption mismatch). Generating new key.", e)
                 rsaKeyPair = generateAndSaveKey()
             }
@@ -77,6 +77,8 @@ class KeyManager(
 
     private fun getSecretKey(): javax.crypto.SecretKey {
         val keyBytes = encryptionKey.toByteArray(java.nio.charset.StandardCharsets.UTF_8)
+        // For stronger key derivation, consider using a PBKDF (e.g., PBKDF2WithHmacSHA256)
+        // with a salt and iteration count instead of a direct SHA-256 hash.
         val digest = java.security.MessageDigest.getInstance("SHA-256")
         val hashedBytes = digest.digest(keyBytes)
         return javax.crypto.spec.SecretKeySpec(hashedBytes, "AES")
