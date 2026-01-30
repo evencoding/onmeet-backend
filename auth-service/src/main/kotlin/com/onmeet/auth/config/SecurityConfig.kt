@@ -1,5 +1,6 @@
 package com.onmeet.auth.config
 
+import com.onmeet.auth.security.AuthGatewayPreAuthFilter
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 import org.springframework.security.authentication.AuthenticationManager
@@ -10,12 +11,13 @@ import org.springframework.security.config.http.SessionCreationPolicy
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder
 import org.springframework.security.crypto.password.PasswordEncoder
 import org.springframework.security.web.SecurityFilterChain
-import com.onmeet.auth.security.JwtAuthenticationFilter
-import com.onmeet.auth.security.GatewayPreAuthFilter
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter
 
 @Configuration
 @EnableWebSecurity
-class SecurityConfig {
+class SecurityConfig(
+    private val authGatewayPreAuthFilter: AuthGatewayPreAuthFilter
+) {
 
     @Bean
     fun passwordEncoder(): PasswordEncoder {
@@ -28,7 +30,7 @@ class SecurityConfig {
     }
 
     @Bean
-    fun filterChain(http: HttpSecurity, gatewayPreAuthFilter: GatewayPreAuthFilter): SecurityFilterChain {
+    fun filterChain(http: HttpSecurity): SecurityFilterChain {
         http
             .csrf { csrf ->
                 // If using session cookies (like accessToken), CSRF protection is still relevant.
@@ -37,11 +39,11 @@ class SecurityConfig {
                 csrf.disable()
             } // Using JWT, CSRF disabled (stateless)
             .sessionManagement { it.sessionCreationPolicy(SessionCreationPolicy.STATELESS) }
-            .authorizeHttpRequests {
-                it.requestMatchers("/auth/login", "/auth/signup", "/auth/check", "/.well-known/**", "/auth/actuator/**", "/error").permitAll()
-                it.anyRequest().authenticated()
+            .authorizeHttpRequests { auth ->
+                auth.requestMatchers("/auth/signup", "/auth/login", "/auth/actuator/**", "/.well-known/jwks.json").permitAll()
+                auth.anyRequest().authenticated()
             }
-            .addFilterBefore(gatewayPreAuthFilter, org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter::class.java)
+            .addFilterBefore(authGatewayPreAuthFilter, UsernamePasswordAuthenticationFilter::class.java)
         
         return http.build()
     }
