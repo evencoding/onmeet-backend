@@ -22,6 +22,7 @@ class KeyManager(
 ) {
     private val log = LoggerFactory.getLogger(KeyManager::class.java)
     private lateinit var rsaKeyPair: KeyPair
+    private val secureRandom = java.security.SecureRandom()
 
     val publicKey: RSAPublicKey
         get() = rsaKeyPair.public as RSAPublicKey
@@ -85,12 +86,12 @@ class KeyManager(
 
     private fun encrypt(data: ByteArray): String {
         val salt = ByteArray(16)
-        java.security.SecureRandom().nextBytes(salt)
+        secureRandom.nextBytes(salt)
         
         val cipher = javax.crypto.Cipher.getInstance("AES/GCM/NoPadding")
         val secretKey = getSecretKey(salt)
         val iv = ByteArray(12) // GCM standard IV length
-        java.security.SecureRandom().nextBytes(iv)
+        secureRandom.nextBytes(iv)
         val spec = javax.crypto.spec.GCMParameterSpec(128, iv)
         cipher.init(javax.crypto.Cipher.ENCRYPT_MODE, secretKey, spec)
 
