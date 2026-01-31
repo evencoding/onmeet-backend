@@ -48,8 +48,8 @@ class JwtTokenProvider(
 
         val claimsSet = JWTClaimsSet.Builder()
             .subject(name)
-            .claim("auth", "ROLE_GUEST")
-            .claim("userId", 0L) // Guest ID 0
+            .claim(JwtConstants.ROLE_CLAIM, "ROLE_GUEST")
+            .claim(JwtConstants.USER_ID_CLAIM, 0L) // Guest ID 0
             .claim("meetingId", meetingId)
             .issueTime(now)
             .expirationTime(validity)
