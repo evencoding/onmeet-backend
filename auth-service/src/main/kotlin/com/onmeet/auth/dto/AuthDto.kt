@@ -56,7 +56,10 @@ data class TeamRequest(
 )
 
 data class InvitationRequest(
+    @field:jakarta.validation.constraints.NotBlank(message = "Email is required")
     val email: String,
+    
+    @field:jakarta.validation.constraints.NotBlank(message = "Role is required")
     val role: String = "USER"
 )
 
