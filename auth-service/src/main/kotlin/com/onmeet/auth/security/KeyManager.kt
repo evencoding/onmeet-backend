@@ -37,10 +37,8 @@ class KeyManager(
             try {
                 rsaKeyPair = loadKey(existingKey.get())
             } catch (e: Exception) {
-                // If decryption fails, generating a new key will make previously encrypted private keys unrecoverable.
-                // Consider a more robust key rotation/migration strategy or fail startup if decryption fails.
-                log.warn("Failed to load existing key (possibly encryption mismatch). Generating new key.", e)
-                rsaKeyPair = generateAndSaveKey()
+                log.error("CRITICAL: Failed to load existing server key (possibly encryption mismatch). Aborting startup to prevent accidental token invalidation.", e)
+                throw IllegalStateException("Failed to load server RSA key. Check auth.encryption-key configuration.", e)
             }
         } else {
             rsaKeyPair = generateAndSaveKey()
