@@ -13,7 +13,8 @@ import java.util.UUID
 @Transactional
 class InvitationService(
     private val invitationRepository: InvitationRepository,
-    private val companyRepository: CompanyRepository
+    private val companyRepository: CompanyRepository,
+    @org.springframework.beans.factory.annotation.Value("\${invitation.expiry-days}") private val invitationExpiryDays: Long
 ) {
 
     fun createInvitation(companyId: Long, email: String, role: User.Role): Invitation {
@@ -35,7 +36,7 @@ class InvitationService(
             code = code,
             role = role,
             company = company,
-            expiresAt = LocalDateTime.now().plusDays(7) // 7 days expiry
+            expiresAt = LocalDateTime.now().plusDays(invitationExpiryDays) // Configurable expiry
         )
         
         // TODO: Send Email Logic Here
