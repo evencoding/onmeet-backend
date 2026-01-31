@@ -14,7 +14,8 @@ import org.springframework.web.bind.annotation.*
 class AuthController(
     private val authService: AuthService,
     @Value("\${jwt.cookie.secure}") private val cookieSecure: Boolean,
-    @Value("\${jwt.cookie.max-age}") private val cookieMaxAge: Long
+    @Value("\${jwt.cookie.max-age}") private val cookieMaxAge: Long,
+    @Value("\${jwt.refresh-cookie.max-age}") private val refreshCookieMaxAge: Long
 ) {
 
     @PostMapping("/signup")
@@ -51,7 +52,7 @@ class AuthController(
             .httpOnly(true)
             .secure(cookieSecure)
             .path("/")
-            .maxAge(60 * 60 * 24 * 7) // 7 days
+            .maxAge(refreshCookieMaxAge)
             .sameSite("Lax")
             .build()
 
@@ -114,7 +115,7 @@ class AuthController(
             .httpOnly(true)
             .secure(cookieSecure)
             .path("/")
-            .maxAge(60 * 60 * 24 * 7) // 7 days
+            .maxAge(refreshCookieMaxAge)
             .sameSite("Lax")
             .build()
 

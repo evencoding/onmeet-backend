@@ -28,6 +28,10 @@ jwt:
   cookie:
     secure: ${COOKIE_SECURE:true}
     max-age: 3600
+  refresh-cookie:
+    max-age: 604800 # 7 days
+invitation:
+  expiry-days: 7
 
 management:
   endpoints:
