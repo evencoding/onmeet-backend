@@ -18,7 +18,9 @@ class JwtTokenProvider(
     @org.springframework.beans.factory.annotation.Value("\${jwt.key-id}") private val keyId: String
 ) {
 
-    private val logger = org.slf4j.LoggerFactory.getLogger(JwtTokenProvider::class.java)
+    companion object {
+        private val log = org.slf4j.LoggerFactory.getLogger(JwtTokenProvider::class.java)
+    }
 
     fun generateToken(authentication: Authentication): String {
         val authorities = authentication.authorities.joinToString(",") { it.authority }
@@ -79,20 +81,20 @@ class JwtTokenProvider(
             val verifier = com.nimbusds.jose.crypto.RSASSAVerifier(keyManager.publicKey)
             
             if (!signedJWT.verify(verifier)) {
-                logger.warn("Token verification failed for token: ${token.take(10)}...")
+                log.warn("Token verification failed for token: ${token.take(10)}...")
                 return false
             }
             
             val claims = signedJWT.jwtClaimsSet
             val now = Date()
             if (claims.expirationTime.before(now)) {
-                logger.debug("Token expired")
+                log.debug("Token expired")
                 return false
             }
             
             return true
         } catch (e: Exception) {
-            logger.error("Error validating token: ${e.message}", e)
+            log.error("Error validating token: ${e.message}", e)
             return false
         }
     }
