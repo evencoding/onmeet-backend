@@ -79,7 +79,7 @@ class AuthService(
         val invitation = invitationService.validateInvitation(request.email, request.code)
 
         if (userRepository.existsByEmail(request.email)) {
-            throw IllegalArgumentException("Email already in use")
+            throw EmailAlreadyExistsException("Email already in use")
         }
 
         // 2. Create User
