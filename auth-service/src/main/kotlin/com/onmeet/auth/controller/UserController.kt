@@ -9,23 +9,16 @@ import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.*
 
 @RestController
-@RequestMapping("/users")
 class UserController(
     private val userService: UserService
 ) {
 
-    @GetMapping("/{id}")
+    @GetMapping("/users/{id}")
     fun getUserInfo(@PathVariable id: Long): ResponseEntity<UserResponseDto> {
         return ResponseEntity.ok(userService.getUserInfo(id))
     }
-}
 
-@RestController
-@RequestMapping("/internal/users")
-class InternalUserController(
-    private val userService: UserService
-) {
-    @GetMapping("/{id}")
+    @GetMapping("/internal/users/{id}")
     fun getUserInfoInternal(@PathVariable id: Long): ResponseEntity<UserResponseDto> {
         return ResponseEntity.ok(userService.getUserInfo(id))
     }
