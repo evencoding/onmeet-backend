@@ -32,6 +32,10 @@ class Invitation(
     @Column(nullable = false, updatable = false)
     var createdAt: LocalDateTime? = null,
 
+    @LastModifiedDate
+    @Column(nullable = false)
+    var updatedAt: LocalDateTime? = null,
+
     @Column(nullable = false)
     var expiresAt: LocalDateTime
 )
