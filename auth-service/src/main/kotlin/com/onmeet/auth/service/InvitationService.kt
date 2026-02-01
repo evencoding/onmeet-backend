@@ -14,6 +14,7 @@ import java.util.UUID
 class InvitationService(
     private val invitationRepository: InvitationRepository,
     private val companyRepository: CompanyRepository,
+    private val emailService: EmailService,
     @org.springframework.beans.factory.annotation.Value("\${invitation.expiry-days}") private val invitationExpiryDays: Long
 ) {
 
@@ -39,7 +40,7 @@ class InvitationService(
             expiresAt = LocalDateTime.now().plusDays(invitationExpiryDays) // Configurable expiry
         )
         
-        // TODO: Send Email Logic Here
+        emailService.sendInvitationEmail(email, code)
         
         return invitationRepository.save(invitation)
     }
