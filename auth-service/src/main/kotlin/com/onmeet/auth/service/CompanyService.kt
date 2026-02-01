@@ -6,6 +6,7 @@ import com.onmeet.auth.entity.Company
 import com.onmeet.auth.entity.Team
 import com.onmeet.auth.repository.CompanyRepository
 import com.onmeet.auth.repository.TeamRepository
+import com.onmeet.auth.repository.UserRepository
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 
@@ -14,7 +15,7 @@ import org.springframework.transaction.annotation.Transactional
 class CompanyService(
     private val companyRepository: CompanyRepository,
     private val teamRepository: TeamRepository,
-    private val userRepository: com.onmeet.auth.repository.UserRepository
+    private val userRepository: UserRepository
 ) {
 
     @Transactional

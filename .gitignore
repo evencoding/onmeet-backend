@@ -44,3 +44,6 @@ out/
 # Secrets
 .env
 auth-service/http/http-client.env.json
+
+# Logs
+docker_build.log
