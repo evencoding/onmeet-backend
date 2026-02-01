@@ -12,8 +12,6 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder
 import org.springframework.security.crypto.password.PasswordEncoder
 import org.springframework.security.web.SecurityFilterChain
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter
-import org.springframework.security.web.csrf.CookieCsrfTokenRepository
-import org.springframework.security.web.csrf.CsrfTokenRequestAttributeHandler
 
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity
 
@@ -40,15 +38,12 @@ class SecurityConfig(
     @Bean
     fun filterChain(http: HttpSecurity): SecurityFilterChain {
         http
-            .csrf { csrf ->
-                csrf.csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())
-                csrf.csrfTokenRequestHandler(CsrfTokenRequestAttributeHandler())
-            }
+            .csrf { it.disable() }
             .sessionManagement { it.sessionCreationPolicy(SessionCreationPolicy.STATELESS) }
             .authorizeHttpRequests { auth ->
                 auth.requestMatchers(
                     "/auth/signup", "/auth/signup/company", "/auth/join",
-                    "/auth/login", "/auth/refresh", "/auth/logout", "/auth/check",
+                    "/auth/login", "/auth/guest/login", "/auth/refresh", "/auth/logout", "/auth/check",
                     "/auth/actuator/**", "/.well-known/jwks.json"
                 ).permitAll()
                 auth.anyRequest().authenticated()
