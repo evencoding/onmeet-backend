@@ -17,7 +17,7 @@ class UserService(
 
     fun getUserInfo(userId: Long): UserResponseDto {
         val user = userRepository.findById(userId)
-            .orElseThrow { org.springframework.security.core.userdetails.UsernameNotFoundException("User not found: $userId") }
+            .orElseThrow { EntityNotFoundException("User not found: $userId") }
 
         return UserResponseDto(
             id = user.id ?: throw IllegalStateException("User ID cannot be null for a persisted entity"),

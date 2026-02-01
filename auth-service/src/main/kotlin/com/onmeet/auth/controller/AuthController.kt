@@ -8,6 +8,7 @@ import jakarta.servlet.http.Cookie
 import jakarta.servlet.http.HttpServletResponse
 import java.security.Principal
 import org.springframework.http.HttpHeaders
+
 import org.springframework.http.ResponseCookie
 import org.springframework.http.ResponseEntity
 import org.springframework.security.core.Authentication
@@ -55,33 +56,20 @@ class AuthController(
 
     @PostMapping("/logout")
     fun logout(
-        authentication: Authentication?,
-        response: HttpServletResponse
+        authentication: Authentication?
     ): ResponseEntity<Void> {
         authentication?.name?.let { email ->
             authService.logoutByEmail(email)
         }
 
-        // Clear tokens from cookies
-        val accessTokenCookie = Cookie(JwtConstants.ACCESS_TOKEN_COOKIE_NAME, null).apply {
-            isHttpOnly = true
-            secure = jwtProperties.cookie.secure
-            path = "/"
-            maxAge = 0
-            setAttribute("SameSite", "Lax")
-        }
-        val refreshTokenCookie = Cookie(JwtConstants.REFRESH_TOKEN_COOKIE_NAME, null).apply {
-            isHttpOnly = true
-            secure = jwtProperties.cookie.secure
-            path = "/"
-            maxAge = 0
-            setAttribute("SameSite", "Lax")
-        }
+        // Clear tokens from cookies using ResponseCookie for consistency
+        val accessCookie = createAccessCookie("", 0)
+        val refreshCookie = createRefreshCookie("", 0)
 
-        response.addCookie(accessTokenCookie)
-        response.addCookie(refreshTokenCookie)
-
-        return ResponseEntity.ok().build()
+        return ResponseEntity.ok()
+            .header(HttpHeaders.SET_COOKIE, accessCookie.toString())
+            .header(HttpHeaders.SET_COOKIE, refreshCookie.toString())
+            .build()
     }
 
     @PostMapping("/refresh")
