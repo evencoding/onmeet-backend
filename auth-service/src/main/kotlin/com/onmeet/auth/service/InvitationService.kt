@@ -47,14 +47,10 @@ class InvitationService(
 
     fun validateInvitation(email: String, code: String): Invitation {
         val invitation = invitationRepository.findByCode(code)
-            .orElseThrow { IllegalArgumentException("Invalid invitation code") }
+            .orElseThrow { IllegalArgumentException("Invalid invitation code or email") }
 
-        if (invitation.email != email) {
-            throw IllegalArgumentException("Email mismatch")
-        }
-
-        if (invitation.expiresAt.isBefore(LocalDateTime.now())) {
-            throw IllegalArgumentException("Invitation expired")
+        if (invitation.email != email || invitation.expiresAt.isBefore(LocalDateTime.now())) {
+            throw IllegalArgumentException("Invalid invitation code or email")
         }
 
         return invitation
