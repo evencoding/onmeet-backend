@@ -12,12 +12,16 @@ import org.springframework.stereotype.Component
 import org.springframework.beans.factory.annotation.Value
 import com.onmeet.auth.entity.User
 import java.util.*
+import com.onmeet.auth.config.JwtProperties
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken
+import org.springframework.security.core.authority.SimpleGrantedAuthority
+import org.springframework.security.core.userdetails.UserDetailsService
 
 @Component
 class JwtTokenProvider(
     private val keyManager: KeyManager,
-    @Value("\${jwt.validity-in-ms}") private val validityInMs: Long,
-    @Value("\${jwt.key-id}") private val keyId: String
+    private val jwtProperties: JwtProperties,
+    private val userDetailsService: UserDetailsService
 ) {
 
     companion object {
@@ -29,95 +33,82 @@ class JwtTokenProvider(
         val authorities = authentication.authorities.joinToString(",") { it.authority }
 
         val now = Date()
-        val validity = Date(now.time + validityInMs)
+        val expiryDate = Date(now.time + jwtProperties.validityInMs)
 
-        // Type cast principal to our User entity to get the ID
-        val principal = authentication.principal as? User
-            ?: throw IllegalArgumentException("토큰 생성을 지원하지 않는 Principal 타입입니다.")
-
-        // Build Claims
         val claimsSet = JWTClaimsSet.Builder()
             .subject(authentication.name)
-            .claim(JwtConstants.ROLE_CLAIM, authorities)
-            .claim(JwtConstants.USER_ID_CLAIM, principal.id)
+            .claim(JwtConstants.CLAIM_AUTHORITIES, authorities)
             .issueTime(now)
-            .expirationTime(validity)
-            .jwtID(UUID.randomUUID().toString())
+            .expirationTime(expiryDate)
             .build()
 
-        return signJwt(claimsSet)
+        val signedJWT = SignedJWT(
+            JWSHeader(JWSAlgorithm.RS256),
+            claimsSet
+        )
+
+        signedJWT.sign(RSASSASigner(keyManager.privateKey))
+
+        return signedJWT.serialize()
     }
 
-    fun generateGuestToken(name: String, meetingId: String?): String {
+    fun generateGuestToken(authName: String, roles: List<String>, meetingId: String? = null): String {
+        val authorities = roles.joinToString(",")
         val now = Date()
-        val validity = Date(now.time + GUEST_TOKEN_VALIDITY_MS) // 4 hours
+        val expiryDate = Date(now.time + GUEST_TOKEN_VALIDITY_MS)
 
-        val claimsSet = JWTClaimsSet.Builder()
-            .subject(name)
-            .claim(JwtConstants.ROLE_CLAIM, "ROLE_GUEST")
-            .claim(JwtConstants.USER_ID_CLAIM, 0L) // Guest ID 0
-            .claim("meetingId", meetingId)
+        val claimsSetBuilder = JWTClaimsSet.Builder()
+            .subject(authName)
+            .claim(JwtConstants.CLAIM_AUTHORITIES, authorities)
+
+        meetingId?.let {
+            claimsSetBuilder.claim(JwtConstants.MEETING_ID_CLAIM, it)
+        }
+
+        val claimsSet = claimsSetBuilder
             .issueTime(now)
-            .expirationTime(validity)
-            .jwtID(UUID.randomUUID().toString())
+            .expirationTime(expiryDate)
             .build()
 
-        return signJwt(claimsSet)
-    }
+        val signedJWT = SignedJWT(
+            JWSHeader(JWSAlgorithm.RS256),
+            claimsSet
+        )
 
-    private fun signJwt(claimsSet: JWTClaimsSet): String {
-        // Create Signed JWT
-        val header = JWSHeader.Builder(JWSAlgorithm.RS256)
-            .keyID(keyId)
-            .build()
-        val signedJWT = SignedJWT(header, claimsSet)
-
-        // Sign with Private Key
-        val signer: JWSSigner = RSASSASigner(keyManager.privateKey)
-        signedJWT.sign(signer)
+        signedJWT.sign(RSASSASigner(keyManager.privateKey))
 
         return signedJWT.serialize()
     }
 
     fun validateToken(token: String): Boolean {
-        try {
+        return try {
             val signedJWT = SignedJWT.parse(token)
-            val verifier = com.nimbusds.jose.crypto.RSASSAVerifier(keyManager.publicKey)
-            
-            if (!signedJWT.verify(verifier)) {
-                log.warn("Token verification failed for token: ${token.take(10)}...")
-                return false
-            }
-            
-            val claims = signedJWT.jwtClaimsSet
             val now = Date()
-            if (claims.expirationTime.before(now)) {
-                log.debug("Token expired")
+            val expirationTime = signedJWT.jwtClaimsSet.expirationTime
+            
+            if (expirationTime != null && now.after(expirationTime)) {
+                log.warn("JWT token is expired")
                 return false
             }
-            
-            return true
+            true
         } catch (e: Exception) {
-            log.error("Error validating token: ${e.message}", e)
-            return false
+            log.error("Invalid JWT token: {}", e.message)
+            false
         }
     }
 
-    fun getAuthentication(token: String): Authentication {
+    fun getUsernameFromToken(token: String): String {
         val signedJWT = SignedJWT.parse(token)
-        val claims = signedJWT.jwtClaimsSet
-        
-        val username = claims.subject
-        val authClaim = claims.getClaim(JwtConstants.ROLE_CLAIM)?.toString() ?: ""
-        
-        val authorities = if (authClaim.isBlank()) {
-            emptyList()
-        } else {
-            authClaim.split(",").map { org.springframework.security.core.authority.SimpleGrantedAuthority(it) }
-        }
-        
-        val userId = claims.getClaim(JwtConstants.USER_ID_CLAIM)?.toString() ?: username
-        
-        return org.springframework.security.authentication.UsernamePasswordAuthenticationToken(userId, token, authorities)
+        return signedJWT.jwtClaimsSet.subject
+    }
+
+    fun getAuthentication(token: String): Authentication {
+        val userDetails = userDetailsService.loadUserByUsername(getUsernameFromToken(token))
+        return UsernamePasswordAuthenticationToken(userDetails, "", userDetails.authorities)
+    }
+
+    fun getAuthoritiesFromToken(token: String): String? {
+        val signedJWT = SignedJWT.parse(token)
+        return signedJWT.jwtClaimsSet.getStringClaim(JwtConstants.CLAIM_AUTHORITIES)
     }
 }

@@ -7,6 +7,8 @@ public final class JwtConstants {
     public static final String REFRESH_TOKEN_COOKIE_NAME = "refreshToken";
     public static final String USER_ID_CLAIM = "userId";
     public static final String ROLE_CLAIM = "role";
+    public static final String CLAIM_AUTHORITIES = "authorities";
+    public static final String MEETING_ID_CLAIM = "meetingId";
 
     private JwtConstants() {
         // Private constructor to prevent instantiation

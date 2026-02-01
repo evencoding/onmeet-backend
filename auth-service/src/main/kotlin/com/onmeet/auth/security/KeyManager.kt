@@ -5,7 +5,6 @@ import com.onmeet.auth.repository.ServerKeyRepository
 import jakarta.annotation.PostConstruct
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Component
-import org.springframework.beans.factory.annotation.Value
 import java.security.KeyFactory
 import java.security.KeyPair
 import java.security.KeyPairGenerator
@@ -14,11 +13,12 @@ import java.security.interfaces.RSAPublicKey
 import java.security.spec.PKCS8EncodedKeySpec
 import java.security.spec.X509EncodedKeySpec
 import java.util.Base64
+import com.onmeet.auth.config.AuthProperties
 
 @Component
 class KeyManager(
     private val serverKeyRepository: ServerKeyRepository,
-    @Value("\${auth.encryption-key}") private val encryptionKey: String
+    private val authProperties: AuthProperties
 ) {
     companion object {
         private const val PBKDF2_ITERATIONS = 65536
@@ -84,7 +84,7 @@ class KeyManager(
     private fun getSecretKey(salt: ByteArray): javax.crypto.SecretKey {
         val factory = javax.crypto.SecretKeyFactory.getInstance("PBKDF2WithHmacSHA256")
         // Use provided random salt
-        val spec = javax.crypto.spec.PBEKeySpec(encryptionKey.toCharArray(), salt, PBKDF2_ITERATIONS, 256)
+        val spec = javax.crypto.spec.PBEKeySpec(authProperties.encryptionKey.toCharArray(), salt, PBKDF2_ITERATIONS, 256)
         val tmp = factory.generateSecret(spec)
         return javax.crypto.spec.SecretKeySpec(tmp.encoded, "AES")
     }
