@@ -63,7 +63,6 @@ dependencies {
 
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
     implementation 'org.springframework.boot:spring-boot-starter-data-redis'
-    kapt 'org.springframework.boot:spring-boot-starter-data-redis'
 }
 
 tasks.named('test') {
