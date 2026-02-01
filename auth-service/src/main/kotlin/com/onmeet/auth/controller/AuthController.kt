@@ -64,7 +64,7 @@ class AuthController(
 
     @PostMapping("/refresh")
     fun refresh(
-        @CookieValue(name = "refreshToken", required = false) cookieRefreshToken: String?,
+        @CookieValue(name = JwtConstants.REFRESH_TOKEN_COOKIE_NAME, required = false) cookieRefreshToken: String?,
         @RequestBody(required = false) request: RefreshRequest?
     ): ResponseEntity<TokenResponse> {
         val refreshToken = cookieRefreshToken ?: request?.refreshToken
@@ -99,7 +99,7 @@ class AuthController(
     }
 
     private fun createRefreshCookie(token: String, maxAge: Long = refreshCookieMaxAge): ResponseCookie {
-        return ResponseCookie.from("refreshToken", token)
+        return ResponseCookie.from(JwtConstants.REFRESH_TOKEN_COOKIE_NAME, token)
             .httpOnly(true)
             .secure(cookieSecure)
             .path("/")
