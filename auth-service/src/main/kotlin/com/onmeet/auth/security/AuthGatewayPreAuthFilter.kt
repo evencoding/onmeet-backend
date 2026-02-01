@@ -10,11 +10,21 @@ class AuthGatewayPreAuthFilter(
     @Value("\${gateway.shared-secret}") gatewaySharedSecret: String
 ) : GatewayPreAuthFilter(gatewaySharedSecret) {
 
+    private val allowedPaths = setOf(
+        "/.well-known/jwks.json",
+        "/actuator/health",
+        "/auth/signup",
+        "/auth/signup/company",
+        "/auth/join",
+        "/auth/login",
+        "/auth/guest/login",
+        "/auth/refresh",
+        "/auth/logout",
+        "/auth/check"
+    )
+
     override fun shouldNotFilter(request: HttpServletRequest): Boolean {
         val path = request.requestURI
-        return path == "/.well-known/jwks.json" || 
-               path.startsWith("/.well-known/jwks.json/") ||
-               path.endsWith("/health") || 
-               path.contains("/actuator/")
+        return allowedPaths.contains(path) || path.startsWith("/actuator/")
     }
 }

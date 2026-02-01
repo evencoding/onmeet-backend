@@ -26,10 +26,15 @@ public class GatewayPreAuthFilter extends OncePerRequestFilter {
         this.gatewaySharedSecret = gatewaySharedSecret;
     }
 
+    private static final java.util.Set<String> ALLOWED_PATHS = java.util.Set.of(
+        "/actuator/health",
+        "/actuator/info"
+    );
+
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) throws ServletException {
         String path = request.getRequestURI();
-        return path.endsWith("/health") || path.endsWith("/info") || path.contains("/actuator/");
+        return ALLOWED_PATHS.contains(path) || path.startsWith("/actuator/");
     }
 
     @Override
