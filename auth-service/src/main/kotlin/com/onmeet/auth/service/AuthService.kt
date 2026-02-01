@@ -55,7 +55,7 @@ class AuthService(
 
         // 2. Create Initial Team (from request)
         val defaultTeam = companyService.createTeam(
-            company.id!!,
+            company.id ?: throw IllegalStateException("Company ID not generated"),
             com.onmeet.auth.dto.TeamRequest(request.teamName, "Initial team", "#FFFFFF")
         )
 
@@ -70,7 +70,7 @@ class AuthService(
             status = User.UserStatus.ACTIVE
         )
 
-        return userRepository.save(user).id!!
+        return userRepository.save(user).id ?: throw IllegalStateException("User ID not generated")
     }
 
     @Transactional
@@ -96,9 +96,9 @@ class AuthService(
         val savedUser = userRepository.save(user)
 
         // 3. Mark Invitation as used
-        invitationService.deleteInvitation(invitation.id!!)
+        invitationService.deleteInvitation(invitation.id ?: throw IllegalStateException("Invitation ID is null"))
 
-        return savedUser.id!!
+        return savedUser.id ?: throw IllegalStateException("User ID not generated")
     }
 
     @Transactional
