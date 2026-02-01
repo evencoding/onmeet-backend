@@ -93,20 +93,29 @@ class AuthServiceTest {
         val request = LoginRequest("test@example.com", "password")
         val authentication = io.mockk.mockk<Authentication>()
         val token = "generated.jwt.token"
+        val authorities = listOf(org.springframework.security.core.authority.SimpleGrantedAuthority("ROLE_USER"))
 
         every { authenticationManager.authenticate(any()) } returns authentication
         every { jwtTokenProvider.generateToken(authentication) } returns token
+        every { authentication.authorities } returns authorities
+        every { refreshTokenRepository.save(any()) } returns io.mockk.mockk()
 
         // When
         val response = authService.login(request)
 
         // Then
         assertEquals(token, response.accessToken)
+        assertNotNull(response.refreshToken)
         verify {
             authenticationManager.authenticate(match {
                 it is UsernamePasswordAuthenticationToken &&
                 it.principal == request.email &&
                 it.credentials == request.password
+            })
+            refreshTokenRepository.save(match {
+                it.mobileOrEmail == request.email &&
+                it.token == response.refreshToken &&
+                it.authority == "ROLE_USER"
             })
         }
     }

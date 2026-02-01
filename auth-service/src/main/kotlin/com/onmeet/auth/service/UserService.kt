@@ -18,14 +18,14 @@ class UserService(
             .orElseThrow { org.springframework.security.core.userdetails.UsernameNotFoundException("User not found: $userId") }
 
         return UserResponseDto(
-            id = user.id!!,
+            id = user.id ?: throw IllegalStateException("User ID cannot be null for a persisted entity"),
             email = user.email,
             name = user.name,
             employeeId = user.employeeId,
             role = user.role.name,
             status = user.status.name,
-            company = user.company?.let { CompanyInfoDto(it.id!!, it.name) },
-            team = user.team?.let { TeamInfoDto(it.id!!, it.name, it.color) }
+            company = user.company?.let { it.id?.let { id -> CompanyInfoDto(id, it.name) } ?: throw IllegalStateException("Company ID cannot be null") },
+            team = user.team?.let { it.id?.let { id -> TeamInfoDto(id, it.name, it.color) } ?: throw IllegalStateException("Team ID cannot be null") }
         )
     }
 
