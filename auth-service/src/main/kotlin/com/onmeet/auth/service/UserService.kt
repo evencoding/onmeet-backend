@@ -3,7 +3,9 @@ package com.onmeet.auth.service
 import com.onmeet.auth.dto.CompanyInfoDto
 import com.onmeet.auth.dto.TeamInfoDto
 import com.onmeet.auth.dto.UserResponseDto
+import com.onmeet.auth.entity.User
 import com.onmeet.auth.repository.UserRepository
+import jakarta.persistence.EntityNotFoundException
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 
@@ -29,13 +31,9 @@ class UserService(
         )
     }
 
-    fun getCompanyIdByUserId(userIdStr: String): Long {
-        val userId = userIdStr.toLongOrNull() 
-            ?: throw IllegalArgumentException("Invalid user ID format: $userIdStr")
-            
+    fun getCompanyIdByUserId(userId: Long): Long {
         val user = userRepository.findById(userId)
-            .orElseThrow { org.springframework.security.core.userdetails.UsernameNotFoundException("User not found: $userId") }
-            
-        return user.company?.id ?: throw IllegalStateException("User does not belong to a company")
+            .orElseThrow { EntityNotFoundException("User not found with ID: $userId") }
+        return user.company?.id ?: throw EntityNotFoundException("User is not associated with any company")
     }
 }
