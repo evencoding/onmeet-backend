@@ -10,11 +10,11 @@ spring:
     driver-class-name: com.mysql.cj.jdbc.Driver
   jpa:
     hibernate:
-      ddl-auto: update
+      ddl-auto: validate
     properties:
       hibernate:
-        format_sql: true
-        show_sql: true
+        "[format_sql]": true
+        "[show_sql]": true
         dialect: org.hibernate.dialect.MySQLDialect
 cors:
   allowed-origins: "http://localhost:3000,http://localhost:8080"
