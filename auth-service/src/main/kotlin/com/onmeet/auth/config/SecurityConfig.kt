@@ -15,15 +15,13 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 import org.springframework.security.web.csrf.CookieCsrfTokenRepository
 import org.springframework.security.web.csrf.CsrfTokenRequestAttributeHandler
 
-import com.onmeet.auth.security.JwtAuthenticationFilter
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity
 
 @Configuration
 @EnableWebSecurity
 @EnableMethodSecurity
 class SecurityConfig(
-    private val authGatewayPreAuthFilter: AuthGatewayPreAuthFilter,
-    private val jwtAuthenticationFilter: JwtAuthenticationFilter
+    private val authGatewayPreAuthFilter: AuthGatewayPreAuthFilter
 ) {
 
     @Bean
@@ -53,7 +51,6 @@ class SecurityConfig(
                 auth.anyRequest().authenticated()
             }
             .addFilterBefore(authGatewayPreAuthFilter, UsernamePasswordAuthenticationFilter::class.java)
-            .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter::class.java)
 
         return http.build()
     }
