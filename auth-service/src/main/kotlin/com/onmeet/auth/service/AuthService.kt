@@ -161,7 +161,9 @@ class AuthService(
     }
 
     @Transactional
-    fun logout(email: String) {
-        refreshTokenRepository.deleteById(email)
+    fun logout(userId: Long) {
+        userRepository.findById(userId).ifPresent { user ->
+            refreshTokenRepository.deleteById(user.email)
+        }
     }
 }

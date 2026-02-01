@@ -54,9 +54,9 @@ class AuthController(
 
     @PostMapping("/logout")
     fun logout(principal: Principal?): ResponseEntity<Void> {
-        principal?.name?.let { authService.logout(it) }
+        principal?.name?.toLongOrNull()?.let { authService.logout(it) }
 
-        return ResponseEntity.ok()
+        return ResponseEntity.noContent()
             .header(HttpHeaders.SET_COOKIE, createAccessCookie("", 0).toString())
             .header(HttpHeaders.SET_COOKIE, createRefreshCookie("", 0).toString())
             .build()
