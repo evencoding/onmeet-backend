@@ -76,5 +76,5 @@ class User(
 
     override fun isCredentialsNonExpired(): Boolean = true
 
-    override fun isEnabled(): Boolean = true
+    override fun isEnabled(): Boolean = (this.status == UserStatus.ACTIVE)
 }
