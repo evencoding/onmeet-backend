@@ -40,25 +40,9 @@ class AuthController(
     fun login(@RequestBody request: LoginRequest): ResponseEntity<LoginResponse> {
         val tokenResponse = authService.login(request)
 
-        val accessCookie = ResponseCookie.from(JwtConstants.ACCESS_TOKEN_COOKIE_NAME, tokenResponse.accessToken)
-            .httpOnly(true)
-            .secure(cookieSecure)
-            .path("/")
-            .maxAge(cookieMaxAge)
-            .sameSite("Lax")
-            .build()
-
-        val refreshCookie = ResponseCookie.from("refreshToken", tokenResponse.refreshToken ?: "")
-            .httpOnly(true)
-            .secure(cookieSecure)
-            .path("/")
-            .maxAge(refreshCookieMaxAge)
-            .sameSite("Lax")
-            .build()
-
         return ResponseEntity.ok()
-            .header(HttpHeaders.SET_COOKIE, accessCookie.toString())
-            .header(HttpHeaders.SET_COOKIE, refreshCookie.toString())
+            .header(HttpHeaders.SET_COOKIE, createAccessCookie(tokenResponse.accessToken).toString())
+            .header(HttpHeaders.SET_COOKIE, createRefreshCookie(tokenResponse.refreshToken ?: "").toString())
             .body(LoginResponse("Login successful"))
     }
 
@@ -71,25 +55,9 @@ class AuthController(
     fun logout(principal: java.security.Principal?): ResponseEntity<Void> {
         principal?.name?.let { authService.logout(it) }
 
-        val accessCookie = ResponseCookie.from(JwtConstants.ACCESS_TOKEN_COOKIE_NAME, "")
-            .httpOnly(true)
-            .secure(cookieSecure)
-            .path("/")
-            .maxAge(0)
-            .sameSite("Lax")
-            .build()
-
-        val refreshCookie = ResponseCookie.from("refreshToken", "")
-            .httpOnly(true)
-            .secure(cookieSecure)
-            .path("/")
-            .maxAge(0)
-            .sameSite("Lax")
-            .build()
-
         return ResponseEntity.ok()
-            .header(HttpHeaders.SET_COOKIE, accessCookie.toString())
-            .header(HttpHeaders.SET_COOKIE, refreshCookie.toString())
+            .header(HttpHeaders.SET_COOKIE, createAccessCookie("", 0).toString())
+            .header(HttpHeaders.SET_COOKIE, createRefreshCookie("", 0).toString())
             .build()
     }
 
@@ -103,25 +71,9 @@ class AuthController(
 
         val tokenResponse = authService.refresh(refreshToken)
 
-        val accessCookie = ResponseCookie.from(JwtConstants.ACCESS_TOKEN_COOKIE_NAME, tokenResponse.accessToken)
-            .httpOnly(true)
-            .secure(cookieSecure)
-            .path("/")
-            .maxAge(cookieMaxAge)
-            .sameSite("Lax")
-            .build()
-
-        val refreshCookie = ResponseCookie.from("refreshToken", tokenResponse.refreshToken ?: "")
-            .httpOnly(true)
-            .secure(cookieSecure)
-            .path("/")
-            .maxAge(refreshCookieMaxAge)
-            .sameSite("Lax")
-            .build()
-
         return ResponseEntity.ok()
-            .header(HttpHeaders.SET_COOKIE, accessCookie.toString())
-            .header(HttpHeaders.SET_COOKIE, refreshCookie.toString())
+            .header(HttpHeaders.SET_COOKIE, createAccessCookie(tokenResponse.accessToken).toString())
+            .header(HttpHeaders.SET_COOKIE, createRefreshCookie(tokenResponse.refreshToken ?: "").toString())
             .body(tokenResponse)
     }
 
@@ -133,5 +85,25 @@ class AuthController(
     @GetMapping("/check")
     fun check(): ResponseEntity<Void> {
         return ResponseEntity.ok().build()
+    }
+
+    private fun createAccessCookie(token: String, maxAge: Long = cookieMaxAge): ResponseCookie {
+        return ResponseCookie.from(JwtConstants.ACCESS_TOKEN_COOKIE_NAME, token)
+            .httpOnly(true)
+            .secure(cookieSecure)
+            .path("/")
+            .maxAge(maxAge)
+            .sameSite("Lax")
+            .build()
+    }
+
+    private fun createRefreshCookie(token: String, maxAge: Long = refreshCookieMaxAge): ResponseCookie {
+        return ResponseCookie.from("refreshToken", token)
+            .httpOnly(true)
+            .secure(cookieSecure)
+            .path("/")
+            .maxAge(maxAge)
+            .sameSite("Lax")
+            .build()
     }
 }

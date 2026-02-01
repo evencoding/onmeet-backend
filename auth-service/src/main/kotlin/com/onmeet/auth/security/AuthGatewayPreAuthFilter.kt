@@ -12,9 +12,9 @@ class AuthGatewayPreAuthFilter(
 
     override fun shouldNotFilter(request: HttpServletRequest): Boolean {
         val path = request.requestURI
-        // Allow public endpoints to bypass secret validation
         return path == "/.well-known/jwks.json" || 
                path.startsWith("/.well-known/jwks.json/") ||
-               path.startsWith("/auth/")
+               path.endsWith("/health") || 
+               path.contains("/actuator/")
     }
 }

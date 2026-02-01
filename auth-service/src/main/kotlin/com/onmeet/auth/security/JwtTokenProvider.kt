@@ -29,7 +29,8 @@ class JwtTokenProvider(
         val validity = Date(now.time + validityInMs)
 
         // Type cast principal to our User entity to get the ID
-        val principal = authentication.principal as com.onmeet.auth.entity.User
+        val principal = authentication.principal as? com.onmeet.auth.entity.User
+            ?: throw IllegalArgumentException("토큰 생성을 지원하지 않는 Principal 타입입니다.")
 
         // Build Claims
         val claimsSet = JWTClaimsSet.Builder()
