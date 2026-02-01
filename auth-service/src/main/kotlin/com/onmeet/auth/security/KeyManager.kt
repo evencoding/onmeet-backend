@@ -22,6 +22,9 @@ class KeyManager(
 ) {
     companion object {
         private const val PBKDF2_ITERATIONS = 65536
+        private const val SALT_LENGTH = 16
+        private const val IV_LENGTH = 12
+        private const val GCM_AUTH_TAG_LENGTH = 128
     }
     
     private val log = LoggerFactory.getLogger(KeyManager::class.java)
@@ -87,14 +90,14 @@ class KeyManager(
     }
 
     private fun encrypt(data: ByteArray): String {
-        val salt = ByteArray(16)
+        val salt = ByteArray(SALT_LENGTH)
         secureRandom.nextBytes(salt)
         
         val cipher = javax.crypto.Cipher.getInstance("AES/GCM/NoPadding")
         val secretKey = getSecretKey(salt)
-        val iv = ByteArray(12) // GCM standard IV length
+        val iv = ByteArray(IV_LENGTH) // GCM standard IV length
         secureRandom.nextBytes(iv)
-        val spec = javax.crypto.spec.GCMParameterSpec(128, iv)
+        val spec = javax.crypto.spec.GCMParameterSpec(GCM_AUTH_TAG_LENGTH, iv)
         cipher.init(javax.crypto.Cipher.ENCRYPT_MODE, secretKey, spec)
 
         val cipherText = cipher.doFinal(data)
@@ -111,20 +114,21 @@ class KeyManager(
         val decoded = Base64.getDecoder().decode(encryptedString)
         
         // Extract Salt
-        val salt = ByteArray(16)
-        System.arraycopy(decoded, 0, salt, 0, 16)
+        val salt = ByteArray(SALT_LENGTH)
+        System.arraycopy(decoded, 0, salt, 0, SALT_LENGTH)
 
         // Extract IV
-        val iv = ByteArray(12)
-        System.arraycopy(decoded, 16, iv, 0, 12)
+        val iv = ByteArray(IV_LENGTH)
+        System.arraycopy(decoded, SALT_LENGTH, iv, 0, IV_LENGTH)
         
         // Extract Ciphertext
-        val cipherText = ByteArray(decoded.size - 28) // 16 + 12
-        System.arraycopy(decoded, 28, cipherText, 0, cipherText.size)
+        val cipherTextOffset = SALT_LENGTH + IV_LENGTH
+        val cipherText = ByteArray(decoded.size - cipherTextOffset)
+        System.arraycopy(decoded, cipherTextOffset, cipherText, 0, cipherText.size)
 
         val cipher = javax.crypto.Cipher.getInstance("AES/GCM/NoPadding")
         val secretKey = getSecretKey(salt)
-        val spec = javax.crypto.spec.GCMParameterSpec(128, iv)
+        val spec = javax.crypto.spec.GCMParameterSpec(GCM_AUTH_TAG_LENGTH, iv)
         cipher.init(javax.crypto.Cipher.DECRYPT_MODE, secretKey, spec)
 
         return cipher.doFinal(cipherText)
