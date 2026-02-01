@@ -22,10 +22,9 @@ class CompanyController(
     @PostMapping("/teams")
     @PreAuthorize("hasRole('MANAGER')")
     fun createTeam(
-        @AuthenticationPrincipal user: User,
         @RequestBody request: TeamRequest
     ): ResponseEntity<Long> {
-        val userId = user.id ?: throw IllegalStateException("User ID missing from principal")
+        val userId = com.onmeet.common.security.UserContext.getRequiredUserId()
         val companyId = userService.getCompanyIdByUserId(userId)
         val team = companyService.createTeam(companyId, request)
         return ResponseEntity.ok(team.id)
@@ -34,10 +33,9 @@ class CompanyController(
     @PostMapping("/invite")
     @PreAuthorize("hasRole('MANAGER')")
     fun inviteMember(
-        @AuthenticationPrincipal user: User,
         @RequestBody request: InvitationRequest
     ): ResponseEntity<Long> {
-        val userId = user.id ?: throw IllegalStateException("User ID missing from principal")
+        val userId = com.onmeet.common.security.UserContext.getRequiredUserId()
         val companyId = userService.getCompanyIdByUserId(userId)
         val invitation = invitationService.createInvitation(
             companyId, 

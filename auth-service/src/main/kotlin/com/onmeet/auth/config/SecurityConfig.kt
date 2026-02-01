@@ -48,8 +48,8 @@ class SecurityConfig(
                 ).permitAll()
                 auth.anyRequest().authenticated()
             }
-            .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter::class.java)
             .addFilterBefore(authGatewayPreAuthFilter, UsernamePasswordAuthenticationFilter::class.java)
+            .addFilterBefore(jwtAuthenticationFilter, authGatewayPreAuthFilter::class.java)
 
         return http.build()
     }

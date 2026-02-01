@@ -4,6 +4,8 @@ import com.onmeet.auth.config.JwtProperties
 import com.onmeet.auth.dto.*
 import com.onmeet.auth.service.AuthService
 import com.onmeet.common.security.JwtConstants
+import jakarta.servlet.http.Cookie
+import jakarta.servlet.http.HttpServletResponse
 import java.security.Principal
 import org.springframework.http.HttpHeaders
 import org.springframework.http.ResponseCookie
@@ -52,15 +54,34 @@ class AuthController(
     }
 
     @PostMapping("/logout")
-    fun logout(authentication: Authentication?): ResponseEntity<Void> {
+    fun logout(
+        authentication: Authentication?,
+        response: HttpServletResponse
+    ): ResponseEntity<Void> {
         authentication?.name?.let { email ->
             authService.logoutByEmail(email)
         }
 
-        return ResponseEntity.noContent()
-            .header(HttpHeaders.SET_COOKIE, createAccessCookie("", 0).toString())
-            .header(HttpHeaders.SET_COOKIE, createRefreshCookie("", 0).toString())
-            .build()
+        // Clear tokens from cookies
+        val accessTokenCookie = Cookie(JwtConstants.ACCESS_TOKEN_COOKIE_NAME, null).apply {
+            isHttpOnly = true
+            secure = jwtProperties.cookie.secure
+            path = "/"
+            maxAge = 0
+            setAttribute("SameSite", "Lax")
+        }
+        val refreshTokenCookie = Cookie(JwtConstants.REFRESH_TOKEN_COOKIE_NAME, null).apply {
+            isHttpOnly = true
+            secure = jwtProperties.cookie.secure
+            path = "/"
+            maxAge = 0
+            setAttribute("SameSite", "Lax")
+        }
+
+        response.addCookie(accessTokenCookie)
+        response.addCookie(refreshTokenCookie)
+
+        return ResponseEntity.ok().build()
     }
 
     @PostMapping("/refresh")

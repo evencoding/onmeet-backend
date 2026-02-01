@@ -32,21 +32,17 @@ class JwtTokenProvider(
     fun generateToken(authentication: Authentication): String {
         val authorities = authentication.authorities.joinToString(",") { it.authority }
 
-        val user = authentication.principal as? User
+        val user = authentication.principal as User
         val now = Date()
         val expiryDate = Date(now.time + jwtProperties.validityInMs)
 
-        val claimsSetBuilder = JWTClaimsSet.Builder()
-            .subject(authentication.name)
+        val claimsSet = JWTClaimsSet.Builder()
+            .subject(user.username)
+            .claim(JwtConstants.USER_ID_CLAIM, user.id)
             .claim(JwtConstants.CLAIM_AUTHORITIES, authorities)
             .issueTime(now)
             .expirationTime(expiryDate)
-
-        user?.let {
-            claimsSetBuilder.claim(JwtConstants.USER_ID_CLAIM, it.id)
-        }
-
-        val claimsSet = claimsSetBuilder.build()
+            .build()
 
         val signedJWT = SignedJWT(
             JWSHeader(JWSAlgorithm.RS256),
