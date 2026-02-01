@@ -17,9 +17,4 @@ class UserController(
     fun getUserInfo(@PathVariable id: Long): ResponseEntity<UserResponseDto> {
         return ResponseEntity.ok(userService.getUserInfo(id))
     }
-
-    @GetMapping("/internal/users/{id}")
-    fun getUserInfoInternal(@PathVariable id: Long): ResponseEntity<UserResponseDto> {
-        return ResponseEntity.ok(userService.getUserInfo(id))
-    }
 }
