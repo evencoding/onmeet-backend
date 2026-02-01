@@ -9,13 +9,15 @@ import com.nimbusds.jwt.SignedJWT
 import com.onmeet.common.security.JwtConstants
 import org.springframework.security.core.Authentication
 import org.springframework.stereotype.Component
+import org.springframework.beans.factory.annotation.Value
+import com.onmeet.auth.entity.User
 import java.util.*
 
 @Component
 class JwtTokenProvider(
     private val keyManager: KeyManager,
-    @org.springframework.beans.factory.annotation.Value("\${jwt.validity-in-ms}") private val validityInMs: Long,
-    @org.springframework.beans.factory.annotation.Value("\${jwt.key-id}") private val keyId: String
+    @Value("\${jwt.validity-in-ms}") private val validityInMs: Long,
+    @Value("\${jwt.key-id}") private val keyId: String
 ) {
 
     companion object {
@@ -29,7 +31,7 @@ class JwtTokenProvider(
         val validity = Date(now.time + validityInMs)
 
         // Type cast principal to our User entity to get the ID
-        val principal = authentication.principal as? com.onmeet.auth.entity.User
+        val principal = authentication.principal as? User
             ?: throw IllegalArgumentException("토큰 생성을 지원하지 않는 Principal 타입입니다.")
 
         // Build Claims
