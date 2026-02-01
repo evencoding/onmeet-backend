@@ -38,9 +38,6 @@ dependencies {
     implementation 'org.springframework.security:spring-security-oauth2-resource-server'
     implementation 'org.springframework.security:spring-security-oauth2-jose'
 
-    // Utils
-    // compileOnly 'org.projectlombok:lombok'
-    // annotationProcessor 'org.projectlombok:lombok'
 
     // Test
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
