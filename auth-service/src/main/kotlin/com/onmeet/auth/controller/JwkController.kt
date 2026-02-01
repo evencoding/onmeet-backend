@@ -5,13 +5,14 @@ import com.nimbusds.jose.jwk.JWKSet
 import com.nimbusds.jose.jwk.KeyUse
 import com.nimbusds.jose.jwk.RSAKey
 import com.onmeet.auth.security.KeyManager
+import org.springframework.beans.factory.annotation.Value
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.RestController
 
 @RestController
 class JwkController(
     private val keyManager: KeyManager,
-    @org.springframework.beans.factory.annotation.Value("\${jwt.key-id}") private val keyId: String
+    @Value("\${jwt.key-id}") private val keyId: String
 ) {
 
     @GetMapping("/.well-known/jwks.json")

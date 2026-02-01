@@ -26,11 +26,12 @@ import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMock
 import org.springframework.context.annotation.ComponentScan
 import org.springframework.context.annotation.FilterType
 import com.onmeet.auth.config.SecurityConfig
+import com.onmeet.auth.security.JwtAuthenticationFilter
 
 @WebMvcTest(
     controllers = [AuthController::class],
     excludeFilters = [
-        ComponentScan.Filter(type = FilterType.ASSIGNABLE_TYPE, classes = [SecurityConfig::class, com.onmeet.auth.security.JwtAuthenticationFilter::class])
+        ComponentScan.Filter(type = FilterType.ASSIGNABLE_TYPE, classes = [SecurityConfig::class, JwtAuthenticationFilter::class])
     ],
     excludeAutoConfiguration = [SecurityAutoConfiguration::class, OAuth2ClientAutoConfiguration::class, OAuth2ResourceServerAutoConfiguration::class]
 )

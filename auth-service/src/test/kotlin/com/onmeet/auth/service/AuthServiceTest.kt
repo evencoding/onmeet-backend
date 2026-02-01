@@ -42,7 +42,6 @@ class AuthServiceTest {
     @MockK
     lateinit var jwtTokenProvider: JwtTokenProvider
 
-    @InjectMockKs
     @MockK
     lateinit var companyService: CompanyService
 

@@ -5,6 +5,8 @@ import com.onmeet.auth.dto.JoinRequest
 import com.onmeet.auth.dto.LoginRequest
 import com.onmeet.auth.dto.SignupRequest
 import com.onmeet.auth.dto.TokenResponse
+import com.onmeet.auth.dto.TeamRequest
+import com.onmeet.auth.dto.GuestLoginRequest
 import com.onmeet.auth.entity.User
 import com.onmeet.auth.exception.EmailAlreadyExistsException
 import com.onmeet.auth.repository.UserRepository
@@ -32,6 +34,7 @@ class AuthService(
 
     companion object {
         private const val INITIAL_TEAM_COLOR = "#FFFFFF"
+        private const val INITIAL_TEAM_DESCRIPTION = "Initial team"
     }
 
     @Transactional
@@ -60,7 +63,7 @@ class AuthService(
         // 2. Create Initial Team (from request)
         val defaultTeam = companyService.createTeam(
             company.id ?: throw IllegalStateException("Company ID not generated"),
-            com.onmeet.auth.dto.TeamRequest(request.teamName, "Initial team", INITIAL_TEAM_COLOR)
+            TeamRequest(request.teamName, INITIAL_TEAM_DESCRIPTION, INITIAL_TEAM_COLOR)
         )
 
         // 3. Create User (Manager)
@@ -129,7 +132,7 @@ class AuthService(
         return TokenResponse(accessToken, refreshTokenStr)
     }
 
-    fun guestLogin(request: com.onmeet.auth.dto.GuestLoginRequest): TokenResponse {
+    fun guestLogin(request: GuestLoginRequest): TokenResponse {
         val accessToken = jwtTokenProvider.generateGuestToken(request.name, request.meetingId)
         return TokenResponse(accessToken, null)
     }

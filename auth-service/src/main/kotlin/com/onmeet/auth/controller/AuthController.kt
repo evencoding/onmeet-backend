@@ -3,6 +3,7 @@ package com.onmeet.auth.controller
 import com.onmeet.auth.dto.*
 import com.onmeet.auth.service.AuthService
 import com.onmeet.common.security.JwtConstants
+import java.security.Principal
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.http.HttpHeaders
 import org.springframework.http.ResponseCookie
@@ -47,12 +48,12 @@ class AuthController(
     }
 
     @PostMapping("/guest/login")
-    fun guestLogin(@RequestBody request: com.onmeet.auth.dto.GuestLoginRequest): ResponseEntity<TokenResponse> {
+    fun guestLogin(@RequestBody request: GuestLoginRequest): ResponseEntity<TokenResponse> {
         return ResponseEntity.ok(authService.guestLogin(request))
     }
 
     @PostMapping("/logout")
-    fun logout(principal: java.security.Principal?): ResponseEntity<Void> {
+    fun logout(principal: Principal?): ResponseEntity<Void> {
         principal?.name?.let { authService.logout(it) }
 
         return ResponseEntity.ok()
@@ -78,7 +79,7 @@ class AuthController(
     }
 
     @GetMapping("/me")
-    fun me(principal: java.security.Principal): ResponseEntity<String> {
+    fun me(principal: Principal): ResponseEntity<String> {
         return ResponseEntity.ok("Hello, ${principal.name}! You are authenticated.")
     }
 
