@@ -8,6 +8,7 @@ import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.time.LocalDateTime
 import java.util.UUID
+import com.onmeet.auth.config.InvitationProperties
 
 @Service
 @Transactional
@@ -15,7 +16,7 @@ class InvitationService(
     private val invitationRepository: InvitationRepository,
     private val companyRepository: CompanyRepository,
     private val emailService: EmailService,
-    @org.springframework.beans.factory.annotation.Value("\${invitation.expiry-days}") private val invitationExpiryDays: Long
+    private val invitationProperties: InvitationProperties
 ) {
 
     fun createInvitation(companyId: Long, email: String, role: User.Role): Invitation {
@@ -37,7 +38,7 @@ class InvitationService(
             code = code,
             role = role,
             company = company,
-            expiresAt = LocalDateTime.now().plusDays(invitationExpiryDays) // Configurable expiry
+            expiresAt = LocalDateTime.now().plusDays(invitationProperties.expiryDays) // Configurable expiry
         )
         
         emailService.sendInvitationEmail(email, code)

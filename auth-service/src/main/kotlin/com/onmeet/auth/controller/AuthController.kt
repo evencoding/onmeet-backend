@@ -88,8 +88,8 @@ class AuthController(
         return ResponseEntity.ok().build()
     }
 
-    private fun createAccessCookie(token: String, maxAge: Long = cookieMaxAge): ResponseCookie {
-        return ResponseCookie.from(JwtConstants.ACCESS_TOKEN_COOKIE_NAME, token)
+    private fun createHttpOnlyCookie(name: String, token: String, maxAge: Long): ResponseCookie {
+        return ResponseCookie.from(name, token)
             .httpOnly(true)
             .secure(cookieSecure)
             .path("/")
@@ -98,13 +98,11 @@ class AuthController(
             .build()
     }
 
+    private fun createAccessCookie(token: String, maxAge: Long = cookieMaxAge): ResponseCookie {
+        return createHttpOnlyCookie(JwtConstants.ACCESS_TOKEN_COOKIE_NAME, token, maxAge)
+    }
+
     private fun createRefreshCookie(token: String, maxAge: Long = refreshCookieMaxAge): ResponseCookie {
-        return ResponseCookie.from(JwtConstants.REFRESH_TOKEN_COOKIE_NAME, token)
-            .httpOnly(true)
-            .secure(cookieSecure)
-            .path("/")
-            .maxAge(maxAge)
-            .sameSite("Lax")
-            .build()
+        return createHttpOnlyCookie(JwtConstants.REFRESH_TOKEN_COOKIE_NAME, token, maxAge)
     }
 }
