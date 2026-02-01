@@ -1,4 +1,4 @@
-package com.onmeet.auth.repository
+package com.onmeet.auth.repository.redis
 
 import com.onmeet.auth.entity.RefreshToken
 import org.springframework.data.repository.CrudRepository

@@ -1,7 +1,7 @@
 package com.onmeet.auth.security
 
 import com.onmeet.auth.entity.ServerKey
-import com.onmeet.auth.repository.ServerKeyRepository
+import com.onmeet.auth.repository.jpa.ServerKeyRepository
 import jakarta.annotation.PostConstruct
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Component

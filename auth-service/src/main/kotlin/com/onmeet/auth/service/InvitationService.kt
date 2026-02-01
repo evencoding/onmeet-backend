@@ -2,8 +2,8 @@ package com.onmeet.auth.service
 
 import com.onmeet.auth.entity.Invitation
 import com.onmeet.auth.entity.User
-import com.onmeet.auth.repository.InvitationRepository
-import com.onmeet.auth.repository.CompanyRepository
+import com.onmeet.auth.repository.jpa.InvitationRepository
+import com.onmeet.auth.repository.jpa.CompanyRepository
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.time.LocalDateTime

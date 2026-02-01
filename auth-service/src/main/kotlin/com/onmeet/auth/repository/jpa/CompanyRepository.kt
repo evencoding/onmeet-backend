@@ -1,4 +1,4 @@
-package com.onmeet.auth.repository
+package com.onmeet.auth.repository.jpa
 
 import com.onmeet.auth.entity.Company
 import org.springframework.data.jpa.repository.JpaRepository
