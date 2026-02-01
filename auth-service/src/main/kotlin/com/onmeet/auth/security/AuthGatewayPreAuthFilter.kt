@@ -30,6 +30,6 @@ class AuthGatewayPreAuthFilter(
         }
         
         val path = request.requestURI
-        return allowedPaths.contains(path) || path.startsWith("/actuator/")
+        return allowedPaths.contains(path) || path.startsWith("/actuator/") || path.startsWith("/auth/actuator/")
     }
 }
