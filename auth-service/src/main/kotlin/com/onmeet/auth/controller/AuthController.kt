@@ -1,22 +1,21 @@
 package com.onmeet.auth.controller
 
+import com.onmeet.auth.config.JwtProperties
 import com.onmeet.auth.dto.*
 import com.onmeet.auth.service.AuthService
 import com.onmeet.common.security.JwtConstants
 import java.security.Principal
-import org.springframework.beans.factory.annotation.Value
 import org.springframework.http.HttpHeaders
 import org.springframework.http.ResponseCookie
 import org.springframework.http.ResponseEntity
+import org.springframework.security.core.Authentication
 import org.springframework.web.bind.annotation.*
 
 @RestController
 @RequestMapping("/auth")
 class AuthController(
     private val authService: AuthService,
-    @Value("\${jwt.cookie.secure}") private val cookieSecure: Boolean,
-    @Value("\${jwt.cookie.max-age}") private val cookieMaxAge: Long,
-    @Value("\${jwt.refresh-cookie.max-age}") private val refreshCookieMaxAge: Long
+    private val jwtProperties: JwtProperties
 ) {
 
     @PostMapping("/signup")
@@ -53,8 +52,10 @@ class AuthController(
     }
 
     @PostMapping("/logout")
-    fun logout(principal: Principal?): ResponseEntity<Void> {
-        principal?.name?.toLongOrNull()?.let { authService.logout(it) }
+    fun logout(authentication: Authentication?): ResponseEntity<Void> {
+        authentication?.name?.let { email ->
+            authService.logoutByEmail(email)
+        }
 
         return ResponseEntity.noContent()
             .header(HttpHeaders.SET_COOKIE, createAccessCookie("", 0).toString())
@@ -88,21 +89,21 @@ class AuthController(
         return ResponseEntity.ok().build()
     }
 
-    private fun createHttpOnlyCookie(name: String, token: String, maxAge: Long): ResponseCookie {
-        return ResponseCookie.from(name, token)
+    private fun createRefreshCookie(token: String, maxAge: Long = jwtProperties.refreshCookie.maxAge): ResponseCookie {
+        return createHttpOnlyCookie(JwtConstants.REFRESH_TOKEN_COOKIE_NAME, token, maxAge)
+    }
+
+    private fun createAccessCookie(token: String, maxAge: Long = jwtProperties.cookie.maxAge): ResponseCookie {
+        return createHttpOnlyCookie(JwtConstants.ACCESS_TOKEN_COOKIE_NAME, token, maxAge)
+    }
+
+    private fun createHttpOnlyCookie(name: String, value: String, maxAge: Long): ResponseCookie {
+        return ResponseCookie.from(name, value)
             .httpOnly(true)
-            .secure(cookieSecure)
+            .secure(jwtProperties.cookie.secure)
             .path("/")
             .maxAge(maxAge)
             .sameSite("Lax")
             .build()
-    }
-
-    private fun createAccessCookie(token: String, maxAge: Long = cookieMaxAge): ResponseCookie {
-        return createHttpOnlyCookie(JwtConstants.ACCESS_TOKEN_COOKIE_NAME, token, maxAge)
-    }
-
-    private fun createRefreshCookie(token: String, maxAge: Long = refreshCookieMaxAge): ResponseCookie {
-        return createHttpOnlyCookie(JwtConstants.REFRESH_TOKEN_COOKIE_NAME, token, maxAge)
     }
 }

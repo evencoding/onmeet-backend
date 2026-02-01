@@ -15,32 +15,32 @@ class PropertiesConfig
 
 @ConfigurationProperties(prefix = "auth")
 data class AuthProperties(
-    var encryptionKey: String = ""
+    val encryptionKey: String = ""
 )
 
 @ConfigurationProperties(prefix = "gateway")
 data class GatewayProperties(
-    var sharedSecret: String = ""
+    val sharedSecret: String = ""
 )
 
 @ConfigurationProperties(prefix = "jwt")
 data class JwtProperties(
-    var validityInMs: Long = 3600000,
-    var keyId: String = "",
-    var cookie: CookieProperties = CookieProperties(),
-    var refreshCookie: RefreshCookieProperties = RefreshCookieProperties()
+    val validityInMs: Long = 3600000,
+    val keyId: String = "",
+    val cookie: CookieProperties = CookieProperties(),
+    val refreshCookie: RefreshCookieProperties = RefreshCookieProperties()
 ) {
     data class CookieProperties(
-        var secure: Boolean = true,
-        var maxAge: Long = 3600
+        val secure: Boolean = true,
+        val maxAge: Long = 3600
     )
 
     data class RefreshCookieProperties(
-        var maxAge: Long = 604800
+        val maxAge: Long = 604800
     )
 }
 
 @ConfigurationProperties(prefix = "invitation")
 data class InvitationProperties(
-    var expiryDays: Long = 7
+    val expiryDays: Long = 7
 )
