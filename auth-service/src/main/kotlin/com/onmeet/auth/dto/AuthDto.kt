@@ -54,6 +54,7 @@ data class TeamRequest(
 )
 
 data class InvitationRequest(
+    @field:jakarta.validation.constraints.Email(message = "Invalid email format")
     @field:jakarta.validation.constraints.NotBlank(message = "Email is required")
     val email: String,
     
