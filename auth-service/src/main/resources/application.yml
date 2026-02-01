@@ -43,5 +43,5 @@ management:
 logging:
   level:
     root: INFO
-    com.onmeet: INFO
+    "com.onmeet": INFO
 
