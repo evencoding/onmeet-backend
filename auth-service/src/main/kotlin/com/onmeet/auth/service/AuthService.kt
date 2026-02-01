@@ -30,6 +30,10 @@ class AuthService(
     private val refreshTokenRepository: RefreshTokenRepository
 ) {
 
+    companion object {
+        private const val INITIAL_TEAM_COLOR = "#FFFFFF"
+    }
+
     @Transactional
     fun signup(request: SignupRequest): Long {
         if (userRepository.existsByEmail(request.email)) {
@@ -56,7 +60,7 @@ class AuthService(
         // 2. Create Initial Team (from request)
         val defaultTeam = companyService.createTeam(
             company.id ?: throw IllegalStateException("Company ID not generated"),
-            com.onmeet.auth.dto.TeamRequest(request.teamName, "Initial team", "#FFFFFF")
+            com.onmeet.auth.dto.TeamRequest(request.teamName, "Initial team", INITIAL_TEAM_COLOR)
         )
 
         // 3. Create User (Manager)

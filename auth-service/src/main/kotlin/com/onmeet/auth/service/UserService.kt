@@ -15,7 +15,7 @@ class UserService(
 
     fun getUserInfo(userId: Long): UserResponseDto {
         val user = userRepository.findById(userId)
-            .orElseThrow { IllegalArgumentException("User not found") }
+            .orElseThrow { org.springframework.security.core.userdetails.UsernameNotFoundException("User not found: $userId") }
 
         return UserResponseDto(
             id = user.id!!,
@@ -27,5 +27,15 @@ class UserService(
             company = user.company?.let { CompanyInfoDto(it.id!!, it.name) },
             team = user.team?.let { TeamInfoDto(it.id!!, it.name, it.color) }
         )
+    }
+
+    fun getCompanyIdByUserId(userIdStr: String): Long {
+        val userId = userIdStr.toLongOrNull() 
+            ?: throw IllegalArgumentException("Invalid user ID format: $userIdStr")
+            
+        val user = userRepository.findById(userId)
+            .orElseThrow { org.springframework.security.core.userdetails.UsernameNotFoundException("User not found: $userId") }
+            
+        return user.company?.id ?: throw IllegalStateException("User does not belong to a company")
     }
 }

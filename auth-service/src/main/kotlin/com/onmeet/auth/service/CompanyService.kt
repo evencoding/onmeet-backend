@@ -13,7 +13,8 @@ import org.springframework.transaction.annotation.Transactional
 @Transactional(readOnly = true)
 class CompanyService(
     private val companyRepository: CompanyRepository,
-    private val teamRepository: TeamRepository
+    private val teamRepository: TeamRepository,
+    private val userRepository: com.onmeet.auth.repository.UserRepository
 ) {
 
     @Transactional
