@@ -20,9 +20,6 @@ repositories {
     mavenCentral()
 }
 
-ext {
-    set('mapstructVersion', "1.5.5.Final")
-}
 
 dependencies {
     // Kotlin
