@@ -8,21 +8,25 @@ import com.onmeet.auth.service.InvitationService
 import org.springframework.http.ResponseEntity
 import org.springframework.security.access.prepost.PreAuthorize
 import org.springframework.security.core.annotation.AuthenticationPrincipal
+import org.springframework.security.core.userdetails.UsernameNotFoundException
 import org.springframework.web.bind.annotation.*
 
 @RestController
 @RequestMapping("/companies")
 class CompanyController(
     private val companyService: CompanyService,
-    private val invitationService: InvitationService
+    private val invitationService: InvitationService,
+    private val userRepository: com.onmeet.auth.repository.UserRepository
 ) {
 
     @PostMapping("/teams")
     @PreAuthorize("hasRole('MANAGER')")
     fun createTeam(
-        @AuthenticationPrincipal user: User,
+        @AuthenticationPrincipal userId: String,
         @RequestBody request: TeamRequest
     ): ResponseEntity<Long> {
+        val user = userRepository.findById(userId.toLong())
+            .orElseThrow { UsernameNotFoundException("User not found: $userId") }
         val companyId = user.company?.id ?: throw IllegalStateException("User does not belong to a company")
         val team = companyService.createTeam(companyId, request)
         return ResponseEntity.ok(team.id)
@@ -31,14 +35,16 @@ class CompanyController(
     @PostMapping("/invite")
     @PreAuthorize("hasRole('MANAGER')")
     fun inviteMember(
-        @AuthenticationPrincipal user: User,
+        @AuthenticationPrincipal userId: String,
         @RequestBody request: InvitationRequest
     ): ResponseEntity<Long> {
+        val user = userRepository.findById(userId.toLong())
+            .orElseThrow { UsernameNotFoundException("User not found: $userId") }
         val companyId = user.company?.id ?: throw IllegalStateException("User does not belong to a company")
         val invitation = invitationService.createInvitation(
             companyId, 
             request.email, 
-            User.Role.valueOf(request.role)
+            request.role
         )
         return ResponseEntity.ok(invitation.id)
     }
