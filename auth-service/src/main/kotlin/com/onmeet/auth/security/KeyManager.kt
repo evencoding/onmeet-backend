@@ -20,6 +20,10 @@ class KeyManager(
     private val serverKeyRepository: ServerKeyRepository,
     @Value("\${auth.encryption-key}") private val encryptionKey: String
 ) {
+    companion object {
+        private const val PBKDF2_ITERATIONS = 65536
+    }
+    
     private val log = LoggerFactory.getLogger(KeyManager::class.java)
     private lateinit var rsaKeyPair: KeyPair
     private val secureRandom = java.security.SecureRandom()
@@ -77,7 +81,7 @@ class KeyManager(
     private fun getSecretKey(salt: ByteArray): javax.crypto.SecretKey {
         val factory = javax.crypto.SecretKeyFactory.getInstance("PBKDF2WithHmacSHA256")
         // Use provided random salt
-        val spec = javax.crypto.spec.PBEKeySpec(encryptionKey.toCharArray(), salt, 65536, 256)
+        val spec = javax.crypto.spec.PBEKeySpec(encryptionKey.toCharArray(), salt, PBKDF2_ITERATIONS, 256)
         val tmp = factory.generateSecret(spec)
         return javax.crypto.spec.SecretKeySpec(tmp.encoded, "AES")
     }

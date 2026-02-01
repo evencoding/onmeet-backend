@@ -27,9 +27,7 @@ data class TokenResponse(
 
 data class LoginResponse(
     val message: String = "Login successful",
-    val tokenType: String = "Bearer",
-    val accessToken: String? = null,
-    val refreshToken: String? = null
+    val tokenType: String = "Bearer"
 )
 
 data class GuestLoginRequest(

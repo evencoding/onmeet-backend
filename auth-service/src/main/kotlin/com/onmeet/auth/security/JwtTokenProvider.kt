@@ -22,6 +22,7 @@ class JwtTokenProvider(
 
     companion object {
         private val log = org.slf4j.LoggerFactory.getLogger(JwtTokenProvider::class.java)
+        private const val GUEST_TOKEN_VALIDITY_MS = 14400000L // 4 hours
     }
 
     fun generateToken(authentication: Authentication): String {
@@ -49,7 +50,7 @@ class JwtTokenProvider(
 
     fun generateGuestToken(name: String, meetingId: String?): String {
         val now = Date()
-        val validity = Date(now.time + 14400000) // 4 hours
+        val validity = Date(now.time + GUEST_TOKEN_VALIDITY_MS) // 4 hours
 
         val claimsSet = JWTClaimsSet.Builder()
             .subject(name)
