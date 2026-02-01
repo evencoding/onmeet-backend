@@ -133,7 +133,7 @@ class AuthService(
     }
 
     fun guestLogin(request: GuestLoginRequest): TokenResponse {
-        val accessToken = jwtTokenProvider.generateGuestToken(request.name, request.meetingId)
+        val accessToken = jwtTokenProvider.generateGuestToken(request.name, listOf("ROLE_GUEST"), request.meetingId)
         return TokenResponse(accessToken, null)
     }
 
