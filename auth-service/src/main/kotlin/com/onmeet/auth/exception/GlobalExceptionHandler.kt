@@ -9,7 +9,9 @@ import org.springframework.web.bind.annotation.RestControllerAdvice
 
 @RestControllerAdvice
 class GlobalExceptionHandler {
-    private val log = LoggerFactory.getLogger(javaClass)
+    companion object {
+        private val log = LoggerFactory.getLogger(GlobalExceptionHandler::class.java)
+    }
 
     @ExceptionHandler(EmailAlreadyExistsException::class)
     fun handleEmailAlreadyExistsException(e: EmailAlreadyExistsException): ResponseEntity<ErrorResponse> {
