@@ -142,6 +142,9 @@ class AuthService(
         val refreshTokenEntity = refreshTokenRepository.findByToken(token)
             ?: throw IllegalArgumentException("Invalid refresh token")
 
+        // 즉시 토큰을 삭제하여 재사용(경쟁 조건)을 방지합니다.
+        refreshTokenRepository.delete(refreshTokenEntity)
+
         val user = userRepository.findByEmail(refreshTokenEntity.mobileOrEmail)
             .orElseThrow { IllegalArgumentException("User not found") }
 
