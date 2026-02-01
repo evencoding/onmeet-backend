@@ -3,8 +3,7 @@ FROM eclipse-temurin:17-jdk-jammy AS build
 WORKDIR /app
 
 # Gradle Wrapper 및 설정 파일 복사하여 의존성 캐싱 최적화
-COPY gradlew .
-RUN chmod +x gradlew
+COPY --chmod=0755 gradlew .
 COPY gradle gradle
 COPY build.gradle .
 COPY settings.gradle .
