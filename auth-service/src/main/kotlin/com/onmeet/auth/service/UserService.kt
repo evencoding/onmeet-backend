@@ -4,7 +4,7 @@ import com.onmeet.auth.dto.CompanyInfoDto
 import com.onmeet.auth.dto.TeamInfoDto
 import com.onmeet.auth.dto.UserResponseDto
 import com.onmeet.auth.entity.User
-import com.onmeet.auth.repository.UserRepository
+import com.onmeet.auth.repository.jpa.UserRepository
 import jakarta.persistence.EntityNotFoundException
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional

@@ -4,9 +4,9 @@ import com.onmeet.auth.dto.CompanyRequest
 import com.onmeet.auth.dto.TeamRequest
 import com.onmeet.auth.entity.Company
 import com.onmeet.auth.entity.Team
-import com.onmeet.auth.repository.CompanyRepository
-import com.onmeet.auth.repository.TeamRepository
-import com.onmeet.auth.repository.UserRepository
+import com.onmeet.auth.repository.jpa.CompanyRepository
+import com.onmeet.auth.repository.jpa.TeamRepository
+import com.onmeet.auth.repository.jpa.UserRepository
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 

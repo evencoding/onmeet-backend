@@ -9,7 +9,7 @@ import com.onmeet.auth.dto.TeamRequest
 import com.onmeet.auth.dto.GuestLoginRequest
 import com.onmeet.auth.entity.User
 import com.onmeet.auth.exception.EmailAlreadyExistsException
-import com.onmeet.auth.repository.UserRepository
+import com.onmeet.auth.repository.jpa.UserRepository
 import com.onmeet.auth.security.JwtTokenProvider
 import org.springframework.security.authentication.AuthenticationManager
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken
@@ -17,7 +17,7 @@ import org.springframework.security.crypto.password.PasswordEncoder
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 
-import com.onmeet.auth.repository.RefreshTokenRepository
+import com.onmeet.auth.repository.redis.RefreshTokenRepository
 import com.onmeet.auth.entity.RefreshToken
 import java.util.UUID
 
