@@ -21,7 +21,7 @@ class KeyManager(
     private val authProperties: AuthProperties
 ) {
     companion object {
-        private const val PBKDF2_ITERATIONS = 65536
+        private const val PBKDF2_ITERATIONS = 600000
         private const val SALT_LENGTH = 16
         private const val IV_LENGTH = 12
         private const val GCM_AUTH_TAG_LENGTH = 128
