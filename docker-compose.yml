@@ -5,7 +5,8 @@ include:
   - video-service/docker-compose.yml
   - chat-service/docker-compose.yml
   - notification-service/docker-compose.yml
-  - image-service/docker-compose.yml
+  - file-service/docker-compose.yml
+  - kafka/docker-compose.yml
 
 networks:
   msa-network:

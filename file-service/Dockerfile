@@ -13,13 +13,13 @@ RUN ./gradlew dependencies --no-daemon
 
 # 공통 모듈 및 Image 서비스 소스 복사
 COPY common-security common-security
-COPY image-service image-service
+COPY file-service file-service
 
 # 빌드 수행
-RUN ./gradlew :image-service:build -x test --no-daemon
+RUN ./gradlew :file-service:build -x test --no-daemon
 
 # Stage 2: Run
 FROM eclipse-temurin:17-jre-jammy
 WORKDIR /app
-COPY --from=build /app/image-service/build/libs/*.jar app.jar
+COPY --from=build /app/file-service/build/libs/*.jar app.jar
 ENTRYPOINT ["java", "-jar", "app.jar"]

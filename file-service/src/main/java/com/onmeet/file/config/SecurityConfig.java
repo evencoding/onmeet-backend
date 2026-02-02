@@ -1,4 +1,4 @@
-package com.onmeet.image.config;
+package com.onmeet.file.config;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
