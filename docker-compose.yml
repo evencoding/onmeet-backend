@@ -6,6 +6,7 @@ include:
   - chat-service/docker-compose.yml
   - notification-service/docker-compose.yml
   - file-service/docker-compose.yml
+  - email-service/docker-compose.yml
   - kafka/docker-compose.yml
 
 networks:
