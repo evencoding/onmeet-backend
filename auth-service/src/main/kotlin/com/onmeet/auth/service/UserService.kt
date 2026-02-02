@@ -26,8 +26,10 @@ class UserService(
             employeeId = user.employeeId,
             role = user.role.name,
             status = user.status.name,
-            company = user.company?.let { it.id?.let { id -> CompanyInfoDto(id, it.name) } ?: throw IllegalStateException("Company ID cannot be null") },
-            team = user.team?.let { it.id?.let { id -> TeamInfoDto(id, it.name, it.color) } ?: throw IllegalStateException("Team ID cannot be null") }
+            company = user.company.let { it.id?.let { id -> CompanyInfoDto(id, it.name) } ?: throw IllegalStateException("Company ID cannot be null") },
+            teams = user.teams.map { 
+                it.id?.let { id -> TeamInfoDto(id, it.name, it.color) } ?: throw IllegalStateException("Team ID cannot be null") 
+            }
         )
     }
 

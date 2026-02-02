@@ -30,12 +30,16 @@ class User(
     var employeeId: String? = null, // 사번
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "company_id")
-    var company: Company? = null,
+    @JoinColumn(name = "company_id", nullable = false)
+    var company: Company,
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "team_id")
-    var team: Team? = null,
+    @ManyToMany(fetch = FetchType.LAZY)
+    @JoinTable(
+        name = "user_teams",
+        joinColumns = [JoinColumn(name = "user_id")],
+        inverseJoinColumns = [JoinColumn(name = "team_id")]
+    )
+    var teams: MutableSet<Team> = mutableSetOf(),
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)

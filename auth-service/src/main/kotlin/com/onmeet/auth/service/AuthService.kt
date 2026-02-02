@@ -3,7 +3,7 @@ package com.onmeet.auth.service
 import com.onmeet.auth.dto.CompanySignupRequest
 import com.onmeet.auth.dto.JoinRequest
 import com.onmeet.auth.dto.LoginRequest
-import com.onmeet.auth.dto.SignupRequest
+
 import com.onmeet.auth.dto.TokenResponse
 import com.onmeet.auth.dto.TeamRequest
 import com.onmeet.auth.dto.GuestLoginRequest
@@ -37,19 +37,8 @@ class AuthService(
         private const val INITIAL_TEAM_DESCRIPTION = "Initial team"
     }
 
-    @Transactional
-    fun signup(request: SignupRequest): Long {
-        if (userRepository.existsByEmail(request.email)) {
-            throw EmailAlreadyExistsException("Email already in use")
-        }
 
-        val user = User(
-            email = request.email,
-            passwordHash = passwordEncoder.encode(request.password),
-            name = request.name
-        )
-        return userRepository.save(user).id ?: throw IllegalStateException("User ID not generated after save")
-    }
+
 
     @Transactional
     fun signupCompany(request: CompanySignupRequest): Long {
@@ -73,7 +62,7 @@ class AuthService(
             name = request.name,
             role = User.Role.MANAGER,
             company = company,
-            team = defaultTeam,
+            teams = mutableSetOf(defaultTeam),
             status = User.UserStatus.ACTIVE
         )
 

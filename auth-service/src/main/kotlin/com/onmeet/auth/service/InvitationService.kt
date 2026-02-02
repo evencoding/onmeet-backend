@@ -60,4 +60,9 @@ class InvitationService(
     fun deleteInvitation(id: Long) {
         invitationRepository.deleteById(id)
     }
+
+    @org.springframework.scheduling.annotation.Scheduled(cron = "0 0 0 * * *")
+    fun deleteExpiredInvitations() {
+        invitationRepository.deleteByExpiresAtBefore(LocalDateTime.now())
+    }
 }

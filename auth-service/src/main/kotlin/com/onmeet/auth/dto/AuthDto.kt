@@ -1,10 +1,6 @@
 package com.onmeet.auth.dto
 
-data class SignupRequest(
-    val email: String,
-    val password: String,
-    val name: String
-)
+
 
 data class CompanySignupRequest(
     val email: String,
@@ -69,7 +65,7 @@ data class UserResponseDto(
     val role: String,
     val status: String,
     val company: CompanyInfoDto?,
-    val team: TeamInfoDto?
+    val teams: List<TeamInfoDto>
 )
 
 data class CompanyInfoDto(
@@ -85,4 +81,10 @@ data class TeamInfoDto(
 
 data class RefreshRequest(
     val refreshToken: String
+)
+
+data class EmailMessage(
+    val to: String,
+    val subject: String,
+    val body: String
 )

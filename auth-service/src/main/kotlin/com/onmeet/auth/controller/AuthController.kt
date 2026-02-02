@@ -21,20 +21,16 @@ class AuthController(
     private val jwtProperties: JwtProperties
 ) {
 
-    @PostMapping("/signup")
-    fun signup(@RequestBody request: SignupRequest): ResponseEntity<Long> {
-        val userId = authService.signup(request)
-        return ResponseEntity.ok(userId)
-    }
 
-    @PostMapping("/signup/company")
+
+    @PostMapping("/register/company")
     fun signupCompany(@RequestBody request: CompanySignupRequest): ResponseEntity<Long> {
         val userId = authService.signupCompany(request)
         return ResponseEntity.ok(userId)
     }
 
-    @PostMapping("/join")
-    fun joinCompany(@RequestBody request: JoinRequest): ResponseEntity<Long> {
+    @PostMapping("/register/employee")
+    fun registerEmployee(@RequestBody request: JoinRequest): ResponseEntity<Long> {
         val userId = authService.joinCompany(request)
         return ResponseEntity.ok(userId)
     }
@@ -49,7 +45,7 @@ class AuthController(
             .body(LoginResponse("Login successful"))
     }
 
-    @PostMapping("/guest/login")
+    @PostMapping("/login/guest")
     fun guestLogin(@RequestBody request: GuestLoginRequest): ResponseEntity<TokenResponse> {
         return ResponseEntity.ok(authService.guestLogin(request))
     }
@@ -62,13 +58,13 @@ class AuthController(
             authService.logoutByEmail(email)
         }
 
-        // Clear tokens from cookies using ResponseCookie for consistency
-        val accessCookie = createAccessCookie("", 0)
-        val refreshCookie = createRefreshCookie("", 0)
+        // Clear tokens from cookies
+        val emptyAccessCookie = createAccessCookie("", 0)
+        val emptyRefreshCookie = createRefreshCookie("", 0)
 
         return ResponseEntity.ok()
-            .header(HttpHeaders.SET_COOKIE, accessCookie.toString())
-            .header(HttpHeaders.SET_COOKIE, refreshCookie.toString())
+            .header(HttpHeaders.SET_COOKIE, emptyAccessCookie.toString())
+            .header(HttpHeaders.SET_COOKIE, emptyRefreshCookie.toString())
             .build()
     }
 
