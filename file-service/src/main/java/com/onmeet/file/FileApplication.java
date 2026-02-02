@@ -1,13 +1,11 @@
-package com.onmeet.image;
+package com.onmeet.file;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 
 @SpringBootApplication
-public class ImageApplication {
-
+public class FileApplication {
     public static void main(String[] args) {
-        SpringApplication.run(ImageApplication.class, args);
+        SpringApplication.run(FileApplication.class, args);
     }
-
 }
