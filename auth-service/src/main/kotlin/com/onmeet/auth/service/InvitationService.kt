@@ -19,6 +19,16 @@ class InvitationService(
     private val invitationProperties: InvitationProperties
 ) {
 
+    /**
+     * [개발 팀 공유 사항]
+     * 기업 멤버 초대 로직입니다.
+     *
+     * 1. 회사 ID와 초대할 이메일, 역할을 받아 초대장을 생성합니다.
+     * 2. 초대 코드를 포함한 이메일 발송 요청을 'email-service'로 비동기 전송합니다 (Kafka 사용).
+     * 3. Kafka 토픽: email-send-topic
+     *
+     * 주의: 이메일 발송은 비동기로 처리되므로, 이 메서드가 완료되었다고 해서 이메일이 즉시 도착하는 것은 아닙니다.
+     */
     fun createInvitation(companyId: Long, email: String, role: User.Role): Invitation {
         val company = companyRepository.findById(companyId)
             .orElseThrow { IllegalArgumentException("Company not found") }

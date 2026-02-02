@@ -21,8 +21,6 @@ class AuthController(
     private val jwtProperties: JwtProperties
 ) {
 
-
-
     @PostMapping("/register/company")
     fun signupCompany(@RequestBody request: CompanySignupRequest): ResponseEntity<Long> {
         val userId = authService.signupCompany(request)
@@ -33,6 +31,18 @@ class AuthController(
     fun registerEmployee(@RequestBody request: JoinRequest): ResponseEntity<Long> {
         val userId = authService.joinCompany(request)
         return ResponseEntity.ok(userId)
+    }
+
+    /**
+     * 초대 코드 검증 API
+     * 이메일과 코드를 받아 유효한지 검증하고, 초대 정보를 반환합니다.
+     */
+    @GetMapping("/invitations/validate")
+    fun validateInvitation(
+        @RequestParam email: String,
+        @RequestParam code: String
+    ): ResponseEntity<InvitationResponse> {
+        return ResponseEntity.ok(authService.validateInvitation(email, code))
     }
 
     @PostMapping("/login")
