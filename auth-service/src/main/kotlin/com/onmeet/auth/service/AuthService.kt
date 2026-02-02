@@ -7,6 +7,7 @@ import com.onmeet.auth.dto.LoginRequest
 import com.onmeet.auth.dto.TokenResponse
 import com.onmeet.auth.dto.TeamRequest
 import com.onmeet.auth.dto.GuestLoginRequest
+import com.onmeet.auth.dto.InvitationResponse
 import com.onmeet.auth.entity.User
 import com.onmeet.auth.exception.EmailAlreadyExistsException
 import com.onmeet.auth.repository.jpa.UserRepository
@@ -150,6 +151,16 @@ class AuthService(
         refreshTokenRepository.save(newRefreshTokenEntity)
 
         return TokenResponse(newAccessToken, newRefreshTokenStr)
+    }
+
+    @Transactional(readOnly = true)
+    fun validateInvitation(email: String, code: String): InvitationResponse {
+        val invitation = invitationService.validateInvitation(email, code)
+        return InvitationResponse(
+            email = invitation.email,
+            companyName = invitation.company.name,
+            role = invitation.role
+        )
     }
 
     @Transactional
