@@ -1,0 +1,29 @@
+services:
+  email-service:
+    build:
+      context: ../
+      dockerfile: email-service/Dockerfile
+    container_name: email-service
+    ports:
+      - "8087:8087"
+    environment:
+      - SPRING_KAFKA_BOOTSTRAP_SERVERS=kafka:29092
+      - AWS_ACCESS_KEY_ID=dummy
+      - AWS_SECRET_ACCESS_KEY=dummy
+      - AWS_REGION=ap-northeast-2
+      - SPRING_MAIL_HOST=localhost
+      - SPRING_MAIL_PORT=587
+      - SPRING_MAIL_USERNAME=dummy
+      - SPRING_MAIL_PASSWORD=dummy
+      - SERVER_PORT=8087
+      - MANAGEMENT_ENDPOINTS_WEB_BASE_PATH=/email/actuator
+    depends_on:
+      kafka:
+        condition: service_healthy
+    networks:
+      - msa-network
+
+networks:
+  msa-network:
+    name: onmeet-network
+    external: true
