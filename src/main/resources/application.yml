@@ -9,6 +9,9 @@ spring:
 server:
   port: 8080
 
+livekit:
+  url: ${LIVEKIT_URL:ws://localhost:7880}
+
 management:
   endpoints:
     web:
