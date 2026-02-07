@@ -36,6 +36,6 @@ class UserService(
     fun getCompanyIdByUserId(userId: Long): Long {
         val user = userRepository.findById(userId)
             .orElseThrow { EntityNotFoundException("User not found with ID: $userId") }
-        return user.company?.id ?: throw EntityNotFoundException("User is not associated with any company")
+        return user.company.id ?: throw EntityNotFoundException("User is not associated with any company")
     }
 }
