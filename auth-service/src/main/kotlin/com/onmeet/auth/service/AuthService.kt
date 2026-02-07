@@ -1,6 +1,7 @@
 package com.onmeet.auth.service
 
 import com.onmeet.auth.dto.CompanySignupRequest
+import com.onmeet.auth.config.TeamProperties
 import com.onmeet.auth.dto.JoinRequest
 import com.onmeet.auth.dto.LoginRequest
 
@@ -10,6 +11,7 @@ import com.onmeet.auth.dto.GuestLoginRequest
 import com.onmeet.auth.dto.InvitationResponse
 import com.onmeet.auth.entity.User
 import com.onmeet.auth.exception.EmailAlreadyExistsException
+import com.onmeet.common.exception.EntityNotFoundException
 import com.onmeet.auth.repository.jpa.UserRepository
 import com.onmeet.auth.security.JwtTokenProvider
 import org.springframework.security.authentication.AuthenticationManager
@@ -17,6 +19,8 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.crypto.password.PasswordEncoder
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
+import java.util.concurrent.TimeUnit
+import org.springframework.data.redis.core.StringRedisTemplate
 
 import com.onmeet.auth.repository.redis.RefreshTokenRepository
 import com.onmeet.auth.entity.RefreshToken
@@ -30,12 +34,12 @@ class AuthService(
     private val jwtTokenProvider: JwtTokenProvider,
     private val companyService: CompanyService,
     private val invitationService: InvitationService,
-    private val refreshTokenRepository: RefreshTokenRepository
+    private val refreshTokenRepository: RefreshTokenRepository,
+    private val teamProperties: TeamProperties,
+    private val redisTemplate: StringRedisTemplate
 ) {
 
     companion object {
-        private const val INITIAL_TEAM_COLOR = "#FFFFFF"
-        private const val INITIAL_TEAM_DESCRIPTION = "Initial team"
     }
 
 
@@ -53,7 +57,7 @@ class AuthService(
         // 2. Create Initial Team (from request)
         val defaultTeam = companyService.createTeam(
             company.id ?: throw IllegalStateException("Company ID not generated"),
-            TeamRequest(request.teamName, INITIAL_TEAM_DESCRIPTION, INITIAL_TEAM_COLOR)
+            TeamRequest(request.teamName, teamProperties.initialDescription, teamProperties.initialColor)
         )
 
         // 3. Create User (Manager)
@@ -135,8 +139,9 @@ class AuthService(
         // 즉시 토큰을 삭제하여 재사용(경쟁 조건)을 방지합니다.
         refreshTokenRepository.delete(refreshTokenEntity)
 
+
         val user = userRepository.findByEmail(refreshTokenEntity.mobileOrEmail)
-            .orElseThrow { IllegalArgumentException("User not found") }
+            .orElseThrow { EntityNotFoundException("User not found") }
 
         val authentication = UsernamePasswordAuthenticationToken(user, null, user.authorities)
         val newAccessToken = jwtTokenProvider.generateToken(authentication)
@@ -163,8 +168,23 @@ class AuthService(
         )
     }
 
-    @Transactional
-    fun logoutByEmail(email: String) {
-        refreshTokenRepository.deleteById(email)
+    fun logout(accessToken: String?, email: String?) {
+        // 1. Blacklist Access Token
+        if (!accessToken.isNullOrBlank()) {
+            val remainingTime = jwtTokenProvider.getRemainingTime(accessToken)
+            if (remainingTime > 0) {
+                redisTemplate.opsForValue().set(
+                    "blacklist:$accessToken",
+                    "logout",
+                    remainingTime,
+                    TimeUnit.MILLISECONDS
+                )
+            }
+        }
+
+        // 2. Remove Refresh Token
+        email?.let {
+            refreshTokenRepository.deleteById(it)
+        }
     }
 }

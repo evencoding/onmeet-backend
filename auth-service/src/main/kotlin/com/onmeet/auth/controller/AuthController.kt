@@ -15,7 +15,7 @@ import org.springframework.security.core.Authentication
 import org.springframework.web.bind.annotation.*
 
 @RestController
-@RequestMapping("/auth")
+@RequestMapping("/")
 class AuthController(
     private val authService: AuthService,
     private val jwtProperties: JwtProperties
@@ -27,7 +27,7 @@ class AuthController(
         return ResponseEntity.ok(userId)
     }
 
-    @PostMapping("/register/employee")
+    @PostMapping("/register/join")
     fun registerEmployee(@RequestBody request: JoinRequest): ResponseEntity<Long> {
         val userId = authService.joinCompany(request)
         return ResponseEntity.ok(userId)
@@ -62,11 +62,14 @@ class AuthController(
 
     @PostMapping("/logout")
     fun logout(
+        @CookieValue(name = JwtConstants.ACCESS_TOKEN_COOKIE_NAME, required = false) cookieAccessToken: String?,
+        @RequestHeader(JwtConstants.AUTHORIZATION_HEADER, required = false) headerAccessToken: String?,
         authentication: Authentication?
     ): ResponseEntity<Void> {
-        authentication?.name?.let { email ->
-            authService.logoutByEmail(email)
-        }
+        // Extract token (cookie priority, then header)
+        val accessToken = cookieAccessToken ?: headerAccessToken?.removePrefix(JwtConstants.BEARER_PREFIX)
+
+        authService.logout(accessToken, authentication?.name)
 
         // Clear tokens from cookies
         val emptyAccessCookie = createAccessCookie("", 0)

@@ -21,13 +21,13 @@ services:
       dockerfile: file-service/Dockerfile
     container_name: file-service
     ports:
-      - "8086:8086"
+      - "${FILE_SERVICE_PORT:-8086}:${FILE_SERVICE_PORT:-8086}"
     environment:
-      - SPRING_DATASOURCE_URL=jdbc:mysql://mysql-file:3306/file_db?useSSL=false&allowPublicKeyRetrieval=true&characterEncoding=UTF-8&serverTimezone=UTC
+      - SPRING_DATASOURCE_URL=${FILE_DB_URL:-jdbc:mysql://mysql-file:3306/file_db?useSSL=false&allowPublicKeyRetrieval=true&characterEncoding=UTF-8&serverTimezone=UTC}
       - SPRING_DATASOURCE_USERNAME=${DB_USERNAME}
       - SPRING_DATASOURCE_PASSWORD=${DB_ROOT_PASSWORD}
       - GATEWAY_SHARED_SECRET=${GATEWAY_SHARED_SECRET}
-      - SERVER_PORT=8086
+      - SERVER_PORT=${FILE_SERVICE_PORT:-8086}
       - MANAGEMENT_ENDPOINTS_WEB_BASE_PATH=/file/actuator
     depends_on:
       mysql-file:

@@ -7,21 +7,25 @@ import org.springframework.stereotype.Component
 
 @Component
 class AuthGatewayPreAuthFilter(
-    gatewayProperties: GatewayProperties
+    gatewayProperties: com.onmeet.auth.config.GatewayProperties,
+    @org.springframework.beans.factory.annotation.Value("\${server.servlet.context-path:}") private val contextPath: String
 ) : GatewayPreAuthFilter(gatewayProperties.sharedSecret) {
 
-    private val allowedPaths = setOf(
-        "/.well-known/jwks.json",
-        "/actuator/health",
-        "/auth/signup",
-        "/auth/signup/company",
-        "/auth/join",
-        "/auth/login",
-        "/auth/guest/login",
-        "/auth/refresh",
-        "/auth/logout",
-        "/auth/check"
-    )
+    private val allowedPaths by lazy {
+        setOf(
+            "/.well-known/jwks.json",
+            "$contextPath/.well-known/jwks.json",
+            "$contextPath/actuator/health",
+            "$contextPath/register/company",
+            "$contextPath/register/join",
+            "$contextPath/invitations/validate",
+            "$contextPath/login",
+            "$contextPath/login/guest",
+            "$contextPath/refresh",
+            "$contextPath/logout",
+            "$contextPath/check"
+        )
+    }
 
     override fun shouldNotFilter(request: HttpServletRequest): Boolean {
         // If already authenticated (e.g. via JWT), skip gateway secret check
@@ -30,6 +34,6 @@ class AuthGatewayPreAuthFilter(
         }
         
         val path = request.requestURI
-        return allowedPaths.contains(path) || path.startsWith("/actuator/") || path.startsWith("/auth/actuator/")
+        return allowedPaths.contains(path) || path.startsWith("$contextPath/actuator/")
     }
 }
