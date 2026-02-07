@@ -45,9 +45,11 @@ class User(
     @Column(nullable = false)
     var status: UserStatus = UserStatus.ACTIVE,
 
+    @ElementCollection(fetch = FetchType.EAGER)
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
-    var role: Role = Role.USER,
+    @CollectionTable(name = "user_roles", joinColumns = [JoinColumn(name = "user_id")])
+    @Column(name = "role")
+    var roles: MutableSet<Role> = mutableSetOf(Role.USER),
 
     @CreatedDate
     @Column(nullable = false, updatable = false)
@@ -63,11 +65,11 @@ class User(
     }
 
     enum class Role {
-        USER, ADMIN, MANAGER
+        USER, ADMIN, MANAGER, TEAM_LEADER
     }
 
     override fun getAuthorities(): MutableCollection<out GrantedAuthority> {
-        return mutableListOf(SimpleGrantedAuthority("ROLE_${role.name}"))
+        return roles.map { SimpleGrantedAuthority("ROLE_${it.name}") }.toMutableList()
     }
 
     override fun getPassword(): String = passwordHash

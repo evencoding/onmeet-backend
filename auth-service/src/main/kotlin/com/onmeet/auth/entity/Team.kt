@@ -27,6 +27,10 @@ class Team(
     @JoinColumn(name = "company_id", nullable = false)
     var company: Company,
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "leader_id")
+    var leader: User? = null,
+
     @Column(nullable = false)
     @Enumerated(EnumType.STRING)
     var status: TeamStatus = TeamStatus.ACTIVE,
@@ -40,6 +44,6 @@ class Team(
     var updatedAt: LocalDateTime? = null
 ) {
     enum class TeamStatus {
-        ACTIVE, INACTIVE
+        ACTIVE, INACTIVE, PENDING_APPROVAL
     }
 }

@@ -24,7 +24,7 @@ class UserService(
             email = user.email,
             name = user.name,
             employeeId = user.employeeId,
-            role = user.role.name,
+            roles = user.roles.map { it.name }.toSet(),
             status = user.status.name,
             company = user.company.let { it.id?.let { id -> CompanyInfoDto(id, it.name) } ?: throw IllegalStateException("Company ID cannot be null") },
             teams = user.teams.map { 
