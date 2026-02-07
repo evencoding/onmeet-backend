@@ -105,8 +105,8 @@ data class UserResponseDto(
     val name: String,
     @Schema(description = "사번")
     val employeeId: String?,
-    @Schema(description = "권한")
-    val role: String,
+    @Schema(description = "권한 목록")
+    val roles: Set<String>,
     @Schema(description = "상태")
     val status: String,
     @Schema(description = "소속 회사 정보")

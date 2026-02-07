@@ -88,14 +88,22 @@ class AuthController(
             .body(LoginResponse("Login successful"))
     }
 
-    @Operation(summary = "게스트 로그인", description = "게스트 계정으로 로그인하여 토큰을 발급받습니다.")
+    @Operation(summary = "게스트 로그인", description = "게스트 계정으로 로그인하여 토큰을 쿠키로 발급받습니다.")
     @ApiResponses(value = [
-        ApiResponse(responseCode = "200", description = "로그인 성공 (토큰 반환)", content = [Content(schema = Schema(implementation = TokenResponse::class))]),
+        ApiResponse(responseCode = "200", description = "로그인 성공 (쿠키에 토큰 설정)"),
         ApiResponse(responseCode = "400", description = "잘못된 요청", content = [Content(examples = [ExampleObject(value = "{\"error\": \"Invalid request\"}")])])
     ])
     @PostMapping("/login/guest")
-    fun guestLogin(@RequestBody request: GuestLoginRequest): ResponseEntity<TokenResponse> {
-        return ResponseEntity.ok(authService.guestLogin(request))
+    fun guestLogin(@RequestBody request: GuestLoginRequest): ResponseEntity<Void> {
+        val tokenResponse = authService.guestLogin(request)
+
+        // Guest Refresh Token: 1 day (86400 seconds)
+        val guestRefreshMaxAge = 86400L
+
+        return ResponseEntity.ok()
+            .header(HttpHeaders.SET_COOKIE, createAccessCookie(tokenResponse.accessToken).toString())
+            .header(HttpHeaders.SET_COOKIE, createRefreshCookie(tokenResponse.refreshToken ?: "", guestRefreshMaxAge).toString())
+            .build()
     }
 
     @Operation(summary = "로그아웃", description = "Access Token을 블랙리스트에 추가하고 쿠키를 삭제합니다.")
