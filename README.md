@@ -113,18 +113,18 @@ AWS_SECRET_ACCESS_KEY=...
 
 ## 🔗 엔드포인트 및 API 명세 (Endpoints & API Reference)
 
-각 서비스의 상세한 API 명세는 아래 링크를 참조하세요.
+각 서비스의 상세한 API 명세는 아래 링크 및 **Swagger UI**를 참조하세요.
 
-| 서비스 (Service) | 경로 접두사 (Path Prefix) | API 명세서 (Reference) |
-|---|---|---|
-| **Gateway** | `/` | [GATEWAY_ROUTES.md](gateway-service/GATEWAY_ROUTES.md) |
-| **Auth** | `/auth/**` | [API_REFERENCE.md](auth-service/API_REFERENCE.md) |
-| **AI** | `/ai/**` | [API_REFERENCE.md](ai-service/API_REFERENCE.md) |
-| **Video** | `/video/**` | [API_REFERENCE.md](video-service/API_REFERENCE.md) |
-| **Chat** | `/chat/**` | [API_REFERENCE.md](chat-service/API_REFERENCE.md) |
-| **Notification** | `/notification/**` | [API_REFERENCE.md](notification-service/API_REFERENCE.md) |
-| **File** | `/file/**` | [API_REFERENCE.md](file-service/API_REFERENCE.md) |
-| **Email** | - | [API_REFERENCE.md](email-service/API_REFERENCE.md) |
+| 서비스 (Service) | 경로 접두사 (Path Prefix) | API 명세서 (Reference) | Swagger UI |
+|---|---|---|---|
+| **Gateway** | `/` | [GATEWAY_ROUTES.md](gateway-service/GATEWAY_ROUTES.md) | [Link](http://localhost:8080/webjars/swagger-ui/index.html) |
+| **Auth** | `/auth/**` | [API_REFERENCE.md](auth-service/API_REFERENCE.md) | [Link](http://localhost:8081/swagger-ui.html) |
+| **AI** | `/ai/**` | [API_REFERENCE.md](ai-service/API_REFERENCE.md) | [Link](http://localhost:8082/swagger-ui.html) |
+| **Video** | `/video/**` | [API_REFERENCE.md](video-service/API_REFERENCE.md) | [Link](http://localhost:8083/swagger-ui.html) |
+| **Chat** | `/chat/**` | [API_REFERENCE.md](chat-service/API_REFERENCE.md) | [Link](http://localhost:8084/swagger-ui.html) |
+| **Notification** | `/notification/**` | [API_REFERENCE.md](notification-service/API_REFERENCE.md) | [Link](http://localhost:8085/swagger-ui.html) |
+| **File** | `/file/**` | [API_REFERENCE.md](file-service/API_REFERENCE.md) | [Link](http://localhost:8086/swagger-ui.html) |
+| **Email** | - | [API_REFERENCE.md](email-service/API_REFERENCE.md) | [Link](http://localhost:8087/swagger-ui.html) |
 
 ### 상태 확인 (Health Check)
 - `GET /actuator/health` (모든 서비스 공통)
