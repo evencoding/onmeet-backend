@@ -1,0 +1,35 @@
+services:
+  mysql-video:
+    image: mysql:9.0
+    container_name: mysql-video
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: video_db
+    ports:
+      - "3309:3306"
+    networks:
+      - msa-network
+
+  video-service:
+    build:
+      context: ../
+      dockerfile: video-service/Dockerfile
+    container_name: video-service
+    ports:
+      - "8083:8083"
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:mysql://mysql-video:3306/video_db?useSSL=false&allowPublicKeyRetrieval=true&characterEncoding=UTF-8&serverTimezone=UTC
+      - SPRING_DATASOURCE_USERNAME=${DB_USERNAME}
+      - SPRING_DATASOURCE_PASSWORD=${DB_ROOT_PASSWORD}
+      - GATEWAY_SHARED_SECRET=${GATEWAY_SHARED_SECRET}
+      - SERVER_PORT=8083
+      - MANAGEMENT_ENDPOINTS_WEB_BASE_PATH=/video/actuator
+    depends_on:
+      - mysql-video
+    networks:
+      - msa-network
+
+networks:
+  msa-network:
+    name: onmeet-network
+    external: true

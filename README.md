@@ -10,15 +10,26 @@ B2B 영상회의 + 회의록(AI 요약) + 알림(SSE) 서비스 ONMEET 백엔드
 - springdoc OpenAPI/Swagger
 - MapStruct
 
-## Quick Start (local)
-1) DB 실행
+## Local Development Setup
+
+This project uses **Environment Variables** for configuration management.
+The `application.yml` files are committed with sensible defaults for local development (using `localhost` and default ports).
+
+### Running with Docker Compose (Recommended)
+Docker Compose is already configured to inject the necessary environment variables.
 ```bash
-docker-compose up -d
+docker-compose up
 ```
-2) 애플리케이션 실행
-```bash
-./gradlew bootRun
-```
+
+### Running Locally (IntelliJ / Gradle)
+By default, services are configured to connect to databases on `localhost` with:
+- Username: `root`
+- Password: `root`
+
+If your local environment differs, setting environment variables in your IDE or shell will override these defaults:
+- `SPRING_DATASOURCE_URL`
+- `SPRING_DATASOURCE_USERNAME`
+- `SPRING_DATASOURCE_PASSWORD`
 
 ## Profiles
 - `local`: PostgreSQL
