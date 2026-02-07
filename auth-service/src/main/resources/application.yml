@@ -1,0 +1,47 @@
+server:
+  port: ${SERVER_PORT:8081}
+
+spring:
+  application:
+    name: auth-service
+  datasource:
+    url: ${SPRING_DATASOURCE_URL}
+    username: ${SPRING_DATASOURCE_USERNAME}
+    password: ${SPRING_DATASOURCE_PASSWORD}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    show-sql: true
+    properties:
+      hibernate:
+        format-sql: true
+
+auth:
+  encryption-key: ${AUTH_ENCRYPTION_KEY}
+gateway:
+  shared-secret: ${GATEWAY_SHARED_SECRET}
+
+jwt:
+  validity-in-ms: 3600000 # 1 hour
+  key-id: onmeet-auth-key
+  cookie:
+    secure: ${COOKIE_SECURE:true}
+    max-age: 3600
+  refresh-cookie:
+    max-age: 604800 # 7 days
+invitation:
+  expiry-days: 7
+
+management:
+  endpoints:
+    web:
+      base-path: /auth/actuator
+      exposure:
+        include: health
+
+logging:
+  level:
+    root: INFO
+    "[com.onmeet]": INFO
+
