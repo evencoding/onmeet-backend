@@ -7,6 +7,8 @@ import com.onmeet.chat.service.ChatService;
 import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.*;
 
+
+// (테스트용) 삭제할 예정
 @RestController
 @RequestMapping("/api/chats")
 public class ChatSendController {
