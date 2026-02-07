@@ -111,15 +111,20 @@ AWS_SECRET_ACCESS_KEY=...
 
 ---
 
-## 🔗 엔드포인트 요약 (Endpoints Overview)
+## 🔗 엔드포인트 및 API 명세 (Endpoints & API Reference)
 
-### Gateway 라우트 (`http://localhost:8080`)
-- `/auth/**` -> Auth Service
-- `/ai/**` -> AI Service
-- `/video/**` -> Video Service
-- `/chat/**` -> Chat Service
-- `/notification/**` -> Notification Service
-- `/file/**` -> File Service (일부 문맥에서 `/image/**`로 매핑됨)
+각 서비스의 상세한 API 명세는 아래 링크를 참조하세요.
+
+| 서비스 (Service) | 경로 접두사 (Path Prefix) | API 명세서 (Reference) |
+|---|---|---|
+| **Gateway** | `/` | [GATEWAY_ROUTES.md](gateway-service/GATEWAY_ROUTES.md) |
+| **Auth** | `/auth/**` | [API_REFERENCE.md](auth-service/API_REFERENCE.md) |
+| **AI** | `/ai/**` | [API_REFERENCE.md](ai-service/API_REFERENCE.md) |
+| **Video** | `/video/**` | [API_REFERENCE.md](video-service/API_REFERENCE.md) |
+| **Chat** | `/chat/**` | [API_REFERENCE.md](chat-service/API_REFERENCE.md) |
+| **Notification** | `/notification/**` | [API_REFERENCE.md](notification-service/API_REFERENCE.md) |
+| **File** | `/file/**` | [API_REFERENCE.md](file-service/API_REFERENCE.md) |
+| **Email** | - | [API_REFERENCE.md](email-service/API_REFERENCE.md) |
 
 ### 상태 확인 (Health Check)
 - `GET /actuator/health` (모든 서비스 공통)
