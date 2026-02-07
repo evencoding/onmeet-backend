@@ -65,7 +65,7 @@ class AuthService(
             email = request.email,
             passwordHash = passwordEncoder.encode(request.password),
             name = request.name,
-            role = User.Role.MANAGER,
+            roles = mutableSetOf(User.Role.MANAGER),
             company = company,
             teams = mutableSetOf(defaultTeam),
             status = User.UserStatus.ACTIVE
@@ -89,7 +89,7 @@ class AuthService(
             passwordHash = passwordEncoder.encode(request.password),
             name = request.name,
             employeeId = request.employeeId,
-            role = invitation.role,
+            roles = mutableSetOf(invitation.role),
             company = invitation.company,
             status = User.UserStatus.ACTIVE
         )
@@ -126,9 +126,24 @@ class AuthService(
         return TokenResponse(accessToken, refreshTokenStr)
     }
 
+    @Transactional
     fun guestLogin(request: GuestLoginRequest): TokenResponse {
         val accessToken = jwtTokenProvider.generateGuestToken(request.name, listOf("ROLE_GUEST"), request.meetingId)
-        return TokenResponse(accessToken, null)
+
+        // Generate Refresh Token
+        val refreshTokenStr = UUID.randomUUID().toString()
+        val authorities = "ROLE_GUEST"
+
+        // Save to Redis with 1 day TTL (86400 seconds)
+        val refreshToken = RefreshToken(
+            mobileOrEmail = request.name,
+            token = refreshTokenStr,
+            authority = authorities,
+            expiration = 86400L
+        )
+        refreshTokenRepository.save(refreshToken)
+
+        return TokenResponse(accessToken, refreshTokenStr)
     }
 
     @Transactional
