@@ -11,4 +11,6 @@ public interface MeetingEventPublisher {
     void publishParticipantLeft(ParticipantEvent event);
 
     void publishAudioSegmentReady(AudioSegmentEvent event);
+
+    void publishChatMessage(ChatMessageEvent event);
 }

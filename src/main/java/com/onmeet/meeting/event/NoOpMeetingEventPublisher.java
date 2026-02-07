@@ -33,4 +33,9 @@ public class NoOpMeetingEventPublisher implements MeetingEventPublisher {
     public void publishAudioSegmentReady(AudioSegmentEvent event) {
         log.debug("Audio segment ready event: roomId={}, segmentIndex={}", event.roomId(), event.segmentIndex());
     }
+
+    @Override
+    public void publishChatMessage(ChatMessageEvent event) {
+        log.debug("Chat message event: roomId={}, senderId={}, type={}", event.roomId(), event.senderId(), event.messageType());
+    }
 }
