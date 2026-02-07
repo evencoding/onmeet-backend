@@ -36,18 +36,13 @@ services:
       - "8084:8080"
     environment:
       - SPRING_DATASOURCE_URL=jdbc:mysql://mysql-chat:3306/chat_db?useSSL=false&allowPublicKeyRetrieval=true&characterEncoding=UTF-8&serverTimezone=UTC
-<<<<<<< HEAD
-      - SPRING_DATASOURCE_USERNAME=root
-      - SPRING_DATASOURCE_PASSWORD=root
-      - SPRING_DATA_REDIS_HOST=redis-chat
-      - SPRING_DATA_REDIS_PORT=6379
-=======
       - SPRING_DATASOURCE_USERNAME=${DB_USERNAME}
       - SPRING_DATASOURCE_PASSWORD=${DB_ROOT_PASSWORD}
       - GATEWAY_SHARED_SECRET=${GATEWAY_SHARED_SECRET}
       - SERVER_PORT=8084
       - MANAGEMENT_ENDPOINTS_WEB_BASE_PATH=/chat/actuator
->>>>>>> origin/develop
+      - SPRING_DATA_REDIS_HOST=redis-chat
+      - SPRING_DATA_REDIS_PORT=6379
     depends_on:
       mysql-chat:
         condition: service_healthy
