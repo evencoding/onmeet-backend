@@ -17,9 +17,26 @@ The `application.yml` files are committed with sensible defaults for local devel
 
 ### Running with Docker Compose (Recommended)
 Docker Compose is already configured to inject the necessary environment variables.
+
+**모든 서비스 실행:**
 ```bash
-docker-compose up
+docker compose up -d
 ```
+
+**특정 서비스만 실행 (권장):**
+전체 시스템을 올리지 않고 특정 서비스와 그 서비스에 필요한 인프라(DB, Redis, Kafka 등)만 선별해서 실행할 수 있습니다. 반드시 **프로젝트 루트 디렉토리**에서 실행해야 합니다.
+
+```bash
+# Auth Service와 관련 필수 인프라만 실행
+docker compose up -d auth-service
+
+# 특정 서비스들 조합해서 실행 (예: 인증 + 게이트웨이)
+docker compose up -d auth-service gateway-service
+
+# 서비스 재빌드 및 적용
+docker compose up -d auth-service --build
+```
+> **참고**: 개별 서비스 디렉토리(`auth-service/` 등) 내의 `docker-compose.yml`을 직접 실행하면 의존성 문제로 에러가 발생할 수 있으므로, 항상 루트에서 서비스명을 지정하여 실행하는 것을 권장합니다.
 
 ### Running Locally (IntelliJ / Gradle)
 By default, services are configured to connect to databases on `localhost` with:

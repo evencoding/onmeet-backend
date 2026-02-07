@@ -42,9 +42,9 @@ class SecurityConfig(
             .sessionManagement { it.sessionCreationPolicy(SessionCreationPolicy.STATELESS) }
             .authorizeHttpRequests { auth ->
                 auth.requestMatchers(
-                    "/auth/signup", "/auth/signup/company", "/auth/join",
-                    "/auth/login", "/auth/guest/login", "/auth/refresh", "/auth/logout", "/auth/check",
-                    "/auth/actuator/**", "/.well-known/jwks.json"
+                    "/register/**", "/invitations/validate",
+                    "/login/**", "/refresh", "/logout", "/check",
+                    "/actuator/**", "/.well-known/jwks.json"
                 ).permitAll()
                 auth.anyRequest().authenticated()
             }
