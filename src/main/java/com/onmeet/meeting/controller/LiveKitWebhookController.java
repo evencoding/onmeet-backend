@@ -1,7 +1,9 @@
 package com.onmeet.meeting.controller;
 
-import com.onmeet.meeting.service.MeetingRoomService;
+import com.onmeet.meeting.service.ChatIntegrationService;
 import com.onmeet.meeting.service.RoomRecordingService;
+import java.nio.charset.StandardCharsets;
+import java.util.Base64;
 import java.util.Map;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -18,9 +20,12 @@ public class LiveKitWebhookController {
     private static final Logger log = LoggerFactory.getLogger(LiveKitWebhookController.class);
 
     private final RoomRecordingService recordingService;
+    private final ChatIntegrationService chatIntegrationService;
 
-    public LiveKitWebhookController(RoomRecordingService recordingService) {
+    public LiveKitWebhookController(RoomRecordingService recordingService,
+                                    ChatIntegrationService chatIntegrationService) {
         this.recordingService = recordingService;
+        this.chatIntegrationService = chatIntegrationService;
     }
 
     @PostMapping("/livekit")
@@ -42,6 +47,7 @@ public class LiveKitWebhookController {
             case "track_published" -> handleTrackPublished(payload);
             case "egress_started" -> handleEgressStarted(payload);
             case "egress_ended" -> handleEgressEnded(payload);
+            case "data_received" -> handleDataReceived(payload);
             default -> log.debug("Unhandled webhook event: {}", event);
         }
 
@@ -119,6 +125,32 @@ public class LiveKitWebhookController {
         } else {
             recordingService.handleEgressFailed(egressId, error);
             log.warn("Egress failed: egressId={}, error={}", egressId, error);
+        }
+    }
+
+    @SuppressWarnings("unchecked")
+    private void handleDataReceived(Map<String, Object> payload) {
+        Map<String, Object> room = (Map<String, Object>) payload.get("room");
+        Map<String, Object> participant = (Map<String, Object>) payload.get("participant");
+
+        if (room == null || participant == null) {
+            return;
+        }
+
+        String roomName = (String) room.get("name");
+        String senderIdentity = (String) participant.get("identity");
+        String dataBase64 = (String) payload.get("data");
+
+        if (roomName == null || dataBase64 == null) {
+            return;
+        }
+
+        try {
+            byte[] data = Base64.getDecoder().decode(dataBase64);
+            chatIntegrationService.handleDataReceived(roomName, senderIdentity, data);
+            log.debug("Data received: room={}, sender={}", roomName, senderIdentity);
+        } catch (IllegalArgumentException e) {
+            log.warn("Failed to decode data payload: room={}, sender={}", roomName, senderIdentity);
         }
     }
 }

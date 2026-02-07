@@ -52,4 +52,14 @@ public class NoOpLiveKitClient implements LiveKitClient {
     public void stopEgress(String egressId) {
         log.debug("LiveKit stopEgress: egressId={}", egressId);
     }
+
+    @Override
+    public void publishData(String roomName, byte[] data, DataPacketKind kind) {
+        log.debug("LiveKit publishData: room={}, size={}, kind={}", roomName, data.length, kind);
+    }
+
+    @Override
+    public void publishData(String roomName, byte[] data, DataPacketKind kind, String destinationIdentity) {
+        log.debug("LiveKit publishData: room={}, size={}, kind={}, dest={}", roomName, data.length, kind, destinationIdentity);
+    }
 }

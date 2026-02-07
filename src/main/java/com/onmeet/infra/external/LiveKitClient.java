@@ -18,22 +18,40 @@ public interface LiveKitClient {
 
     void stopEgress(String egressId);
 
+    void publishData(String roomName, byte[] data, DataPacketKind kind);
+
+    void publishData(String roomName, byte[] data, DataPacketKind kind, String destinationIdentity);
+
     record TokenGrants(
         boolean canPublish,
         boolean canSubscribe,
         boolean canPublishData,
-        boolean roomAdmin
+        boolean roomAdmin,
+        boolean hidden
     ) {
+        public TokenGrants(boolean canPublish, boolean canSubscribe, boolean canPublishData, boolean roomAdmin) {
+            this(canPublish, canSubscribe, canPublishData, roomAdmin, false);
+        }
+
         public static TokenGrants forHost() {
-            return new TokenGrants(true, true, true, true);
+            return new TokenGrants(true, true, true, true, false);
         }
 
         public static TokenGrants forParticipant() {
-            return new TokenGrants(true, true, true, false);
+            return new TokenGrants(true, true, true, false, false);
         }
 
         public static TokenGrants forViewer() {
-            return new TokenGrants(false, true, false, false);
+            return new TokenGrants(false, true, false, false, false);
         }
+
+        public static TokenGrants forChatService() {
+            return new TokenGrants(false, true, true, false, true);
+        }
+    }
+
+    enum DataPacketKind {
+        RELIABLE,
+        LOSSY
     }
 }

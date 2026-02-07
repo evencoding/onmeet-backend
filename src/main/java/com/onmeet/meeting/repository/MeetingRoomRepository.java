@@ -15,6 +15,8 @@ public interface MeetingRoomRepository extends JpaRepository<MeetingRoom, Long> 
 
     Optional<MeetingRoom> findByRoomCode(String roomCode);
 
+    Optional<MeetingRoom> findByLivekitRoomName(String livekitRoomName);
+
     boolean existsByRoomCode(String roomCode);
 
     @Query("SELECT r FROM MeetingRoom r WHERE "
