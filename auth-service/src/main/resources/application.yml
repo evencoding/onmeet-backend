@@ -51,5 +51,8 @@ management:
 logging:
   level:
     root: INFO
-    "[com.onmeet]": INFO
+    com.onmeet.auth: DEBUG
 
+onmeet:
+  auth:
+    internal-url: ${AUTH_INTERNAL_URL:http://auth-service:8081}
