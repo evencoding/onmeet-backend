@@ -33,6 +33,10 @@ class User(
     @JoinColumn(name = "company_id", nullable = false)
     var company: Company,
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "job_title_id")
+    var jobTitle: JobTitle? = null,
+
     @ManyToMany(fetch = FetchType.LAZY)
     @JoinTable(
         name = "user_teams",
@@ -68,9 +72,20 @@ class User(
         USER, ADMIN, MANAGER, TEAM_LEADER
     }
 
-    override fun getAuthorities(): MutableCollection<out GrantedAuthority> {
-        return roles.map { SimpleGrantedAuthority("ROLE_${it.name}") }.toMutableList()
-    }
+    fun hasRole(role: Role): Boolean = roles.contains(role)
+
+    fun isManager(): Boolean = hasRole(Role.MANAGER)
+    
+    fun isTeamLeader(): Boolean = hasRole(Role.TEAM_LEADER)
+
+    fun isSelf(user: User): Boolean = this.id == user.id
+
+    fun belongsToCompany(companyId: Long): Boolean = company.id == companyId
+
+    fun requireId(): Long = id ?: throw IllegalStateException("User ID is required but was null")
+
+    override fun getAuthorities(): MutableCollection<out GrantedAuthority> =
+        roles.map { SimpleGrantedAuthority("ROLE_${it.name}") }.toMutableList()
 
     override fun getPassword(): String = passwordHash
 
@@ -81,6 +96,14 @@ class User(
     override fun isAccountNonLocked(): Boolean = true
 
     override fun isCredentialsNonExpired(): Boolean = true
+
+    fun activate() {
+        this.status = UserStatus.ACTIVE
+    }
+
+    fun deactivate() {
+        this.status = UserStatus.INACTIVE
+    }
 
     override fun isEnabled(): Boolean = (this.status == UserStatus.ACTIVE)
 }
