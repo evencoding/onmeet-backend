@@ -16,3 +16,7 @@ spring:
         "[format_sql]": true
         "[show_sql]": true
         dialect: org.hibernate.dialect.MySQLDialect
+
+onmeet:
+  auth:
+    internal-url: ${AUTH_INTERNAL_URL:http://auth-service:8081}
