@@ -16,3 +16,15 @@ spring:
         "[format_sql]": true
         "[show_sql]": true
         dialect: org.hibernate.dialect.MySQLDialect
+  cloud:
+    aws:
+      s3:
+        bucket: ${S3_BUCKET_NAME}
+      region:
+        static: ${AWS_REGION:ap-northeast-2}
+      credentials:
+        access-key: ${AWS_ACCESS_KEY}
+        secret-key: ${AWS_SECRET_KEY}
+
+gateway:
+  shared-secret: ${GATEWAY_SHARED_SECRET:onmeet-shared-secret-for-internal-auth}
