@@ -43,8 +43,11 @@ class UserController(
         ApiResponse(responseCode = "404", description = "사용자를 찾을 수 없음", content = [Content(examples = [ExampleObject(value = "{\"error\": \"User not found\"}")])])
     ])
     @GetMapping("/{userId}")
-    fun getUserInfo(@PathVariable userId: Long): ResponseEntity<UserResponseDto> =
-        ResponseEntity.ok(userService.getUserInfo(userId))
+    fun getUserInfo(
+        @AuthenticationPrincipal requester: User,
+        @PathVariable userId: Long
+    ): ResponseEntity<UserResponseDto> =
+        ResponseEntity.ok(userService.getUserInfo(userId, requester))
 
     @Operation(summary = "내 프로필 수정", description = "현재 로그인한 자신의 프로필 정보를 수정합니다.")
     @ApiResponses(value = [

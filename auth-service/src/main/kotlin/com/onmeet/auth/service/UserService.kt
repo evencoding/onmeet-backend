@@ -8,7 +8,7 @@ import org.springframework.data.domain.Pageable
 
 interface UserService {
     fun updateUserProfile(userId: Long, requester: User, request: UserProfileUpdateRequest): UserResponseDto
-    fun getUserInfo(userId: Long): UserResponseDto
+    fun getUserInfo(userId: Long, requester: User): UserResponseDto
     fun getUserInfo(email: String): UserResponseDto
     fun getAllEmployees(manager: User, pageable: Pageable): PageResponse<UserResponseDto>
     fun getCompanyIdByUserId(userId: Long): Long
