@@ -21,6 +21,12 @@
 - **필드**: `status` (HTTP 상태 코드), `message` (에러 메시지), `timestamp` (발생 시각).
 - Java 호환성을 위해 `@JvmOverloads`가 적용되어 있습니다.
 
+### Security Components (`com.onmeet.common.security`)
+서비스 간 인증 및 보안을 위한 공통 컴포넌트입니다.
+- `GatewayPreAuthFilter`: Gateway에서 전달된 인증 헤더(X-User-Id, X-User-Roles) 및 보안 시크릿(X-Gateway-Secret)을 검증하여 SecurityContext를 설정합니다.
+- `UserContext`: 현재 요청 쓰레드의 인증 정보(UserId, Email, Roles)를 쉽게 가져올 수 있는 유틸리티입니다.
+- `JwtConstants`: JWT 관련 공통 상수(헤더 키, 쿠키 명 등)를 정의합니다.
+
 ### Common Exceptions (`com.onmeet.common.exception`)
 전 서비스에서 공통으로 발생하는 예외들입니다.
 - `BaseException`: 모든 커스텀 예외의 최상위 클래스.

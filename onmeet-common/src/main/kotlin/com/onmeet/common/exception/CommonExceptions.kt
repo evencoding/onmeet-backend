@@ -1,7 +1,7 @@
 package com.onmeet.common.exception
 
 /**
- * 기본 시스템 예외. 모든 비즈니스 예외는 이 클래스를 상속받아야 합니다.
+ * 모든 서비스 커스텀 예외의 기반 클래스.
  */
 open class BaseException(
     override val message: String,
@@ -9,11 +9,11 @@ open class BaseException(
 ) : RuntimeException(message)
 
 /**
- * 엔티티를 찾을 수 없을 때 발생하는 예외.
+ * 대상을 찾을 수 없을 때 발생하는 예외 (404 Not Found).
  */
 open class EntityNotFoundException(message: String) : BaseException(message, 404)
 
 /**
- * 권한이 부족할 때 발생하는 예외.
+ * 권한이 부족하여 작업을 수행할 수 없을 때 발생하는 예외 (403 Forbidden).
  */
 open class InsufficientPermissionException(message: String) : BaseException(message, 403)
