@@ -43,6 +43,7 @@ B2B 화상 회의 + AI 요약 + 알림 서비스 (MSA w/ Spring Boot 3 & Kotlin)
 
 - **[Auth Service API 명세서](auth-service/API_REFERENCE.md)**: 상세 API 명세
 - **[로그인 & 테스트 가이드](auth-service/LOGIN_GUIDE.md)**: 로컬 인증 테스트 방법
+- **[공통 모듈(`onmeet-common`) 가이드](onmeet-common/ONMEET_COMMON_GUIDE.md)**: 공통 클라이언트 및 예외 처리 사용법
 
 ---
 
