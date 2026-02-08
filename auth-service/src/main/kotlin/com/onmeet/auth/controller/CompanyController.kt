@@ -64,7 +64,7 @@ class CompanyController(
         @AuthenticationPrincipal user: User,
         @RequestBody request: TeamRequest
     ): ResponseEntity<Long> =
-        ResponseEntity.ok(teamService.createTeam(user.company.requireId(), request.name).requireId())
+        ResponseEntity.ok(teamService.createTeam(user, request).requireId())
 
     @Operation(summary = "멤버 초대", description = "이메일로 새로운 멤버를 기업에 초대합니다 (매니저 권한 필요).")
     @ApiResponses(
