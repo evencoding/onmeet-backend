@@ -1,5 +1,6 @@
 package com.onmeet.auth.service
 
+import com.onmeet.auth.config.TeamProperties
 import com.onmeet.auth.dto.TeamRequest
 import com.onmeet.auth.entity.Team
 import com.onmeet.auth.entity.User
@@ -15,14 +16,15 @@ import org.springframework.transaction.annotation.Transactional
 class TeamServiceImpl(
     private val teamRepository: TeamRepository,
     private val userRepository: UserRepository,
-    private val companyRepository: com.onmeet.auth.repository.jpa.CompanyRepository
+    private val companyRepository: com.onmeet.auth.repository.jpa.CompanyRepository,
+    private val teamProperties: TeamProperties
 ) : TeamService {
 
     @Transactional
     override fun createTeam(user: User, request: TeamRequest): Team {
         val company = user.company
         
-        if (teamRepository.findByNameAndCompanyId(request.name, company.id!!) != null) {
+        if (teamRepository.findByNameAndCompanyId(request.name, company.requireId()) != null) {
             throw TeamAlreadyExistsException("Team already exists in this company: ${request.name}")
         }
 
@@ -59,8 +61,8 @@ class TeamServiceImpl(
             teamRepository.save(
                 Team(
                     name = name,
-                    description = description,
-                    color = color,
+                    description = description ?: teamProperties.initialDescription,
+                    color = color ?: teamProperties.initialColor,
                     company = company,
                     status = Team.TeamStatus.ACTIVE
                 )
@@ -111,6 +113,10 @@ class TeamServiceImpl(
         if (!manager.isManager()) {
              throw InsufficientPermissionException("Only managers can assign team leaders")
         }
+
+        if (!team.belongsToCompany(manager.company.requireId())) {
+             throw CrossCompanyAccessException("You can only assign leaders to teams in your company")
+        }
         
         val newLeader = userRepository.findById(newLeaderId)
             .orElseThrow { UserNotFoundException("User not found: $newLeaderId") }
@@ -138,6 +144,10 @@ class TeamServiceImpl(
              throw InsufficientPermissionException("You need specific permission to delegate leadership")
         }
 
+        if (!team.belongsToCompany(currentLeader.company.requireId())) {
+             throw CrossCompanyAccessException("You can only delegate leadership for teams in your company")
+        }
+
         val newLeader = userRepository.findById(newLeaderId)
             .orElseThrow { UserNotFoundException("User not found: $newLeaderId") }
             
@@ -160,6 +170,9 @@ class TeamServiceImpl(
             .also { team ->
                 if (!requester.isManager() && !team.isLeader(requester)) {
                     throw InsufficientPermissionException("You do not have permission to dissolve this team")
+                }
+                if (!team.belongsToCompany(requester.company.requireId())) {
+                    throw CrossCompanyAccessException("You can only dissolve teams in your company")
                 }
             }
             .let { teamRepository.delete(it) }
