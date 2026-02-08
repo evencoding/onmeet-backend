@@ -118,7 +118,7 @@ AWS_SECRET_ACCESS_KEY=...
 | 서비스 (Service) | 경로 접두사 (Path Prefix) | API 명세서 (Reference) | Swagger UI |
 |---|---|---|---|
 | **Gateway** | `/` | [GATEWAY_ROUTES.md](gateway-service/GATEWAY_ROUTES.md) | [Link](http://localhost:8080/webjars/swagger-ui/index.html) |
-| **Auth** | `/auth/**` | [API_REFERENCE.md](auth-service/API_REFERENCE.md) | [Link](http://localhost:8081/swagger-ui.html) |
+| **Auth** | `/auth/**` | [API_REFERENCE.md](auth-service/API_REFERENCE.md) | [Link](http://localhost:8081/auth/swagger-ui.html) |
 | **AI** | `/ai/**` | [API_REFERENCE.md](ai-service/API_REFERENCE.md) | [Link](http://localhost:8082/swagger-ui.html) |
 | **Video** | `/video/**` | [API_REFERENCE.md](video-service/API_REFERENCE.md) | [Link](http://localhost:8083/swagger-ui.html) |
 | **Chat** | `/chat/**` | [API_REFERENCE.md](chat-service/API_REFERENCE.md) | [Link](http://localhost:8084/swagger-ui.html) |
