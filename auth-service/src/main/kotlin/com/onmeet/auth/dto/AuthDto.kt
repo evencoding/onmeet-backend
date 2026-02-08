@@ -1,6 +1,8 @@
 package com.onmeet.auth.dto
 
 import io.swagger.v3.oas.annotations.media.Schema
+import org.springframework.data.domain.Page
+
 
 @Schema(description = "기업 회원가입 요청")
 data class CompanySignupRequest(
@@ -68,6 +70,16 @@ data class JoinRequest(
     val employeeId: String? = null
 )
 
+@Schema(description = "유저 정보 수정 요청")
+data class UserProfileUpdateRequest(
+    @Schema(description = "이름", example = "Jane Doe")
+    val name: String?,
+    @Schema(description = "사번", example = "EMP-001")
+    val employeeId: String?,
+    @Schema(description = "직급 ID", example = "1")
+    val jobTitleId: Long?
+)
+
 @Schema(description = "회사 정보 수정 요청")
 data class CompanyRequest(
     @Schema(description = "회사명")
@@ -111,6 +123,8 @@ data class UserResponseDto(
     val status: String,
     @Schema(description = "소속 회사 정보")
     val company: CompanyInfoDto?,
+    @Schema(description = "직급 정보")
+    val jobTitle: JobTitleResponse?,
     @Schema(description = "소속 팀 목록")
     val teams: List<TeamInfoDto>
 )
@@ -144,3 +158,31 @@ data class EmailMessage(
     val subject: String,
     val body: String
 )
+@Schema(description = "페이징 응답")
+data class PageResponse<T>(
+    @Schema(description = "데이터 목록")
+    val content: List<T>,
+    @Schema(description = "현재 페이지 번호 (0-indexed)")
+    val pageNumber: Int,
+    @Schema(description = "페이지 크기")
+    val pageSize: Int,
+    @Schema(description = "전체 요소 수")
+    val totalElements: Long,
+    @Schema(description = "전체 페이지 수")
+    val totalPages: Int,
+    @Schema(description = "마지막 페이지 여부")
+    val last: Boolean
+) {
+    companion object {
+        fun <T, R> from(page: Page<T>, mapper: (T) -> R): PageResponse<R> {
+            return PageResponse(
+                content = page.content.map(mapper),
+                pageNumber = page.number,
+                pageSize = page.size,
+                totalElements = page.totalElements,
+                totalPages = page.totalPages,
+                last = page.isLast
+            )
+        }
+    }
+}

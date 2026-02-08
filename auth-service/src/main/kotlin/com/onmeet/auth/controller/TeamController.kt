@@ -31,10 +31,8 @@ class TeamController(
     fun createTeam(
         @AuthenticationPrincipal user: User,
         @RequestBody request: TeamRequest
-    ): ResponseEntity<Long> {
-        val team = teamService.createTeam(user, request)
-        return ResponseEntity.ok(team.id)
-    }
+    ): ResponseEntity<Long> =
+        ResponseEntity.ok(teamService.createTeam(user, request).id)
 
     @Operation(summary = "팀 승인", description = "팀 생성 요청을 승인합니다 (매니저 전용).")
     @ApiResponses(value = [
@@ -46,10 +44,8 @@ class TeamController(
     fun approveTeam(
         @AuthenticationPrincipal user: User,
         @PathVariable teamId: Long
-    ): ResponseEntity<Void> {
-        teamService.approveTeam(teamId, user)
-        return ResponseEntity.ok().build()
-    }
+    ): ResponseEntity<Void> =
+        teamService.approveTeam(teamId, user).let { ResponseEntity.ok().build() }
     
     @Operation(summary = "팀 반려", description = "팀 생성 요청을 반려(삭제)합니다 (매니저 전용).")
     @ApiResponses(value = [
@@ -61,10 +57,8 @@ class TeamController(
     fun rejectTeam(
         @AuthenticationPrincipal user: User,
         @PathVariable teamId: Long
-    ): ResponseEntity<Void> {
-        teamService.rejectTeam(teamId, user)
-        return ResponseEntity.ok().build()
-    }
+    ): ResponseEntity<Void> =
+        teamService.rejectTeam(teamId, user).let { ResponseEntity.ok().build() }
 
     @Operation(summary = "팀장 임명", description = "특정 사용자에게 팀장 권한을 부여합니다 (매니저 전용).")
     @ApiResponses(value = [
@@ -78,10 +72,8 @@ class TeamController(
         @AuthenticationPrincipal user: User,
         @PathVariable teamId: Long,
         @PathVariable userId: Long
-    ): ResponseEntity<Void> {
-        teamService.assignLeader(teamId, user, userId)
-        return ResponseEntity.ok().build()
-    }
+    ): ResponseEntity<Void> =
+        teamService.assignLeader(teamId, user, userId).let { ResponseEntity.ok().build() }
     
     @Operation(summary = "팀장 위임", description = "팀장직을 다른 팀원에게 위임합니다 (현 팀장 또는 매니저 가능).")
     @ApiResponses(value = [
@@ -95,10 +87,8 @@ class TeamController(
         @AuthenticationPrincipal user: User,
         @PathVariable teamId: Long,
         @PathVariable userId: Long
-    ): ResponseEntity<Void> {
-        teamService.delegateLeader(teamId, user, userId)
-        return ResponseEntity.ok().build()
-    }
+    ): ResponseEntity<Void> =
+        teamService.delegateLeader(teamId, user, userId).let { ResponseEntity.ok().build() }
 
     @Operation(summary = "팀 해체", description = "팀을 삭제합니다 (팀장 또는 매니저 가능).")
     @ApiResponses(value = [
@@ -110,8 +100,6 @@ class TeamController(
     fun dissolveTeam(
         @AuthenticationPrincipal user: User,
         @PathVariable teamId: Long
-    ): ResponseEntity<Void> {
-        teamService.dissolveTeam(teamId, user)
-        return ResponseEntity.ok().build()
-    }
+    ): ResponseEntity<Void> =
+        teamService.dissolveTeam(teamId, user).let { ResponseEntity.ok().build() }
 }
