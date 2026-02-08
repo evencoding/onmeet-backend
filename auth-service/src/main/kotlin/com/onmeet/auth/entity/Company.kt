@@ -32,4 +32,6 @@ class Company(
     enum class CompanyStatus {
         ACTIVE, INACTIVE
     }
+
+    fun requireId(): Long = id ?: throw IllegalStateException("Company ID is required but was null")
 }

@@ -7,6 +7,11 @@ services:
       MYSQL_DATABASE: ai_db
     ports:
       - "3308:3306"
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${DB_ROOT_PASSWORD}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
     networks:
       - msa-network
 
@@ -16,17 +21,18 @@ services:
       dockerfile: ai-service/Dockerfile
     container_name: ai-service
     ports:
-      - "8082:8082"
+      - "${AI_SERVICE_PORT:-8082}:${AI_SERVICE_PORT:-8082}"
     environment:
-      - SPRING_DATASOURCE_URL=jdbc:mysql://mysql-ai:3306/ai_db?useSSL=false&allowPublicKeyRetrieval=true&characterEncoding=UTF-8&serverTimezone=UTC
+      - SPRING_DATASOURCE_URL=${AI_DB_URL:-jdbc:mysql://mysql-ai:3306/ai_db?useSSL=false&allowPublicKeyRetrieval=true&characterEncoding=UTF-8&serverTimezone=UTC}
       - SPRING_DATASOURCE_USERNAME=${DB_USERNAME}
       - SPRING_DATASOURCE_PASSWORD=${DB_ROOT_PASSWORD}
       - GATEWAY_SHARED_SECRET=${GATEWAY_SHARED_SECRET}
-      - SERVER_PORT=8082
+      - SERVER_PORT=${AI_SERVICE_PORT:-8082}
       - MANAGEMENT_ENDPOINTS_WEB_BASE_PATH=/ai/actuator
       - LOGGING_LEVEL_ORG_SPRINGFRAMEWORK_SECURITY=DEBUG
     depends_on:
-      - mysql-ai
+      mysql-ai:
+        condition: service_healthy
     networks:
       - msa-network
 
