@@ -6,7 +6,7 @@ B2B 화상 회의 + AI 요약 + 알림 서비스 (MSA w/ Spring Boot 3 & Kotlin)
 
 ### Core
 - **Language**: Kotlin (JDK 21)
-- **Framework**: Spring Boot 3.4.x, Spring Cloud 2023.x
+- **Framework**: Spring Boot 3.3.5, Spring Cloud 2023.x
 - **Build Tool**: Gradle (Kotlin DSL)
 
 ### 아키텍처 및 통신 (Architecture & Communication)
