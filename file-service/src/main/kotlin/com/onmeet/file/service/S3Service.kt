@@ -14,10 +14,10 @@ class S3Service(
 ) {
     private val log = LoggerFactory.getLogger(S3Service::class.java)
 
-    fun uploadFile(fileName: String, inputStream: InputStream, contentType: String): String {
-        log.info("Uploading file to S3: {}", fileName)
+    fun uploadFile(key: String, inputStream: InputStream, contentType: String): String {
+        log.info("Uploading file to S3: {}", key)
         val resource = s3Template.upload(
-            bucket, fileName, inputStream,
+            bucket, key, inputStream,
             ObjectMetadata.builder().contentType(contentType).build()
         )
 

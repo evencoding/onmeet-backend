@@ -17,6 +17,9 @@ class FileMetadata(
     @Column(name = "file_name", nullable = false)
     var fileName: String,
 
+    @Column(name = "category", nullable = false)
+    var category: String,
+
     @Column(name = "original_file_name", nullable = false)
     var originalFileName: String,
 
@@ -29,8 +32,14 @@ class FileMetadata(
     @Column(name = "content_type", nullable = false)
     var contentType: String,
 
-    @Column(name = "uploader_id", nullable = false)
-    var uploaderId: Long,
+    @Column(name = "owner_type", nullable = false)
+    var ownerType: String = "USER",
+
+    @Column(name = "owner_id", nullable = false)
+    var ownerId: String,
+
+    @Column(name = "uploader_id", nullable = true)
+    var uploaderId: Long? = null,
 ) {
     @CreatedDate
     @Column(name = "created_at", nullable = false, updatable = false)
@@ -47,3 +56,17 @@ class FileMetadata(
         this.contentType = contentType
     }
 }
+
+fun FileMetadata.toResponseDto() = com.onmeet.file.dto.FileResponseDto(
+    id = id,
+    fileName = fileName,
+    category = category,
+    originalFileName = originalFileName,
+    s3Url = s3Url,
+    fileSize = fileSize,
+    contentType = contentType,
+    ownerType = ownerType,
+    ownerId = ownerId,
+    uploaderId = uploaderId,
+    createdAt = createdAt
+)

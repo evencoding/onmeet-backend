@@ -12,6 +12,7 @@ interface UserService {
     fun getUserInfo(email: String): UserResponseDto
     fun getAllEmployees(manager: User, pageable: Pageable): PageResponse<UserResponseDto>
     fun getCompanyIdByUserId(userId: Long): Long
+    fun getUserPermissions(userId: Long): com.onmeet.auth.dto.UserPermissionResponse
     fun deactivateUser(userId: Long, manager: User): UserResponseDto
     fun activateUser(userId: Long, manager: User): UserResponseDto
 }

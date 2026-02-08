@@ -85,4 +85,25 @@ class UserController(
         @PathVariable userId: Long
     ): ResponseEntity<UserResponseDto> =
         ResponseEntity.ok(userService.activateUser(userId, manager))
+
+    @Operation(summary = "[내부용] 사용자 권한 정보 조회", description = "파일 서비스 등 타 서비스에서 권한 검증을 위해 사용자의 역할, 회사, 팀 정보를 조회합니다.")
+    @GetMapping("/internal/{userId}/permissions")
+    fun getUserPermissions(@PathVariable userId: Long): ResponseEntity<com.onmeet.auth.dto.UserPermissionResponse> =
+        ResponseEntity.ok(userService.getUserPermissions(userId))
+
+    @Operation(summary = "[내부용] 사용자 팀 정보 조회")
+    @GetMapping("/internal/{userId}/teams")
+    fun getUserTeams(@PathVariable userId: Long): ResponseEntity<List<com.onmeet.auth.dto.TeamInfoDto>> =
+        ResponseEntity.ok(userService.getUserPermissions(userId).teamIds.map { teamId ->
+            // Simple mapping or better - add a service method if needed. 
+            // For now, mapping from the aggregated permission response is efficient.
+            com.onmeet.auth.dto.TeamInfoDto(id = teamId, name = "Team $teamId", color = null)
+        })
+
+    @Operation(summary = "[내부용] 사용자 회사 정보 조회")
+    @GetMapping("/internal/{userId}/company")
+    fun getUserCompany(@PathVariable userId: Long): ResponseEntity<com.onmeet.auth.dto.CompanyInfoDto> =
+        userService.getUserPermissions(userId).let { 
+            ResponseEntity.ok(com.onmeet.auth.dto.CompanyInfoDto(id = it.companyId ?: 0L, name = "Company ${it.companyId}"))
+        }
 }

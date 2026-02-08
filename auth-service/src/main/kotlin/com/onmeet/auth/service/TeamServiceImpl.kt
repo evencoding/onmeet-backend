@@ -5,6 +5,7 @@ import com.onmeet.auth.dto.TeamRequest
 import com.onmeet.auth.entity.Team
 import com.onmeet.auth.entity.User
 import com.onmeet.auth.entity.Company
+import com.onmeet.common.exception.InsufficientPermissionException
 import com.onmeet.auth.exception.*
 import com.onmeet.auth.repository.jpa.TeamRepository
 import com.onmeet.auth.repository.jpa.UserRepository
