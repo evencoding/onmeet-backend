@@ -37,10 +37,8 @@ class AuthController(
         ApiResponse(responseCode = "409", description = "이미 존재하는 이메일/기업", content = [Content(examples = [ExampleObject(value = "{\"error\": \"Email already exists\"}")])])
     ])
     @PostMapping("/register/company")
-    fun signupCompany(@RequestBody request: CompanySignupRequest): ResponseEntity<Long> {
-        val userId = authService.signupCompany(request)
-        return ResponseEntity.ok(userId)
-    }
+    fun signupCompany(@RequestBody request: CompanySignupRequest): ResponseEntity<Long> =
+        ResponseEntity.ok(authService.signupCompany(request))
 
     @Operation(summary = "사원(멤버) 회원가입", description = "초대받은 사원이 기업에 합류하여 계정을 생성합니다.")
     @ApiResponses(value = [
@@ -49,10 +47,8 @@ class AuthController(
         ApiResponse(responseCode = "404", description = "초대 정보 찾을 수 없음", content = [Content(examples = [ExampleObject(value = "{\"error\": \"Invitation not found\"}")])])
     ])
     @PostMapping("/register/join")
-    fun registerEmployee(@RequestBody request: JoinRequest): ResponseEntity<Long> {
-        val userId = authService.joinCompany(request)
-        return ResponseEntity.ok(userId)
-    }
+    fun registerEmployee(@RequestBody request: JoinRequest): ResponseEntity<Long> =
+        ResponseEntity.ok(authService.joinCompany(request))
 
     /**
      * 초대 코드 검증 API
@@ -68,9 +64,8 @@ class AuthController(
     fun validateInvitation(
         @Parameter(description = "초대받은 이메일") @RequestParam email: String,
         @Parameter(description = "초대 코드") @RequestParam code: String
-    ): ResponseEntity<InvitationResponse> {
-        return ResponseEntity.ok(authService.validateInvitation(email, code))
-    }
+    ): ResponseEntity<InvitationResponse> =
+        ResponseEntity.ok(authService.validateInvitation(email, code))
 
     @Operation(summary = "로그인", description = "이메일과 비밀번호로 로그인하여 Access/Refresh Token을 발급받습니다.")
     @ApiResponses(value = [
@@ -160,34 +155,29 @@ class AuthController(
         ApiResponse(responseCode = "401", description = "인증되지 않은 사용자", content = [Content(examples = [ExampleObject(value = "{\"error\": \"Unauthorized\"}")])])
     ])
     @GetMapping("/me")
-    fun me(principal: Principal): ResponseEntity<String> {
-        return ResponseEntity.ok("Hello, ${principal.name}! You are authenticated.")
-    }
+    fun me(principal: Principal): ResponseEntity<String> =
+        ResponseEntity.ok("Hello, ${principal.name}! You are authenticated.")
 
     @Operation(summary = "헬스 체크", description = "서비스 생존 여부를 확인합니다.")
     @ApiResponses(value = [
         ApiResponse(responseCode = "200", description = "서비스 정상 동작 중")
     ])
     @GetMapping("/check")
-    fun check(): ResponseEntity<Void> {
-        return ResponseEntity.ok().build()
-    }
+    fun check(): ResponseEntity<Void> =
+        ResponseEntity.ok().build()
 
-    private fun createRefreshCookie(token: String, maxAge: Long = jwtProperties.refreshCookie.maxAge): ResponseCookie {
-        return createHttpOnlyCookie(JwtConstants.REFRESH_TOKEN_COOKIE_NAME, token, maxAge)
-    }
+    private fun createRefreshCookie(token: String, maxAge: Long = jwtProperties.refreshCookie.maxAge): ResponseCookie =
+        createHttpOnlyCookie(JwtConstants.REFRESH_TOKEN_COOKIE_NAME, token, maxAge)
 
-    private fun createAccessCookie(token: String, maxAge: Long = jwtProperties.cookie.maxAge): ResponseCookie {
-        return createHttpOnlyCookie(JwtConstants.ACCESS_TOKEN_COOKIE_NAME, token, maxAge)
-    }
+    private fun createAccessCookie(token: String, maxAge: Long = jwtProperties.cookie.maxAge): ResponseCookie =
+        createHttpOnlyCookie(JwtConstants.ACCESS_TOKEN_COOKIE_NAME, token, maxAge)
 
-    private fun createHttpOnlyCookie(name: String, value: String, maxAge: Long): ResponseCookie {
-        return ResponseCookie.from(name, value)
+    private fun createHttpOnlyCookie(name: String, value: String, maxAge: Long): ResponseCookie =
+        ResponseCookie.from(name, value)
             .httpOnly(true)
             .secure(jwtProperties.cookie.secure)
             .path("/")
             .maxAge(maxAge)
             .sameSite("Lax")
             .build()
-    }
 }
