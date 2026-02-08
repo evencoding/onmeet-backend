@@ -44,7 +44,8 @@ class SecurityConfig(
                 auth.requestMatchers(
                     "/register/**", "/invitations/validate",
                     "/login/**", "/refresh", "/logout", "/check",
-                    "/actuator/**", "/.well-known/jwks.json"
+                    "/actuator/**", "/.well-known/jwks.json",
+                    "/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html"
                 ).permitAll()
                 auth.anyRequest().authenticated()
             }
