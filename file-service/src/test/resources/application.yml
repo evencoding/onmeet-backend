@@ -1,0 +1,15 @@
+spring:
+  # Datasource configuration will be provided by external environment (Docker)
+  # datasource:
+  #   url: ...
+cloud:
+  aws:
+    s3:
+      bucket: test-bucket
+    region:
+      static: us-east-1
+    credentials:
+      access-key: test
+      secret-key: test
+gateway:
+  shared-secret: test-secret
