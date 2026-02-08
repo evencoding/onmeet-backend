@@ -45,10 +45,16 @@ class UserServiceImpl(
         return userRepository.save(user).toResponseDto()
     }
 
-    override fun getUserInfo(userId: Long): UserResponseDto =
-        userRepository.findById(userId)
-            .map { it.toResponseDto() }
+    override fun getUserInfo(userId: Long, requester: User): UserResponseDto {
+        val user = userRepository.findById(userId)
             .orElseThrow { UserNotFoundException("User not found: $userId") }
+        
+        if (!user.belongsToCompany(requester.company.requireId())) {
+            throw CrossCompanyAccessException("You cannot access user info from another company")
+        }
+        
+        return user.toResponseDto()
+    }
 
     override fun getUserInfo(email: String): UserResponseDto =
         userRepository.findByEmail(email)
