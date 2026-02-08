@@ -31,11 +31,11 @@ class EmailServiceImpl(
      * - 실제 메일 발송은 'email-service'에서 수행됩니다.
      */
     override fun sendInvitationEmail(to: String, code: String) {
-        val subject = "You are invited to join OnMeet"
-        val body = "Your invitation code is: $code. Please use this code to join your company on OnMeet."
-        val emailMessage = EmailMessage(to, subject, body)
-        
-        log.info("Sending invitation email event to Kafka topic: $TOPIC for $to")
-        kafkaTemplate.send(TOPIC, emailMessage)
+        EmailMessage(
+            to = to,
+            subject = "You are invited to join OnMeet",
+            body = "Your invitation code is: $code. Please use this code to join your company on OnMeet."
+        ).also { log.info("Sending invitation email event to Kafka topic: $TOPIC for $to") }
+            .let { kafkaTemplate.send(TOPIC, it) }
     }
 }
