@@ -7,9 +7,9 @@ import org.springframework.data.jpa.domain.support.AuditingEntityListener
 import java.time.LocalDateTime
 
 @Entity
-@Table(name = "teams")
+@Table(name = "job_titles")
 @EntityListeners(AuditingEntityListener::class)
-class Team(
+class JobTitle(
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     val id: Long? = null,
@@ -17,23 +17,12 @@ class Team(
     @Column(nullable = false)
     var name: String,
 
-    @Column
-    var description: String? = null,
-
-    @Column
-    var color: String? = null,
-
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "company_id", nullable = false)
     var company: Company,
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "leader_id")
-    var leader: User? = null,
-
     @Column(nullable = false)
-    @Enumerated(EnumType.STRING)
-    var status: TeamStatus = TeamStatus.ACTIVE,
+    var isDefault: Boolean = false,
 
     @CreatedDate
     @Column(nullable = false, updatable = false)
@@ -43,15 +32,7 @@ class Team(
     @Column(nullable = false)
     var updatedAt: LocalDateTime? = null
 ) {
-    enum class TeamStatus {
-        ACTIVE, INACTIVE, PENDING_APPROVAL
-    }
-
-    fun isLeader(user: User): Boolean = leader?.id == user.id
-
-    fun isActive(): Boolean = status == TeamStatus.ACTIVE
-
     fun belongsToCompany(companyId: Long): Boolean = company.id == companyId
 
-    fun requireId(): Long = id ?: throw IllegalStateException("Team ID is required but was null")
+    fun requireId(): Long = id ?: throw IllegalStateException("JobTitle ID is required but was null")
 }
