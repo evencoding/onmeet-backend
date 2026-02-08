@@ -6,6 +6,7 @@ import com.onmeet.auth.exception.*
 import com.onmeet.auth.repository.jpa.JobTitleRepository
 import com.onmeet.auth.repository.jpa.UserRepository
 import com.onmeet.common.exception.EntityNotFoundException
+import com.onmeet.common.exception.InsufficientPermissionException
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import org.springframework.data.domain.Pageable
@@ -73,6 +74,18 @@ class UserServiceImpl(
         userRepository.findById(userId)
             .map { it.company.requireId() }
             .orElseThrow { UserNotFoundException("User not found with ID: $userId") }
+
+    override fun getUserPermissions(userId: Long): UserPermissionResponse {
+        val user = userRepository.findById(userId)
+            .orElseThrow { UserNotFoundException("User not found: $userId") }
+        
+        return UserPermissionResponse(
+            userId = user.requireId(),
+            roles = user.roles.map { it.name }.toSet(),
+            companyId = user.company.id,
+            teamIds = user.teams.mapNotNull { it.id }
+        )
+    }
 
     @Transactional
     override fun deactivateUser(userId: Long, manager: User): UserResponseDto {

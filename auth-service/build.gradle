@@ -29,6 +29,7 @@ dependencies {
 
     // Modules
     implementation project(':common-security')
+    implementation project(':onmeet-common')
 
     // Spring Boot
     implementation 'org.springframework.boot:spring-boot-starter-web'

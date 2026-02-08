@@ -147,6 +147,18 @@ data class TeamInfoDto(
     val color: String?
 )
 
+@Schema(description = "유저 권한 및 소속 정보 응답")
+data class UserPermissionResponse(
+    @Schema(description = "User ID")
+    val userId: Long,
+    @Schema(description = "권한 목록")
+    val roles: Set<String>,
+    @Schema(description = "소속 회사 ID")
+    val companyId: Long?,
+    @Schema(description = "소속 팀 ID 목록")
+    val teamIds: List<Long>
+)
+
 @Schema(description = "토큰 갱신 요청")
 data class RefreshRequest(
     @Schema(description = "Refresh Token (Optional if cookie is present)")
