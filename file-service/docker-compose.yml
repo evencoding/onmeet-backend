@@ -1,31 +1,31 @@
+version: '3.8'
+
 services:
-  mysql-file:
-    image: mysql:9.0
-    container_name: mysql-file
+  postgres-file:
+    image: postgres:16-alpine
+    container_name: postgres-file
     environment:
-      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD}
-      MYSQL_DATABASE: file_db
+      POSTGRES_USER: ${DB_USERNAME:-postgres}
+      POSTGRES_PASSWORD: ${DB_ROOT_PASSWORD:-root}
+      POSTGRES_DB: file_db
     ports:
-      - "3312:3306"
+      - "5433:5432"
     healthcheck:
-      test: [ "CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${DB_ROOT_PASSWORD}" ]
+      test: [ "CMD-SHELL", "pg_isready -U ${DB_USERNAME:-postgres} -d file_db" ]
       interval: 10s
       timeout: 5s
       retries: 5
     networks:
-      - msa-network
+      - onmeet-network
 
   file-service:
     build:
-      context: ../
-      dockerfile: file-service/Dockerfile
+      context: ./
     container_name: file-service
     ports:
       - "${FILE_SERVICE_PORT:-8086}:${FILE_SERVICE_PORT:-8086}"
     environment:
-      - SPRING_DATASOURCE_URL=${FILE_DB_URL:-jdbc:mysql://mysql-file:3306/file_db?useSSL=false&allowPublicKeyRetrieval=true&characterEncoding=UTF-8&serverTimezone=UTC}
-      - SPRING_DATASOURCE_USERNAME=${DB_USERNAME}
-      - SPRING_DATASOURCE_PASSWORD=${DB_ROOT_PASSWORD}
+      - DB_URL=host=postgres-file user=${DB_USERNAME:-postgres} password=${DB_ROOT_PASSWORD:-root} dbname=file_db port=5432 sslmode=disable
       - GATEWAY_SHARED_SECRET=${GATEWAY_SHARED_SECRET}
       - SERVER_PORT=${FILE_SERVICE_PORT:-8086}
       - AWS_ACCESS_KEY=${AWS_ACCESS_KEY}
@@ -33,14 +33,14 @@ services:
       - AWS_REGION=${AWS_REGION:-ap-northeast-2}
       - S3_BUCKET_NAME=${S3_BUCKET_NAME}
       - CLOUDFRONT_DOMAIN=${CLOUDFRONT_DOMAIN}
-      - MANAGEMENT_ENDPOINTS_WEB_BASE_PATH=/file/actuator
+      - KAFKA_BROKERS=${KAFKA_BROKERS:-kafka:9092}
+      - AUTH_SERVICE_URL=http://auth-service:8081
     depends_on:
-      mysql-file:
+      postgres-file:
         condition: service_healthy
     networks:
-      - msa-network
+      - onmeet-network
 
 networks:
-  msa-network:
-    name: onmeet-network
+  onmeet-network:
     external: true
