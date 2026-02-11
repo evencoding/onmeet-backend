@@ -55,6 +55,9 @@ class User(
     @Column(name = "role")
     var roles: MutableSet<Role> = mutableSetOf(Role.USER),
 
+    @Column
+    var profileImageId: Long? = null,
+
     @CreatedDate
     @Column(nullable = false, updatable = false)
     var createdAt: LocalDateTime? = null,
