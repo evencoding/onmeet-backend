@@ -31,26 +31,23 @@ class AuthServiceTest {
     @MockK
     private lateinit var authenticationManager: AuthenticationManager
 
-    @MockK
-    private lateinit var jwtTokenProvider: JwtTokenProvider
 
     @MockK
     private lateinit var companyService: CompanyService
 
     @MockK
+    private lateinit var teamService: TeamService
+
+    @MockK
     private lateinit var invitationService: InvitationService
+    
+    @MockK
+    private lateinit var jobTitleService: JobTitleService
 
     @MockK
-    private lateinit var refreshTokenRepository: RefreshTokenRepository
-
-    @MockK
-    private lateinit var teamProperties: TeamProperties
-
-    @MockK
-    private lateinit var redisTemplate: org.springframework.data.redis.core.StringRedisTemplate
-
-    @InjectMockKs
-    private lateinit var authService: AuthService
+    private lateinit var tokenService: TokenService
+    
+    // ...
 
     @Test
     fun `signupCompany should save manager and return id`() {
@@ -64,14 +61,23 @@ class AuthServiceTest {
         )
         val company = Company(id = 1L, name = "TestCompany")
         val team = Team(id = 1L, name = "Development", description = "Initial team", color = "#FFFFFF", company = company)
+        val jobTitle = JobTitle(name = "CEO", company = company)
 
         every { userRepository.existsByEmail(any()) } returns false
         every { companyService.createCompany(any()) } returns company
-        every { teamProperties.initialDescription } returns "Initial team"
-        every { teamProperties.initialColor } returns "#FFFFFF"
-        every { companyService.createTeam(any(), any()) } returns team
+        every { jobTitleService.createDefaultInitialTitle(any()) } returns jobTitle
+        every { teamService.createTeam(any<Long>(), any()) } returns team
         every { passwordEncoder.encode(any()) } returns "hashed_password"
-        every { userRepository.save(any()) } returns User(id = 1L, email = "test@example.com", passwordHash = "hashed_password", name = "Manager", role = User.Role.MANAGER, company = company)
+        every { userRepository.save(any()) } returns User(
+            id = 1L, 
+            email = "test@example.com", 
+            passwordHash = "hashed_password", 
+            name = "Manager", 
+            roles = mutableSetOf(User.Role.MANAGER), 
+            company = company,
+            status = User.UserStatus.ACTIVE
+        )
+        every { fileClient.generateDefaultProfileImage(any()) } returns null
 
         // when
         val userId = authService.signupCompany(request)
@@ -80,6 +86,76 @@ class AuthServiceTest {
         assertEquals(1L, userId)
         verify { userRepository.save(any()) }
     }
+
+
+    @MockK
+    private lateinit var fileClient: com.onmeet.auth.client.FileClient
+
+    @InjectMockKs
+    private lateinit var authService: AuthService
+
+    // ... (existing tests) ...
+
+    @Test
+    fun `resetUserProfileImage should delete old image and generate new default when manager requests`() {
+        // given
+        val company = Company(id = 1L, name = "TestCompany")
+        val manager = User(
+            id = 1L, 
+            email = "manager@example.com", 
+            passwordHash = "pw", 
+            name = "Manager", 
+            roles = mutableSetOf(User.Role.MANAGER), 
+            company = company,
+            status = User.UserStatus.ACTIVE
+        )
+        val employee = User(
+            id = 2L, 
+            email = "employee@example.com", 
+            passwordHash = "pw", 
+            name = "Employee", 
+            roles = mutableSetOf(User.Role.USER), 
+            company = company,
+            status = User.UserStatus.ACTIVE
+        ).apply { profileImageId = 100L }
+
+        every { userRepository.findById(2L) } returns java.util.Optional.of(employee)
+        every { userRepository.findByEmail("manager@example.com") } returns java.util.Optional.of(manager)
+        every { fileClient.deleteFile(100L) } returns Unit
+        every { fileClient.generateDefaultProfileImage("Employee") } returns com.onmeet.auth.client.FileMetadataResponse(
+            id = 200L, 
+            fileName = "new.svg", 
+            s3Url = "s3://new.svg", 
+            contentType = "image/svg+xml"
+        )
+        every { userRepository.save(any()) } returns employee
+
+        // when
+        authService.resetUserProfileImage(2L, "manager@example.com")
+
+        // then
+        verify { fileClient.deleteFile(100L) }
+        verify { fileClient.generateDefaultProfileImage("Employee") }
+        verify { userRepository.save(match { it.profileImageId == 200L }) }
+    }
+
+    @Test
+    fun `resetUserProfileImage should throw UnauthorizedException when requester is not manager nor self`() {
+        // given
+        val company = Company(id = 1L, name = "TestCompany")
+        val otherUser = User(id = 3L, email = "other@example.com", passwordHash = "pw", name = "Other", roles = mutableSetOf(User.Role.USER), company = company, status = User.UserStatus.ACTIVE)
+        val employee = User(id = 2L, email = "employee@example.com", passwordHash = "pw", name = "Employee", roles = mutableSetOf(User.Role.USER), company = company, status = User.UserStatus.ACTIVE)
+
+        every { userRepository.findById(2L) } returns java.util.Optional.of(employee)
+        every { userRepository.findByEmail("other@example.com") } returns java.util.Optional.of(otherUser)
+
+        // when & then
+        assertThrows(UnauthorizedException::class.java) {
+            authService.resetUserProfileImage(2L, "other@example.com")
+        }
+    }
+
+
 
     @Test
     fun `signupCompany should throw exception if email exists`() {
@@ -118,19 +194,23 @@ class AuthServiceTest {
             company = company,
             expiresAt = LocalDateTime.now().plusDays(1)
         )
+        val jobTitle = JobTitle(name = "Staff", company = company)
 
         every { invitationService.validateInvitation("join@example.com", "INVITE123") } returns invitation
         every { userRepository.existsByEmail("join@example.com") } returns false
+        every { jobTitleService.getDefaultJobTitle(any()) } returns jobTitle
         every { passwordEncoder.encode(any()) } returns "hashed_password"
         every { userRepository.save(any()) } returns User(
             id = 2L,
             email = "join@example.com",
             passwordHash = "hashed_password",
             name = "Employee",
-            role = User.Role.USER,
-            company = company
+            roles = mutableSetOf(User.Role.USER),
+            company = company,
+            status = User.UserStatus.ACTIVE
         )
         every { invitationService.deleteInvitation(any()) } returns Unit
+        every { fileClient.generateDefaultProfileImage(any()) } returns null
 
         // when
         val userId = authService.joinCompany(request)
@@ -146,18 +226,17 @@ class AuthServiceTest {
         // given
         val request = LoginRequest("test@example.com", "password")
         val authentication = io.mockk.mockk<org.springframework.security.core.Authentication>()
+        val tokenResponse = TokenResponse("access_token", "refresh_token")
         
         every { authenticationManager.authenticate(any()) } returns authentication
-        every { jwtTokenProvider.generateToken(authentication) } returns "access_token"
-        every { authentication.authorities } returns mutableListOf()
-        every { refreshTokenRepository.save(any()) } returns RefreshToken("test@example.com", "refresh_token", "")
+        every { tokenService.issueTokens(authentication, "test@example.com") } returns tokenResponse
 
         // when
         val response = authService.login(request)
 
         // then
         assertEquals("access_token", response.accessToken)
-        assertNotNull(response.refreshToken)
-        verify { refreshTokenRepository.save(any()) }
+        assertEquals("refresh_token", response.refreshToken)
+        verify { tokenService.issueTokens(authentication, "test@example.com") }
     }
 }
