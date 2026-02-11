@@ -47,4 +47,45 @@ abstract class BaseServiceClient(
             null
         }
     }
+
+    /**
+     * 현재 요청의 쿠키를 포함하여 POST 요청을 보냅니다.
+     */
+    protected fun <T, R> postWithAuth(url: String, requestBody: R, responseType: Class<T>): T? {
+        val headers = HttpHeaders().apply {
+            (RequestContextHolder.getRequestAttributes() as? ServletRequestAttributes)?.request?.getHeader(HttpHeaders.COOKIE)?.let {
+                add(HttpHeaders.COOKIE, it)
+            }
+        }
+        
+        val entity = HttpEntity(requestBody, headers)
+
+        return try {
+            restTemplate.postForObject(url, entity, responseType)
+        } catch (e: Exception) {
+            log.error("Error during POST API request. URL: {}, Message: {}", url, e.message)
+            null
+        }
+    }
+
+    /**
+     * 현재 요청의 쿠키를 포함하여 Multipart POST 요청을 보냅니다.
+     */
+    protected fun <T> postMultipartWithAuth(url: String, body: org.springframework.util.MultiValueMap<String, Any>, responseType: Class<T>): T? {
+        val headers = HttpHeaders().apply {
+            contentType = org.springframework.http.MediaType.MULTIPART_FORM_DATA
+            (RequestContextHolder.getRequestAttributes() as? ServletRequestAttributes)?.request?.getHeader(HttpHeaders.COOKIE)?.let {
+                add(HttpHeaders.COOKIE, it)
+            }
+        }
+        
+        val entity = HttpEntity(body, headers)
+
+        return try {
+            restTemplate.postForObject(url, entity, responseType)
+        } catch (e: Exception) {
+            log.error("Error during Multipart POST API request. URL: {}, Message: {}", url, e.message)
+            null
+        }
+    }
 }

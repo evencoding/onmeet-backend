@@ -126,7 +126,9 @@ data class UserResponseDto(
     @Schema(description = "직급 정보")
     val jobTitle: JobTitleResponse?,
     @Schema(description = "소속 팀 목록")
-    val teams: List<TeamInfoDto>
+    val teams: List<TeamInfoDto>,
+    @Schema(description = "프로필 이미지 ID")
+    val profileImageId: Long?
 )
 
 @Schema(description = "회사 정보 요약")

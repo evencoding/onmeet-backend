@@ -36,9 +36,12 @@ class AuthController(
         ApiResponse(responseCode = "400", description = "잘못된 요청 (유효성 검사 실패)", content = [Content(examples = [ExampleObject(value = "{\"error\": \"Invalid request format\"}")])]),
         ApiResponse(responseCode = "409", description = "이미 존재하는 이메일/기업", content = [Content(examples = [ExampleObject(value = "{\"error\": \"Email already exists\"}")])])
     ])
-    @PostMapping("/register/company")
-    fun signupCompany(@RequestBody request: CompanySignupRequest): ResponseEntity<Long> =
-        ResponseEntity.ok(authService.signupCompany(request))
+    @PostMapping(value = ["/register/company"], consumes = ["multipart/form-data"])
+    fun signupCompany(
+        @RequestPart("request") request: CompanySignupRequest,
+        @RequestPart(value = "profileImage", required = false) profileImage: org.springframework.web.multipart.MultipartFile?
+    ): ResponseEntity<Long> =
+        ResponseEntity.ok(authService.signupCompany(request, profileImage))
 
     @Operation(summary = "사원(멤버) 회원가입", description = "초대받은 사원이 기업에 합류하여 계정을 생성합니다.")
     @ApiResponses(value = [
@@ -46,9 +49,12 @@ class AuthController(
         ApiResponse(responseCode = "400", description = "잘못된 요청 (유효성 검사 실패)", content = [Content(examples = [ExampleObject(value = "{\"error\": \"Invalid request\"}")])]),
         ApiResponse(responseCode = "404", description = "초대 정보 찾을 수 없음", content = [Content(examples = [ExampleObject(value = "{\"error\": \"Invitation not found\"}")])])
     ])
-    @PostMapping("/register/join")
-    fun registerEmployee(@RequestBody request: JoinRequest): ResponseEntity<Long> =
-        ResponseEntity.ok(authService.joinCompany(request))
+    @PostMapping(value = ["/register/join"], consumes = ["multipart/form-data"])
+    fun registerEmployee(
+        @RequestPart("request") request: JoinRequest,
+        @RequestPart(value = "profileImage", required = false) profileImage: org.springframework.web.multipart.MultipartFile?
+    ): ResponseEntity<Long> =
+        ResponseEntity.ok(authService.joinCompany(request, profileImage))
 
     /**
      * 초대 코드 검증 API
@@ -157,6 +163,16 @@ class AuthController(
     @GetMapping("/me")
     fun me(principal: Principal): ResponseEntity<String> =
         ResponseEntity.ok("Hello, ${principal.name}! You are authenticated.")
+
+    @DeleteMapping("/users/{userId}/profile-image")
+    fun resetProfileImage(
+        @PathVariable userId: Long,
+        authentication: Authentication
+    ): ResponseEntity<Void> {
+        val requesterEmail = authentication.name
+        authService.resetUserProfileImage(userId, requesterEmail)
+        return ResponseEntity.noContent().build() 
+    }
 
     @Operation(summary = "헬스 체크", description = "서비스 생존 여부를 확인합니다.")
     @ApiResponses(value = [
