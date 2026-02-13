@@ -22,6 +22,16 @@ subprojects {
         jib {
             from {
                 image = 'eclipse-temurin:17-jre-jammy'
+                platforms {
+                    platform {
+                        architecture = 'arm64'
+                        os = 'linux'
+                    }
+                    platform {
+                        architecture = 'amd64'
+                        os = 'linux'
+                    }
+                }
             }
             to {
                 image = "onmeet/${project.name}"

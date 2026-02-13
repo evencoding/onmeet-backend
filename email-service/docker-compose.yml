@@ -1,8 +1,7 @@
 services:
   email-service:
-    build:
-      context: ../
-      dockerfile: email-service/Dockerfile
+    image: onmeet/email-service:latest
+    pull_policy: never
     container_name: email-service
     ports:
       - "${EMAIL_SERVICE_PORT:-8087}:${EMAIL_SERVICE_PORT:-8087}"

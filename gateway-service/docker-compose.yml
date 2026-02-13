@@ -1,8 +1,7 @@
 services:
   gateway-service:
-    build:
-      context: ../
-      dockerfile: gateway-service/Dockerfile
+    image: onmeet/gateway-service:latest
+    pull_policy: never
     container_name: gateway-service
     ports:
       - "${GATEWAY_SERVICE_PORT:-8080}:${GATEWAY_SERVICE_PORT:-8080}"

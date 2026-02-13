@@ -39,7 +39,7 @@ dependencies {
     implementation 'org.springframework.security:spring-security-oauth2-jose'
 
     // Swagger / OpenAPI (WebFlux)
-    implementation 'org.springdoc:springdoc-openapi-starter-webflux-ui:2.6.0'
+    implementation 'org.springdoc:springdoc-openapi-starter-webflux-ui:2.2.0'
 
 
     // Test

@@ -5,18 +5,13 @@ WORKDIR /app
 # Gradle Wrapper 및 설정 파일 복사
 COPY --chmod=0755 gradlew .
 COPY gradle gradle
-COPY build.gradle .
-COPY settings.gradle .
-
-# 의존성 먼저 다운로드하여 캐싱 최적화
-RUN ./gradlew dependencies --no-daemon
-
-# 공통 모듈 및 email 서비스 소스 복사
-COPY common-security common-security
-COPY email-service email-service
+# 의존성 및 소스 전체 복사
+COPY . .
 
 # 빌드 수행
 RUN ./gradlew :email-service:build -x test --no-daemon
+
+
 
 # Stage 2: Run
 FROM eclipse-temurin:17-jre-jammy
