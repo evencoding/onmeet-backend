@@ -17,6 +17,10 @@ import org.springframework.security.web.server.csrf.CookieServerCsrfTokenReposit
 import org.springframework.security.web.server.csrf.ServerCsrfTokenRequestAttributeHandler
 import org.springframework.security.web.server.header.XFrameOptionsServerHttpHeadersWriter
 
+import org.springframework.web.cors.CorsConfiguration
+import org.springframework.web.cors.reactive.CorsConfigurationSource
+import org.springframework.web.cors.reactive.UrlBasedCorsConfigurationSource
+
 @Configuration
 @EnableWebFluxSecurity
 class SecurityConfig(
@@ -28,6 +32,7 @@ class SecurityConfig(
     fun springSecurityFilterChain(http: ServerHttpSecurity, csrfCookieFilter: CsrfCookieFilter): SecurityWebFilterChain {
         http
             .csrf { it.disable() }
+            .cors { it.configurationSource(corsConfigurationSource()) }
             .authorizeExchange { exchanges ->
                 // Public endpoints
                 exchanges.pathMatchers(
@@ -40,7 +45,9 @@ class SecurityConfig(
                     "/webjars/**",
                     "/v3/api-docs/**",
                     "/swagger-resources/**",
-                    "/*/v3/api-docs/**"
+                    "/*/v3/api-docs/**",
+                    "/file/doc.json",
+                    "/file/swagger/**"
                 ).permitAll()
                 exchanges.pathMatchers("/error").permitAll()
                 
@@ -63,6 +70,19 @@ class SecurityConfig(
             .logout { it.disable() }
 
         return http.build()
+    }
+
+    @Bean
+    fun corsConfigurationSource(): CorsConfigurationSource {
+        val configuration = CorsConfiguration()
+        configuration.allowedOriginPatterns = listOf("http://localhost:*", "http://127.0.0.1:*")
+        configuration.allowedMethods = listOf("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH")
+        configuration.allowedHeaders = listOf("*")
+        configuration.allowCredentials = true
+        
+        val source = UrlBasedCorsConfigurationSource()
+        source.registerCorsConfiguration("/**", configuration)
+        return source
     }
 
     @Bean

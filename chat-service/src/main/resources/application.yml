@@ -1,5 +1,8 @@
 server:
   port: ${SERVER_PORT:8084}
+  servlet:
+    context-path: /chat
+  forward-headers-strategy: framework
 spring:
   application:
     name: chat-service

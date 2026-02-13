@@ -1,5 +1,8 @@
 server:
   port: ${SERVER_PORT:8087}
+  servlet:
+    context-path: /email
+  forward-headers-strategy: framework
 
 spring:
   application:

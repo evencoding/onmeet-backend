@@ -2,10 +2,16 @@ server:
   port: ${SERVER_PORT:8081}
   servlet:
     context-path: /auth
+  forward-headers-strategy: framework
 
 spring:
   application:
     name: auth-service
+  kafka:
+    bootstrap-servers: ${SPRING_KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
 app:
   team:
     initial-color: ${INITIAL_TEAM_COLOR:#FFFFFF}
@@ -20,14 +26,12 @@ app:
       ddl-auto: validate
   flyway:
     baseline-on-migrate: true
-  kafka:
-    bootstrap-servers: ${SPRING_KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
-    producer:
-      key-serializer: org.apache.kafka.common.serialization.StringSerializer
-      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
 
 auth:
   encryption-key: ${AUTH_ENCRYPTION_KEY}
+privacy:
+  encryption:
+    key: ${PRIVACY_ENCRYPTION_KEY:default-32-byte-secret-key-12345}
 gateway:
   shared-secret: ${GATEWAY_SHARED_SECRET}
 
@@ -51,7 +55,10 @@ management:
 logging:
   level:
     root: INFO
-    com.onmeet.auth: DEBUG
+    com.onmeet: DEBUG
+    org.springframework.security: DEBUG
+    org.springframework.web: DEBUG
+
 
   auth:
     internal-url: ${AUTH_INTERNAL_URL:http://auth-service:8081}
