@@ -71,32 +71,46 @@ B2B 화상 회의 + AI 요약 + 알림 서비스 (MSA w/ Spring Boot 3 & Kotlin)
 - Docker & Docker Compose
 
 ### Docker Compose로 실행 (권장)
-루트 경로의 `docker-compose.yml`을 사용하여 전체 시스템 또는 특정 서비스를 실행할 수 있습니다.
+최신 빌드 방식(Jib)이 적용되어, **이미지 빌드 후 실행**해야 합니다.
 
 ```bash
-# 1. 기반 인프라 (MySQL, Redis, Kafka, Zookeeper) + 모든 서비스 실행
+# 1. Docker 이미지 빌드 (Jib) - 약 30초 소요
+./gradlew jibDockerBuild --parallel
+
+# 2. 전체 서비스 실행 (이미지 Pull 없이 로컬 이미지 사용)
 docker compose up -d
 
-# 2. 로그 확인
+# 3. 로그 확인
 docker compose logs -f auth-service gateway-service
 ```
 
 #### 부분 실행 (Partial Execution)
-리소스를 절약하기 위해 필요한 서비스만 선별하여 실행할 수 있습니다. 의존성(MySQL, Redis 등)은 자동으로 함께 실행됩니다.
+특정 서비스만 실행할 때도 **이미지 빌드가 선행**되어야 합니다.
 
 ```bash
-# Gateway + Auth Service + Chat Service 실행
+# 1. 특정 서비스만 빌드 (예: Auth Service)
+./gradlew :auth-service:jibDockerBuild
+
+# 2. 필요한 서비스 실행 (의존성 포함 자동 실행)
 docker compose up -d gateway-service auth-service chat-service
 ```
 
 ### 로컬에서 실행 (Local / IntelliJ)
-각 서비스는 IntelliJ 또는 Gradle 명령어로 개별 실행 가능합니다.
-단, DB나 Redis 같은 인프라는 실행되어 있어야 합니다.
+IntelliJ에서 개발할 때는 **인프라만 Docker로 띄우고, 서비스는 IDE에서 실행**하는 것이 디버깅에 유리합니다.
 
+**1. 기반 인프라 실행**
+데이터베이스, Kafka, Redis 등 필수 인프라를 실행합니다.
 ```bash
-# 인프라만 먼저 실행
-docker compose up -d mysql-auth redis-auth kafka zookeeper
+docker compose up -d mysql-auth redis-auth kafka zookeeper mysql-ai mysql-video mysql-chat mysql-notification postgres-file
 ```
+
+**2. 서비스 실행 (IntelliJ)**
+- 프로젝트 창에서 각 서비스의 `Application.kt` (예: `AuthApplication.kt`)를 우클릭하여 **Run 'AuthApplication'**을 선택합니다.
+- 환경 변수(`EnvFile` 플러그인 또는 Run Configuration)가 필요한 경우 설정합니다.
+
+**3. (선택) IntelliJ에서 Docker 이미지 빌드**
+터미널 명령어 대신 IDE UI를 사용할 수 있습니다.
+- 우측 **Gradle** 탭 > **Tasks** > **jib** > **jibDockerBuild** 더블 클릭
 
 ---
 
