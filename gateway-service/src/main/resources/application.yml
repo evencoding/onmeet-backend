@@ -47,9 +47,9 @@ spring:
       globalcors:
         cors-configurations:
           '[/**]':
-            allowedOrigins:
-              - "http://localhost:8080"
-              - "http://localhost:3000" # Frontend (Future)
+            allowedOriginPatterns:
+              - "http://localhost:[*]"
+              - "http://127.0.0.1:[*]"
             allowedMethods:
               - GET
               - POST
@@ -57,9 +57,13 @@ spring:
               - DELETE
               - OPTIONS
               - PATCH
+              - HEAD
             allowedHeaders:
               - "*"
+            exposedHeaders:
+              - "Content-Disposition"
             allowCredentials: true
+            maxAge: 3600
 
   security:
     oauth2:
