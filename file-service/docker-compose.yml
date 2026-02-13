@@ -28,8 +28,8 @@ services:
       - DB_URL=host=postgres-file user=${DB_USERNAME:-postgres} password=${DB_ROOT_PASSWORD:-root} dbname=file_db port=5432 sslmode=disable
       - GATEWAY_SHARED_SECRET=${GATEWAY_SHARED_SECRET}
       - SERVER_PORT=${FILE_SERVICE_PORT:-8086}
-      - AWS_ACCESS_KEY=${AWS_ACCESS_KEY}
-      - AWS_SECRET_KEY=${AWS_SECRET_KEY}
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
       - AWS_REGION=${AWS_REGION:-ap-northeast-2}
       - S3_BUCKET_NAME=${S3_BUCKET_NAME}
       - CLOUDFRONT_DOMAIN=${CLOUDFRONT_DOMAIN}

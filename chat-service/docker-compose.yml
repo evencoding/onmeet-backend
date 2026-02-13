@@ -8,7 +8,7 @@ services:
     ports:
       - "3310:3306"
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${DB_ROOT_PASSWORD}"]
+      test: [ "CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${DB_ROOT_PASSWORD}" ]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -16,9 +16,8 @@ services:
       - msa-network
 
   chat-service:
-    build:
-      context: ../
-      dockerfile: chat-service/Dockerfile
+    image: onmeet/chat-service:latest
+    pull_policy: never
     container_name: chat-service
     ports:
       - "${CHAT_SERVICE_PORT:-8084}:${CHAT_SERVICE_PORT:-8084}"
