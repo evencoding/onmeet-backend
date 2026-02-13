@@ -12,4 +12,5 @@ interface JobTitleService {
     fun deleteJobTitle(manager: User, id: Long)
     fun createDefaultInitialTitle(company: Company): JobTitle
     fun getDefaultJobTitle(company: Company): JobTitle?
+    fun getJobTitleByName(company: Company, name: String): JobTitle?
 }

@@ -55,6 +55,13 @@ abstract class BaseGlobalExceptionHandler {
             .body(ErrorResponse(HttpStatus.BAD_REQUEST.value(), "Validation failed: $errorMessage"))
     }
 
+    @ExceptionHandler(org.springframework.web.HttpRequestMethodNotSupportedException::class)
+    fun handleMethodNotSupportedException(e: org.springframework.web.HttpRequestMethodNotSupportedException): ResponseEntity<ErrorResponse> {
+        logger.warn("Method not supported: {} for this endpoint. Supported: {}", e.method, e.supportedHttpMethods)
+        return ResponseEntity.status(HttpStatus.METHOD_NOT_ALLOWED)
+            .body(ErrorResponse(HttpStatus.METHOD_NOT_ALLOWED.value(), "Method '${e.method}' is not supported. Supported: ${e.supportedHttpMethods}"))
+    }
+
     @ExceptionHandler(Exception::class)
     fun handleException(e: Exception): ResponseEntity<ErrorResponse> {
         logger.error("Unhandled Exception: ", e)

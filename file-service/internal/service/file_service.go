@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"math/rand"
 	"mime/multipart"
 	"path/filepath"
 	"strconv"
@@ -204,9 +205,40 @@ func (s *fileService) UploadFileAsync(fileHeader *multipart.FileHeader, category
 }
 
 func (s *fileService) GenerateDefaultProfileImage(name string, color string, uploaderId *int64, ownerType, ownerId string) (*model.FileMetadata, error) {
+	var textColor string
 	if color == "" {
-		// 랜덤 파스텔 컬러 (단순 예시)
-		color = "#6c5ce7"
+		// Define a palette of high-contrast background and text colors
+		type ColorPair struct {
+			Background string
+			Text       string
+		}
+
+		palette := []ColorPair{
+			{"#E1BEE7", "#6A1B9A"}, // Purple
+			{"#D1C4E9", "#4527A0"}, // Deep Purple
+			{"#C5CAE9", "#283593"}, // Indigo
+			{"#BBDEFB", "#1565C0"}, // Blue
+			{"#B3E5FC", "#0277BD"}, // Light Blue
+			{"#B2DFDB", "#00695C"}, // Teal
+			{"#C8E6C9", "#2E7D32"}, // Green
+			{"#DCEDC8", "#558B2F"}, // Light Green
+			{"#FFF9C4", "#F9A825"}, // Yellow (Darker text for contrast)
+			{"#FFECB3", "#FF6F00"}, // Amber
+			{"#FFE0B2", "#EF6C00"}, // Orange
+			{"#FFCCBC", "#D84315"}, // Deep Orange
+			{"#D7CCC8", "#4E342E"}, // Brown
+			{"#F5F5F5", "#424242"}, // Grey
+			{"#CFD8DC", "#37474F"}, // Blue Grey
+		}
+
+		// Pick a random pair
+		// Note: In production, seed the random number generator in main or init
+		idx := rand.Intn(len(palette))
+		color = palette[idx].Background
+		textColor = palette[idx].Text
+	} else {
+		// If color is provided, default text to white (or calculate contrast if needed)
+		textColor = "white"
 	}
 
 	initial := ""
@@ -215,7 +247,7 @@ func (s *fileService) GenerateDefaultProfileImage(name string, color string, upl
 		initial = string(runes[0])
 	}
 
-	svgContent := fmt.Sprintf(`<svg width="200" height="200" xmlns="http://www.w3.org/2000/svg"><rect width="100%%" height="100%%" fill="%s"/><text x="50%%" y="50%%" font-size="100" text-anchor="middle" dy=".3em" fill="white" font-family="Arial, sans-serif">%s</text></svg>`, color, initial)
+	svgContent := fmt.Sprintf(`<svg width="200" height="200" xmlns="http://www.w3.org/2000/svg"><rect width="100%%" height="100%%" fill="%s"/><text x="50%%" y="50%%" font-size="100" text-anchor="middle" dy=".3em" fill="%s" font-family="Arial, sans-serif">%s</text></svg>`, color, textColor, initial)
 
 	fileName := uuid.New().String() + ".svg"
 	category := "profile"

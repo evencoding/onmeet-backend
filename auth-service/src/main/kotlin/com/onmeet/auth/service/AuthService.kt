@@ -10,6 +10,9 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.crypto.password.PasswordEncoder
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
+import com.onmeet.auth.repository.WithdrawnUserRepository
+import com.onmeet.auth.entity.WithdrawnUser
+import java.time.LocalDateTime
 
 @Service
 class AuthService(
@@ -21,7 +24,8 @@ class AuthService(
     private val invitationService: InvitationService,
     private val jobTitleService: JobTitleService,
     private val tokenService: TokenService,
-    private val fileClient: com.onmeet.auth.client.FileClient
+    private val fileClient: com.onmeet.auth.client.FileClient,
+    private val withdrawnUserRepository: com.onmeet.auth.repository.WithdrawnUserRepository
 ) {
 
     @Transactional
@@ -142,6 +146,7 @@ class AuthService(
         tokenService.revokeTokens(accessToken, email)
     }
 
+
     @Transactional
     fun resetUserProfileImage(targetUserId: Long, requesterEmail: String) {
         val targetUser = userRepository.findById(targetUserId)
@@ -170,10 +175,77 @@ class AuthService(
             }
         }
 
+        val name = if (isSelf) "Deleted User" else targetUser.name 
+
         // 기본 이미지 생성 및 할당
-        fileClient.generateDefaultProfileImage(targetUser.name)?.let {
+        fileClient.generateDefaultProfileImage(name)?.let {
             targetUser.profileImageId = it.id
             userRepository.save(targetUser)
         }
+    }
+
+    @Transactional
+    fun withdraw(email: String, request: WithdrawRequest) {
+        val user = userRepository.findByEmail(email)
+            .orElseThrow { UserNotFoundException("User not found: $email") }
+
+        if (!passwordEncoder.matches(request.password, user.passwordHash)) {
+            throw InvalidPasswordException("Invalid password")
+        }
+
+        // Archive user data
+        val withdrawnUser = com.onmeet.auth.entity.WithdrawnUser(
+            originalUserId = user.requireId(),
+            email = user.email,
+            name = user.name,
+            reason = request.reason,
+            withdrawnAt = java.time.LocalDateTime.now()
+        )
+        withdrawnUserRepository.save(withdrawnUser)
+
+        // Anonymize and deactivate user
+        user.email = "withdrawn_${user.id}@onmeet.deleted"
+        user.name = "Withdrawn User"
+        user.passwordHash = "" // Clear password
+        user.status = User.UserStatus.INACTIVE
+        user.profileImageId = null 
+        // Logic to delete profile image from file-service can be added here if needed.
+        
+        userRepository.save(user)
+    }
+
+    @Transactional
+    fun updateProfile(email: String, request: UpdateProfileRequest) {
+        val user = userRepository.findByEmail(email)
+            .orElseThrow { UserNotFoundException("User not found: $email") }
+
+        request.name?.let {
+            if (it.isNotBlank()) user.name = it
+        }
+
+        request.jobTitle?.let { titleName ->
+            if (titleName.isBlank()) {
+                user.jobTitle = null
+            } else {
+                val jobTitle = jobTitleService.getJobTitleByName(user.company, titleName)
+                    ?: throw JobTitleNotFoundException("Job title not found: $titleName")
+                user.jobTitle = jobTitle
+            }
+        }
+        
+        userRepository.save(user)
+    }
+
+    @Transactional
+    fun changePassword(email: String, request: ChangePasswordRequest) {
+        val user = userRepository.findByEmail(email)
+            .orElseThrow { UserNotFoundException("User not found: $email") }
+
+        if (!passwordEncoder.matches(request.oldPassword, user.passwordHash)) {
+            throw InvalidPasswordException("Old password does not match")
+        }
+
+        user.passwordHash = passwordEncoder.encode(request.newPassword)
+        userRepository.save(user)
     }
 }
