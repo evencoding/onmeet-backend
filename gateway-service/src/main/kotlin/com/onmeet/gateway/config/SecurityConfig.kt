@@ -27,14 +27,21 @@ class SecurityConfig(
     @Bean
     fun springSecurityFilterChain(http: ServerHttpSecurity, csrfCookieFilter: CsrfCookieFilter): SecurityWebFilterChain {
         http
-            .csrf { csrf ->
-                csrf.csrfTokenRepository(CookieServerCsrfTokenRepository.withHttpOnlyFalse())
-                    .csrfTokenRequestHandler(ServerCsrfTokenRequestAttributeHandler())
-            }
-            .addFilterAfter(csrfCookieFilter, org.springframework.security.config.web.server.SecurityWebFiltersOrder.CSRF)
+            .csrf { it.disable() }
             .authorizeExchange { exchanges ->
                 // Public endpoints
-                exchanges.pathMatchers("/auth/**", "/.well-known/**", "/actuator/**", "/*/actuator/**").permitAll()
+                exchanges.pathMatchers(
+                    "/auth/**", 
+                    "/.well-known/**", 
+                    "/actuator/**", 
+                    "/*/actuator/**",
+                    "/swagger-ui.html",
+                    "/swagger-ui/**",
+                    "/webjars/**",
+                    "/v3/api-docs/**",
+                    "/swagger-resources/**",
+                    "/*/v3/api-docs/**"
+                ).permitAll()
                 exchanges.pathMatchers("/error").permitAll()
                 
                 // All other requests require authentication

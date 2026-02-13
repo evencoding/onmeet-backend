@@ -13,6 +13,7 @@ spring:
             - Path=/auth/**
           filters:
             - UserHeaderFilter
+            - AddRequestHeader=X-Gateway-Secret, ${GATEWAY_SHARED_SECRET}
         - id: ai-service
           uri: ${AI_SERVICE_URL:http://ai-service:8082}
           predicates:
@@ -43,8 +44,47 @@ spring:
             - Path=/file/**
           filters:
             - UserHeaderFilter
+      globalcors:
+        cors-configurations:
+          '[/**]':
+            allowedOrigins:
+              - "http://localhost:8080"
+              - "http://localhost:3000" # Frontend (Future)
+            allowedMethods:
+              - GET
+              - POST
+              - PUT
+              - DELETE
+              - OPTIONS
+              - PATCH
+            allowedHeaders:
+              - "*"
+            allowCredentials: true
+
   security:
     oauth2:
       resourceserver:
         jwt:
           jwk-set-uri: ${AUTH_SERVICE_URL:http://auth-service:8081}/auth/.well-known/jwks.json
+
+springdoc:
+  api-docs:
+    enabled: true
+  swagger-ui:
+    enabled: true
+    urls:
+      - name: auth-service
+        url: /auth/v3/api-docs
+      - name: ai-service
+        url: /ai/v3/api-docs
+      - name: video-service
+        url: /video/v3/api-docs
+      - name: chat-service
+        url: /chat/v3/api-docs
+      - name: notification-service
+        url: /notification/v3/api-docs
+      - name: email-service
+        url: /email/v3/api-docs
+      - name: file-service
+        url: /file/swagger/doc.json
+
