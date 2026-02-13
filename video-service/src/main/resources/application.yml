@@ -1,5 +1,8 @@
 server:
   port: ${SERVER_PORT:8083}
+  servlet:
+    context-path: /video
+  forward-headers-strategy: framework
 spring:
   application:
     name: video-service

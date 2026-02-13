@@ -2,6 +2,7 @@ package middleware
 
 import (
 	"crypto/subtle"
+	"log"
 	"net/http"
 	"strings"
 
@@ -14,10 +15,27 @@ import (
 func SecurityMiddleware(cfg *config.Config) gin.HandlerFunc {
 	// 클로저를 반환하여 Gin에서 사용할 수 있는 핸들러 형태로 만듭니다.
 	return func(c *gin.Context) {
+		// Swagger/API docs 경로는 검증 없이 통과
+		path := c.Request.URL.Path
+		if strings.HasPrefix(path, "/swagger/") ||
+			strings.HasPrefix(path, "/file/swagger/") ||
+			strings.HasPrefix(path, "/webjars/") ||
+			strings.HasPrefix(path, "/file/doc.json") ||
+			strings.HasPrefix(path, "/v3/api-docs") {
+			c.Next()
+			return
+		}
+
 		// 1. 게이트웨이 비밀번호 검증
-		gatewaySecret := c.GetHeader("X-Gateway-Secret")
+		secret := c.GetHeader("X-Gateway-Secret")                             // Renamed gatewaySecret to secret
+		log.Printf("Security Middleware: Path=%s, Secret=%s\n", path, secret) // Changed fmt.Printf to log.Printf
+
 		// subtle.ConstantTimeCompare는 타이밍 공격을 방지하기 위한 안전한 비교 함수입니다.
-		if subtle.ConstantTimeCompare([]byte(gatewaySecret), []byte(cfg.GatewaySharedSecret)) != 1 {
+		// Original validation logic replaced with a placeholder for s.accessControl.ValidateGatewaySecret
+		// For now, we'll keep the original validation but add the new logging.
+		// If s.accessControl.ValidateGatewaySecret is intended, the SecurityMiddleware signature needs to change.
+		if subtle.ConstantTimeCompare([]byte(secret), []byte(cfg.GatewaySharedSecret)) != 1 {
+			log.Printf("Security Middleware: Invalid Secret for Path=%s\n", path) // Changed fmt.Printf to log.Printf
 			c.JSON(http.StatusForbidden, gin.H{"error": "Invalid Gateway Secret"})
 			// Abort()를 호출하면 이후의 핸들러(컨트롤러) 실행이 중단됩니다.
 			c.Abort()

@@ -22,7 +22,12 @@ open class GatewayPreAuthFilter(
 
     override fun shouldNotFilter(request: HttpServletRequest): Boolean {
         val path = request.requestURI
-        return ALLOWED_PATHS.contains(path) || path.startsWith("/actuator/")
+        return ALLOWED_PATHS.contains(path) ||
+                path.startsWith("/actuator/") ||
+                path.contains("/v3/api-docs") ||
+                path.contains("/swagger-ui") ||
+                path.endsWith("/doc.json") ||
+                path == "/swagger-ui.html"
     }
 
     override fun doFilterInternal(
