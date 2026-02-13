@@ -47,7 +47,97 @@ class AuthServiceTest {
     @MockK
     private lateinit var tokenService: TokenService
     
+    @MockK
+    private lateinit var withdrawnUserRepository: com.onmeet.auth.repository.WithdrawnUserRepository
+    
     // ...
+
+    @Test
+    fun `updateProfile should update name and job title`() {
+        // given
+        val company = Company(id = 1L, name = "TestCompany")
+        val jobTitle = JobTitle(id = 10L, name = "Developer", company = company)
+        val user = User(
+            id = 1L, email = "test@example.com", passwordHash = "pw", name = "OldName", 
+            roles = mutableSetOf(User.Role.USER), company = company, status = User.UserStatus.ACTIVE
+        )
+        val request = UpdateProfileRequest(name = "NewName", jobTitle = "Developer")
+
+        every { userRepository.findByEmail("test@example.com") } returns java.util.Optional.of(user)
+        every { jobTitleService.getJobTitleByName(company, "Developer") } returns jobTitle
+        every { userRepository.save(any()) } returns user
+
+        // when
+        authService.updateProfile("test@example.com", request)
+
+        // then
+        assertEquals("NewName", user.name)
+        assertEquals(jobTitle, user.jobTitle)
+        verify { userRepository.save(user) }
+    }
+
+    @Test
+    fun `updateProfile should clear job title if blank`() {
+        // given
+        val company = Company(id = 1L, name = "TestCompany")
+        val user = User(
+            id = 1L, email = "test@example.com", passwordHash = "pw", name = "Name", 
+            roles = mutableSetOf(User.Role.USER), company = company, status = User.UserStatus.ACTIVE
+        ).apply { jobTitle = JobTitle(name = "OldTitle", company = company) }
+        
+        val request = UpdateProfileRequest(name = null, jobTitle = "")
+
+        every { userRepository.findByEmail("test@example.com") } returns java.util.Optional.of(user)
+        every { userRepository.save(any()) } returns user
+
+        // when
+        authService.updateProfile("test@example.com", request)
+
+        // then
+        assertNull(user.jobTitle)
+        verify { userRepository.save(user) }
+    }
+
+    @Test
+    fun `changePassword should update password if old password matches`() {
+        // given
+        val user = User(
+            id = 1L, email = "test@example.com", passwordHash = "hashed_old", name = "Name", 
+            roles = mutableSetOf(User.Role.USER), company = Company(1L, "Test"), status = User.UserStatus.ACTIVE
+        )
+        val request = ChangePasswordRequest(oldPassword = "old", newPassword = "new")
+
+        every { userRepository.findByEmail("test@example.com") } returns java.util.Optional.of(user)
+        every { passwordEncoder.matches("old", "hashed_old") } returns true
+        every { passwordEncoder.encode("new") } returns "hashed_new"
+        every { userRepository.save(any()) } returns user
+
+        // when
+        authService.changePassword("test@example.com", request)
+
+        // then
+        assertEquals("hashed_new", user.passwordHash)
+        verify { userRepository.save(user) }
+    }
+
+    @Test
+    fun `changePassword should throw exception if old password does not match`() {
+        // given
+        val user = User(
+            id = 1L, email = "test@example.com", passwordHash = "hashed_old", name = "Name", 
+            roles = mutableSetOf(User.Role.USER), company = Company(1L, "Test"), status = User.UserStatus.ACTIVE
+        )
+        val request = ChangePasswordRequest(oldPassword = "wrong", newPassword = "new")
+
+        every { userRepository.findByEmail("test@example.com") } returns java.util.Optional.of(user)
+        every { passwordEncoder.matches("wrong", "hashed_old") } returns false
+
+        // when & then
+        assertThrows(InvalidPasswordException::class.java) {
+            authService.changePassword("test@example.com", request)
+        }
+    }
+
 
     @Test
     fun `signupCompany should save manager and return id`() {

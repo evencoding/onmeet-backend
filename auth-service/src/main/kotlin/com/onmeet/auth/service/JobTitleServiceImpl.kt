@@ -97,6 +97,9 @@ class JobTitleServiceImpl(
     override fun getDefaultJobTitle(company: Company): JobTitle? =
         jobTitleRepository.findByCompanyAndIsDefaultTrue(company)
 
+    override fun getJobTitleByName(company: Company, name: String): JobTitle? =
+        jobTitleRepository.findByCompanyAndName(company, name)
+
     private fun validateManager(user: User) {
         if (!user.hasRole(User.Role.MANAGER)) {
             throw InsufficientPermissionException("Only managers can manage job titles")

@@ -24,7 +24,7 @@ type FileMetadata struct {
 	// *int64처럼 포인터를 쓰는 이유는 DB의 NULL 값을 허용하기 위해서입니다. (Java의 클래스 타입 Integer와 유사)
 	UploaderID *int64 `json:"uploaderId"`
 	// datatypes.JSON은 PostgreSQL의 jsonb 타입을 지원하기 위한 특수 타입입니다.
-	ExtraInfo datatypes.JSON `gorm:"type:jsonb" json:"extraInfo"`
+	ExtraInfo datatypes.JSON `gorm:"type:jsonb" json:"extraInfo" swaggertype:"object"`
 	CreatedAt time.Time      `json:"createdAt"`
 	UpdatedAt time.Time      `json:"updatedAt"`
 	// gorm.DeletedAt은 'Soft Delete'(논리 삭제) 기능을 지원합니다. (JPA의 @SQLDelete와 비유 가능)

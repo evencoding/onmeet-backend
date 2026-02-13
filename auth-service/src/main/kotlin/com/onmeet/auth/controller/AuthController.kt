@@ -14,6 +14,7 @@ import io.swagger.v3.oas.annotations.media.Schema
 import io.swagger.v3.oas.annotations.media.ExampleObject
 import jakarta.servlet.http.Cookie
 import jakarta.servlet.http.HttpServletResponse
+import jakarta.validation.Valid
 import java.security.Principal
 import org.springframework.http.HttpHeaders
 
@@ -181,6 +182,39 @@ class AuthController(
     @GetMapping("/check")
     fun check(): ResponseEntity<Void> =
         ResponseEntity.ok().build()
+
+    @DeleteMapping("/users/me")
+    @Operation(summary = "회원 탈퇴", description = "비밀번호 검증 후 회원을 탈퇴 처리(Soft Delete & Archive)합니다.")
+    fun withdraw(
+        @RequestBody @Valid request: WithdrawRequest,
+        authentication: Authentication
+    ): ResponseEntity<Void> {
+        val email = authentication.name
+        authService.withdraw(email, request)
+        return ResponseEntity.noContent().build()
+    }
+
+    @PatchMapping("/users/me")
+    @Operation(summary = "회원 정보 수정", description = "이름, 직함 등 회원 정보를 수정합니다.")
+    fun updateProfile(
+        @RequestBody @Valid request: UpdateProfileRequest,
+        authentication: Authentication
+    ): ResponseEntity<Void> {
+        val email = authentication.name
+        authService.updateProfile(email, request)
+        return ResponseEntity.ok().build()
+    }
+
+    @PutMapping("/users/me/password")
+    @Operation(summary = "비밀번호 변경", description = "기존 비밀번호 확인 후 새 비밀번호로 변경합니다.")
+    fun changePassword(
+        @RequestBody @Valid request: ChangePasswordRequest,
+        authentication: Authentication
+    ): ResponseEntity<Void> {
+        val email = authentication.name
+        authService.changePassword(email, request)
+        return ResponseEntity.ok().build()
+    }
 
     private fun createRefreshCookie(token: String, maxAge: Long = jwtProperties.refreshCookie.maxAge): ResponseCookie =
         createHttpOnlyCookie(JwtConstants.REFRESH_TOKEN_COOKIE_NAME, token, maxAge)

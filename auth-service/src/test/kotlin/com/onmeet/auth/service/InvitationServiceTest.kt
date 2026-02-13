@@ -33,7 +33,7 @@ class InvitationServiceTest {
     lateinit var invitationProperties: InvitationProperties
 
     @InjectMockKs
-    lateinit var invitationService: InvitationService
+    lateinit var invitationService: InvitationServiceImpl
 
     @Test
     fun `createInvitation should create invitation and send email`() {
