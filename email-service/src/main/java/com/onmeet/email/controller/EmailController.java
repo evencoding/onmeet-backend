@@ -5,6 +5,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 
 @RestController
@@ -13,6 +15,10 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 public class EmailController {
 
     @Operation(summary = "이메일 서비스 헬스 체크", description = "이메일 서비스의 동작 상태를 확인합니다.")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "서비스 동작 중"),
+        @ApiResponse(responseCode = "500", description = "서버 오류")
+    })
     @GetMapping("/health")
     public String health() {
         return "Email Service is running";
