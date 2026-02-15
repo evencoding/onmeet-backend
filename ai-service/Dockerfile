@@ -9,7 +9,7 @@ COPY gradle gradle
 COPY . .
 
 # 빌드 수행
-RUN ./gradlew :ai-service:build -x test --no-daemon
+RUN ./gradlew clean :ai-service:build -x test --no-daemon
 
 
 

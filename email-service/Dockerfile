@@ -9,7 +9,7 @@ COPY gradle gradle
 COPY . .
 
 # 빌드 수행
-RUN ./gradlew :email-service:build -x test --no-daemon
+RUN ./gradlew clean :email-service:build -x test --no-daemon
 
 
 

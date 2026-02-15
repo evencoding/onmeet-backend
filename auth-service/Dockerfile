@@ -9,7 +9,7 @@ COPY gradle gradle
 COPY . .
 
 # 빌드 수행
-RUN ./gradlew clean :auth-service:build -x test --no-daemon --no-configuration-cache
+RUN ./gradlew clean :auth-service:build -x test --no-daemon
 
 
 

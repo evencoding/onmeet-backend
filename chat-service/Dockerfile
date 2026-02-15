@@ -9,7 +9,7 @@ COPY gradle gradle
 COPY . .
 
 # 빌드 수행
-RUN ./gradlew :chat-service:build -x test --no-daemon
+RUN ./gradlew clean :chat-service:build -x test --no-daemon
 
 
 

@@ -6,21 +6,21 @@ services:
       MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD}
       MYSQL_DATABASE: auth_db
     ports:
-      - "3307:3306"
+      - "127.0.0.1:3307:3306"
     healthcheck:
       test: [ "CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${DB_ROOT_PASSWORD}" ]
       interval: 10s
       timeout: 5s
       retries: 5
     networks:
-      - msa-network
+      - onmeet-network
 
   auth-service:
     image: onmeet/auth-service:latest
     pull_policy: never
     container_name: auth-service
     ports:
-      - "${AUTH_SERVICE_PORT:-8081}:${AUTH_SERVICE_PORT:-8081}"
+      - "127.0.0.1:8081:8081"
     environment:
       - SPRING_DATASOURCE_URL=${AUTH_DB_URL:-jdbc:mysql://mysql-auth:3306/auth_db?useSSL=false&allowPublicKeyRetrieval=true&characterEncoding=UTF-8&serverTimezone=UTC}
       - SPRING_DATASOURCE_USERNAME=${DB_USERNAME}
@@ -29,27 +29,40 @@ services:
       - AUTH_ENCRYPTION_KEY=${AUTH_ENCRYPTION_KEY}
       - SPRING_DATA_REDIS_HOST=${AUTH_REDIS_HOST:-redis-auth}
       - SERVER_PORT=${AUTH_SERVICE_PORT:-8081}
+      - MANAGEMENT_ENDPOINT_HEALTH_PROBES_ENABLED=true
       - SPRING_KAFKA_BOOTSTRAP_SERVERS=${KAFKA_BOOTSTRAP_SERVERS:-kafka:29092}
-      - ONMEET_FILE_INTERNAL_URL=http://file-service:8086
+      - ONMEET_FILE_INTERNAL_URL=http://file-service:8087
     depends_on:
       mysql-auth:
         condition: service_healthy
       redis-auth:
-        condition: service_started
+        condition: service_healthy
       kafka:
         condition: service_healthy
     networks:
-      - msa-network
+      - onmeet-network
+    deploy:
+      resources:
+        limits:
+          cpus: '0.50'
+          memory: 512M
+        reservations:
+          cpus: '0.10'
+          memory: 256M
 
   redis-auth:
     image: redis:alpine
     container_name: redis-auth
     ports:
-      - "6379:6379"
+      - "127.0.0.1:6379:6379"
     networks:
-      - msa-network
+      - onmeet-network
+    healthcheck:
+      test: [ "CMD", "redis-cli", "ping" ]
+      interval: 5s
+      timeout: 3s
+      retries: 5
 
 networks:
-  msa-network:
-    name: onmeet-network
+  onmeet-network:
     external: true
