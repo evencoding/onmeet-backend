@@ -19,6 +19,9 @@ dependencies {
     api 'io.github.resilience4j:resilience4j-spring-boot3:2.2.0'
     api 'org.springframework.boot:spring-boot-starter-aop'
 
+    // Feign Client
+    api 'org.springframework.cloud:spring-cloud-starter-openfeign:4.1.3'
+
     // Observability
     api 'io.micrometer:micrometer-registry-prometheus'
     api 'io.micrometer:micrometer-tracing-bridge-brave'
