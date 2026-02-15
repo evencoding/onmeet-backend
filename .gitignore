@@ -39,3 +39,6 @@ Desktop.ini
 auth-service/http/http-client.env.json
 auth_logs.txt
 *.log
+
+# AI Agent Rules
+.agent/
