@@ -10,6 +10,9 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.PathVariable;
+
 @RestController
 @RequestMapping("/v1")
 @Tag(name = "Chat", description = "채팅 관련 서비스 API")
@@ -24,5 +27,12 @@ public class ChatController {
     @GetMapping("/me")
     public String me(@AuthenticationPrincipal String userId) {
         return "Hello from Chat Service! User ID: " + (userId != null ? userId : "Unknown");
+    }
+
+    @Operation(summary = "팀 채팅 조회 (권한 체크 예시)", description = "팀 멤버만 채팅을 조회할 수 있습니다.")
+    @GetMapping("/teams/{teamId}/chat")
+    @PreAuthorize("@teamSecurity.isMemberOf(#teamId, principal)")
+    public String getTeamChat(@PathVariable Long teamId, @AuthenticationPrincipal String userId) {
+        return "Chat content for team " + teamId + " for user " + userId;
     }
 }
