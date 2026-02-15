@@ -11,6 +11,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse
 import io.swagger.v3.oas.annotations.responses.ApiResponses
 import io.swagger.v3.oas.annotations.tags.Tag
 import org.springframework.http.ResponseEntity
+import org.springframework.security.access.prepost.PreAuthorize
 import org.springframework.security.core.annotation.AuthenticationPrincipal
 import org.springframework.web.bind.annotation.*
 
@@ -40,6 +41,7 @@ class TeamController(
         ApiResponse(responseCode = "403", description = "권한 없음 (매니저 아님)"),
         ApiResponse(responseCode = "404", description = "팀 또는 사용자를 찾을 수 없음")
     ])
+    @PreAuthorize("hasRole('MANAGER') and @teamSecurity.belongsToSameCompany(#teamId, principal)")
     @PostMapping("/{teamId}/approve")
     fun approveTeam(
         @AuthenticationPrincipal user: User,
@@ -53,6 +55,7 @@ class TeamController(
         ApiResponse(responseCode = "403", description = "권한 없음 (매니저 아님)"),
         ApiResponse(responseCode = "404", description = "팀 또는 사용자를 찾을 수 없음")
     ])
+    @PreAuthorize("hasRole('MANAGER') and @teamSecurity.belongsToSameCompany(#teamId, principal)")
     @PostMapping("/{teamId}/reject")
     fun rejectTeam(
         @AuthenticationPrincipal user: User,
@@ -67,6 +70,7 @@ class TeamController(
         ApiResponse(responseCode = "403", description = "권한 없음 (매니저 아님)"),
         ApiResponse(responseCode = "404", description = "팀 또는 사용자를 찾을 수 없음")
     ])
+    @PreAuthorize("hasRole('MANAGER') and @teamSecurity.belongsToSameCompany(#teamId, principal)")
     @PostMapping("/{teamId}/leader/{userId}")
     fun assignLeader(
         @AuthenticationPrincipal user: User,
@@ -82,6 +86,7 @@ class TeamController(
         ApiResponse(responseCode = "403", description = "권한 없음 (팀장 또는 매니저 아님)"),
         ApiResponse(responseCode = "404", description = "팀 또는 사용자를 찾을 수 없음")
     ])
+    @PreAuthorize("hasRole('MANAGER') or @teamSecurity.isLeaderOf(#teamId, principal)")
     @PostMapping("/{teamId}/delegate/{userId}")
     fun delegateLeader(
         @AuthenticationPrincipal user: User,
@@ -96,6 +101,7 @@ class TeamController(
         ApiResponse(responseCode = "403", description = "권한 없음 (팀장 또는 매니저 아님)"),
         ApiResponse(responseCode = "404", description = "팀 또는 사용자를 찾을 수 없음")
     ])
+    @PreAuthorize("hasRole('MANAGER') or @teamSecurity.isLeaderOf(#teamId, principal)")
     @DeleteMapping("/{teamId}")
     fun dissolveTeam(
         @AuthenticationPrincipal user: User,
