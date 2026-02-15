@@ -1,0 +1,125 @@
+package com.onmeet.auth.service
+
+import com.onmeet.auth.dto.UserProfileUpdateRequest
+import com.onmeet.auth.entity.Company
+import com.onmeet.auth.entity.JobTitle
+import com.onmeet.auth.entity.User
+import com.onmeet.auth.exception.CrossCompanyAccessException
+import com.onmeet.auth.exception.UserNotFoundException
+import com.onmeet.auth.repository.jpa.JobTitleRepository
+import com.onmeet.auth.repository.jpa.UserRepository
+import com.onmeet.common.exception.InsufficientPermissionException
+import io.mockk.every
+import io.mockk.impl.annotations.InjectMockKs
+import io.mockk.impl.annotations.MockK
+import io.mockk.junit5.MockKExtension
+import io.mockk.verify
+import org.junit.jupiter.api.Assertions.*
+import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.extension.ExtendWith
+import java.util.*
+
+@ExtendWith(MockKExtension::class)
+class UserServiceImplTest {
+
+    @MockK
+    private lateinit var userRepository: UserRepository
+
+    @MockK
+    private lateinit var jobTitleRepository: JobTitleRepository
+
+    @InjectMockKs
+    private lateinit var userService: UserServiceImpl
+
+    @Test
+    fun `updateUserProfile should update profile when requester is self`() {
+        // given
+        val company = Company(id = 1L, name = "TestCo")
+        val user = User(id = 1L, email = "user@test.com", passwordHash = "hash", name = "Old", company = company)
+        val request = UserProfileUpdateRequest(name = "New", employeeId = "EMP1", jobTitleId = null)
+
+        every { userRepository.findById(1L) } returns Optional.of(user)
+        every { userRepository.save(any()) } returns user
+
+        // when
+        val result = userService.updateUserProfile(1L, user, request)
+
+        // then
+        assertEquals("New", user.name)
+        assertEquals("EMP1", user.employeeId)
+        verify { userRepository.save(user) }
+    }
+
+    @Test
+    fun `updateUserProfile should update profile when requester is manager in same company`() {
+        // given
+        val company = Company(id = 1L, name = "TestCo")
+        val manager = User(id = 2L, email = "mgr@test.com", passwordHash = "hash", name = "Mgr", 
+                          roles = mutableSetOf(User.Role.MANAGER), company = company)
+        val user = User(id = 1L, email = "user@test.com", passwordHash = "hash", name = "Old", company = company)
+        val request = UserProfileUpdateRequest(name = "New", employeeId = null, jobTitleId = null)
+
+        every { userRepository.findById(1L) } returns Optional.of(user)
+        every { userRepository.save(any()) } returns user
+
+        // when
+        userService.updateUserProfile(1L, manager, request)
+
+        // then
+        assertEquals("New", user.name)
+        verify { userRepository.save(user) }
+    }
+
+    @Test
+    fun `updateUserProfile should throw CrossCompanyAccessException when manager updates user from another company`() {
+        // given
+        val company1 = Company(id = 1L, name = "Co1")
+        val company2 = Company(id = 2L, name = "Co2")
+        val manager = User(id = 10L, email = "mgr@test.com", passwordHash = "hash", name = "Mgr", 
+                          roles = mutableSetOf(User.Role.MANAGER), company = company1)
+        val userFromOtherCo = User(id = 20L, email = "other@test.com", passwordHash = "hash", name = "Other", company = company2)
+        val request = UserProfileUpdateRequest(name = "New", employeeId = null, jobTitleId = null)
+
+        every { userRepository.findById(20L) } returns Optional.of(userFromOtherCo)
+
+        // when & then
+        assertThrows(CrossCompanyAccessException::class.java) {
+            userService.updateUserProfile(20L, manager, request)
+        }
+    }
+
+    @Test
+    fun `deactivateUser should change user status to INACTIVE`() {
+        // given
+        val company = Company(id = 1L, name = "TestCo")
+        val manager = User(id = 1L, email = "mgr@test.com", passwordHash = "hash", name = "Mgr", 
+                          roles = mutableSetOf(User.Role.MANAGER), company = company)
+        val target = User(id = 2L, email = "target@test.com", passwordHash = "hash", name = "Target", company = company)
+
+        every { userRepository.findById(2L) } returns Optional.of(target)
+        every { userRepository.save(any()) } returns target
+
+        // when
+        userService.deactivateUser(2L, manager)
+
+        // then
+        assertEquals(User.UserStatus.INACTIVE, target.status)
+        verify { userRepository.save(target) }
+    }
+
+    @Test
+    fun `deactivateUser should throw InsufficientPermissionException when requester is not manager`() {
+        // given
+        val company = Company(id = 1L, name = "TestCo")
+        val user = User(id = 1L, email = "user@test.com", passwordHash = "hash", name = "User", 
+                       roles = mutableSetOf(User.Role.USER), company = company)
+        val target = User(id = 2L, email = "target@test.com", passwordHash = "hash", name = "Target", company = company)
+
+        every { userRepository.findById(2L) } returns Optional.of(target)
+
+        // when & then
+        assertThrows(InsufficientPermissionException::class.java) {
+            userService.deactivateUser(2L, user)
+        }
+    }
+}

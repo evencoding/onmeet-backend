@@ -8,6 +8,13 @@ plugins {
     id 'com.google.cloud.tools.jib' version '3.4.3' apply false
 }
 
+ext {
+    springDocVersion = '2.6.0'
+    springDocWebFluxVersion = '2.2.0'
+    lombokVersion = '1.18.36'
+    lombokMapstructBindingVersion = '0.2.0'
+}
+
 subprojects {
     group = 'com.onmeet'
     version = '0.0.1-SNAPSHOT'
