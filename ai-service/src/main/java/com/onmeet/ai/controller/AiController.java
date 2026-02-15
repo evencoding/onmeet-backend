@@ -11,7 +11,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 
 @RestController
-@RequestMapping("/ai")
+@RequestMapping("/v1")
 @Tag(name = "AI", description = "AI 관련 서비스 API")
 public class AiController {
 

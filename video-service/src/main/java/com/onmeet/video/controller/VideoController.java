@@ -11,7 +11,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 
 @RestController
-@RequestMapping("/videos")
+@RequestMapping("/v1")
 @Tag(name = "Video", description = "화상 통화/회의 관련 서비스 API")
 public class VideoController {
 

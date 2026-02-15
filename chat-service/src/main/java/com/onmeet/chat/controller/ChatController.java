@@ -11,7 +11,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 
 @RestController
-@RequestMapping("/chat")
+@RequestMapping("/v1")
 @Tag(name = "Chat", description = "채팅 관련 서비스 API")
 public class ChatController {
 
