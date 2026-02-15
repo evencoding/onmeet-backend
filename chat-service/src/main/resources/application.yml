@@ -16,12 +16,31 @@ spring:
       ddl-auto: validate
     properties:
       hibernate:
-        "[format_sql]": true
-        "[show_sql]": true
+        "[format_sql]": false
+        "[show_sql]": false
         dialect: org.hibernate.dialect.MySQLDialect
+
+gateway:
+  shared-secret: ${GATEWAY_SHARED_SECRET}
 
 onmeet:
   auth:
     internal-url: ${AUTH_INTERNAL_URL:http://auth-service:8081}
 cors:
   allowed-origins: "http://localhost:3000,http://localhost:8080"
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health, info, prometheus
+  zipkin:
+    tracing:
+      endpoint: http://zipkin:9411/api/v2/spans
+  tracing:
+    sampling:
+      probability: 1.0
+
+springdoc:
+  api-docs:
+    path: /v1/v3/api-docs
