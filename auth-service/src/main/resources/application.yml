@@ -12,10 +12,6 @@ spring:
     producer:
       key-serializer: org.apache.kafka.common.serialization.StringSerializer
       value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
-app:
-  team:
-    initial-color: ${INITIAL_TEAM_COLOR:#FFFFFF}
-    initial-description: ${INITIAL_TEAM_DESCRIPTION:Initial team}
   datasource:
     url: ${SPRING_DATASOURCE_URL}
     username: ${SPRING_DATASOURCE_USERNAME}
@@ -27,11 +23,16 @@ app:
   flyway:
     baseline-on-migrate: true
 
+app:
+  team:
+    initial-color: ${INITIAL_TEAM_COLOR:#FFFFFF}
+    initial-description: ${INITIAL_TEAM_DESCRIPTION:Initial team}
+
 auth:
   encryption-key: ${AUTH_ENCRYPTION_KEY}
 privacy:
   encryption:
-    key: ${PRIVACY_ENCRYPTION_KEY:default-32-byte-secret-key-12345}
+    key: ${PRIVACY_ENCRYPTION_KEY}
 gateway:
   shared-secret: ${GATEWAY_SHARED_SECRET}
 
@@ -50,17 +51,41 @@ management:
   endpoints:
     web:
       exposure:
-        include: health
+        include: health, info, prometheus
+
+  zipkin:
+    tracing:
+      endpoint: http://zipkin:9411/api/v2/spans
+  tracing:
+    sampling:
+      probability: 1.0
+
+springdoc:
+  api-docs:
+    path: /v1/v3/api-docs
 
 logging:
   level:
     root: INFO
-    com.onmeet: DEBUG
-    org.springframework.security: DEBUG
-    org.springframework.web: DEBUG
+    com.onmeet: INFO
+    org.springframework.security: INFO
+    org.springframework.web: INFO
 
-
+onmeet:
   auth:
     internal-url: ${AUTH_INTERNAL_URL:http://auth-service:8081}
   file:
     internal-url: ${FILE_SERVICE_URL:http://file-service:8086}
+
+resilience4j:
+  circuitbreaker:
+    instances:
+      fileService:
+        registerHealthIndicator: true
+        slidingWindowSize: 10
+        minimumNumberOfCalls: 5
+        permittedNumberOfCallsInHalfOpenState: 3
+        automaticTransitionFromOpenToHalfOpenEnabled: true
+        waitDurationInOpenState: 5s
+        failureRateThreshold: 50
+        eventConsumerBufferSize: 10
