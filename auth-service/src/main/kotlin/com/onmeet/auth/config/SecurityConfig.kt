@@ -63,7 +63,19 @@ class SecurityConfig(
     @Bean
     fun corsConfigurationSource(): CorsConfigurationSource {
         val configuration = CorsConfiguration()
-        configuration.allowedOriginPatterns = listOf("*")
+        
+        val envOrigins = System.getenv("ALLOWED_ORIGINS")
+            ?.split(",")
+            ?.map { it.trim() }
+            ?.filter { it.isNotEmpty() }
+            ?: emptyList()
+
+        configuration.allowedOriginPatterns = listOf(
+            "http://localhost:3000",
+            "http://localhost:8080",
+            "https://*.onmeet.com"
+        ) + envOrigins
+
         configuration.allowedMethods = listOf("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH", "HEAD")
         configuration.allowedHeaders = listOf("*")
         configuration.allowCredentials = true

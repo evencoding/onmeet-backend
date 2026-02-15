@@ -15,7 +15,7 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal
 import org.springframework.web.bind.annotation.*
 
 @RestController
-@RequestMapping("/teams")
+@RequestMapping("/v1/teams")
 @Tag(name = "Team Management", description = "팀 관리 API (생성, 승인, 위임, 해체)")
 class TeamController(
     private val teamService: TeamService

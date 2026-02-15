@@ -28,7 +28,7 @@ func SecurityMiddleware(cfg *config.Config) gin.HandlerFunc {
 
 		// 1. 게이트웨이 비밀번호 검증
 		secret := c.GetHeader("X-Gateway-Secret")                             // Renamed gatewaySecret to secret
-		log.Printf("Security Middleware: Path=%s, Secret=%s\n", path, secret) // Changed fmt.Printf to log.Printf
+		log.Printf("Security Middleware: Validating gateway secret for Path=%s\n", path)
 
 		// subtle.ConstantTimeCompare는 타이밍 공격을 방지하기 위한 안전한 비교 함수입니다.
 		// Original validation logic replaced with a placeholder for s.accessControl.ValidateGatewaySecret

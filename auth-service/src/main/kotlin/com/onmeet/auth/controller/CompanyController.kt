@@ -19,7 +19,7 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal
 import org.springframework.web.bind.annotation.*
 
 @RestController
-@RequestMapping("/companies")
+@RequestMapping("/v1/companies")
 @Tag(name = "Company & Team", description = "기업 및 팀 관리 API")
 class CompanyController(
     private val companyService: CompanyService,
