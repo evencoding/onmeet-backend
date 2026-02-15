@@ -10,33 +10,38 @@ spring:
         - id: auth-service
           uri: ${AUTH_SERVICE_URL:http://auth-service:8081}
           predicates:
-            - Path=/auth/**
+            - Path=/v1/auth/**
           filters:
+            - RewritePath=/v1/auth/(?<segment>.*), /auth/v1/${segment}
             - UserHeaderFilter
             - AddRequestHeader=X-Gateway-Secret, ${GATEWAY_SHARED_SECRET}
         - id: ai-service
           uri: ${AI_SERVICE_URL:http://ai-service:8082}
           predicates:
-            - Path=/ai/**
+            - Path=/v1/ai/**
           filters:
+            - RewritePath=/v1/ai/(?<segment>.*), /ai/v1/${segment}
             - UserHeaderFilter
         - id: video-service
           uri: ${VIDEO_SERVICE_URL:http://video-service:8083}
           predicates:
-            - Path=/video/**
+            - Path=/v1/video/**
           filters:
+            - RewritePath=/v1/video/(?<segment>.*), /video/v1/${segment}
             - UserHeaderFilter
         - id: chat-service
           uri: ${CHAT_SERVICE_URL:http://chat-service:8084}
           predicates:
-            - Path=/chat/**
+            - Path=/v1/chat/**
           filters:
+            - RewritePath=/v1/chat/(?<segment>.*), /chat/v1/${segment}
             - UserHeaderFilter
         - id: notification-service
           uri: ${NOTIFICATION_SERVICE_URL:http://notification-service:8085}
           predicates:
-            - Path=/notification/**
+            - Path=/v1/notification/**
           filters:
+            - RewritePath=/v1/notification/(?<segment>.*), /notification/v1/${segment}
             - UserHeaderFilter
         - id: email-service
           uri: ${EMAIL_SERVICE_URL:http://email-service:8087}
@@ -50,6 +55,13 @@ spring:
             - Path=/file/**
           filters:
             - UserHeaderFilter
+      default-filters:
+        - name: RequestRateLimiter
+          args:
+            'redis-rate-limiter.replenishRate': 10
+            'redis-rate-limiter.burstCapacity': 20
+            'redis-rate-limiter.requestedTokens': 1
+            key-resolver: "#{@ipKeyResolver}"
       globalcors:
         cors-configurations:
           '[/**]':
@@ -84,18 +96,30 @@ springdoc:
     enabled: true
     urls:
       - name: auth-service
-        url: /auth/v3/api-docs
+        url: /v1/auth/v3/api-docs
       - name: ai-service
-        url: /ai/v3/api-docs
+        url: /v1/ai/v3/api-docs
       - name: video-service
-        url: /video/v3/api-docs
+        url: /v1/video/v3/api-docs
       - name: chat-service
-        url: /chat/v3/api-docs
+        url: /v1/chat/v3/api-docs
       - name: notification-service
-        url: /notification/v3/api-docs
+        url: /v1/notification/v3/api-docs
       - name: email-service
         url: /email/v3/api-docs
 
       - name: file-service
         url: /file/doc.json
 
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health, info, prometheus
+  zipkin:
+    tracing:
+      endpoint: http://zipkin:9411/api/v2/spans
+  tracing:
+    sampling:
+      probability: 1.0
