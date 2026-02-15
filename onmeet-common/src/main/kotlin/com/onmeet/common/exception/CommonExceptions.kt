@@ -17,3 +17,8 @@ open class EntityNotFoundException(message: String) : BaseException(message, 404
  * 권한이 부족하여 작업을 수행할 수 없을 때 발생하는 예외 (403 Forbidden).
  */
 open class InsufficientPermissionException(message: String) : BaseException(message, 403)
+
+/**
+ * 타 회사 자산에 접근하려고 할 때 발생하는 예외 (403 Forbidden).
+ */
+open class CrossCompanyAccessException(message: String) : BaseException(message, 403)
