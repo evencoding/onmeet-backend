@@ -14,7 +14,7 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal
 import org.springframework.web.bind.annotation.*
 
 @RestController
-@RequestMapping("/job-titles")
+@RequestMapping("/v1/job-titles")
 @Tag(name = "Job Title Management", description = "직급 관리 API")
 class JobTitleController(
     private val jobTitleService: JobTitleService

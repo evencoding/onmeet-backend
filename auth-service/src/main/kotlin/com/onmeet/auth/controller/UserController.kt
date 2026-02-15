@@ -19,7 +19,7 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal
 import org.springframework.web.bind.annotation.*
 
 @RestController
-@RequestMapping("/users")
+@RequestMapping("/v1/users")
 @Tag(name = "User Management", description = "사용자 프로필 및 정보 관리 API")
 class UserController(
     private val userService: UserService

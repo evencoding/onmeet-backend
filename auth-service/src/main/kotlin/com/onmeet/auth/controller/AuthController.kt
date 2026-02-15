@@ -24,7 +24,7 @@ import org.springframework.security.core.Authentication
 import org.springframework.web.bind.annotation.*
 
 @RestController
-@RequestMapping("/")
+@RequestMapping("/v1")
 @Tag(name = "Authentication", description = "인증/인가 및 토큰 관리 API")
 class AuthController(
     private val authService: AuthService,
