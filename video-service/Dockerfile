@@ -9,7 +9,7 @@ COPY gradle gradle
 COPY . .
 
 # 빌드 수행
-RUN ./gradlew :video-service:build -x test --no-daemon
+RUN ./gradlew clean :video-service:build -x test --no-daemon
 
 
 
