@@ -1,7 +1,9 @@
 package com.onmeet.video.controller;
 
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -24,5 +26,12 @@ public class VideoController {
     @GetMapping("/me")
     public String me(@AuthenticationPrincipal String userId) {
         return "Hello from Video Service! User ID: " + (userId != null ? userId : "Unknown");
+    }
+
+    @Operation(summary = "회의실 입장 (권한 체크 예시)", description = "팀 멤버만 회의실에 입장할 수 있습니다.")
+    @GetMapping("/teams/{teamId}/meetings")
+    @PreAuthorize("@teamSecurity.isMemberOf(#teamId, principal)")
+    public String getMeetings(@PathVariable Long teamId, @AuthenticationPrincipal String userId) {
+        return "Meeting list for team " + teamId + " for user " + userId;
     }
 }
