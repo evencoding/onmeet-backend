@@ -80,14 +80,6 @@ class TeamServiceImpl(
     override fun approveTeam(teamId: Long, approver: User): Unit {
         teamRepository.findById(teamId)
             .orElseThrow { TeamNotFoundException("Team not found: $teamId") }
-            .also {
-                if (!approver.isManager()) {
-                    throw InsufficientPermissionException("Only managers can approve teams")
-                }
-                if (!it.belongsToCompany(approver.company.requireId())) {
-                    throw CrossCompanyAccessException("You can only approve teams in your company")
-                }
-            }
             .apply { status = Team.TeamStatus.ACTIVE }
     }
 
@@ -95,14 +87,6 @@ class TeamServiceImpl(
     override fun rejectTeam(teamId: Long, approver: User): Unit {
         teamRepository.findById(teamId)
             .orElseThrow { TeamNotFoundException("Team not found: $teamId") }
-            .also {
-                if (!approver.isManager()) {
-                    throw InsufficientPermissionException("Only managers can reject teams")
-                }
-                if (!it.belongsToCompany(approver.company.requireId())) {
-                    throw CrossCompanyAccessException("You can only reject teams in your company")
-                }
-            }
             .let { teamRepository.delete(it) }
     }
 
@@ -111,14 +95,6 @@ class TeamServiceImpl(
          val team = teamRepository.findById(teamId)
             .orElseThrow { TeamNotFoundException("Team not found: $teamId") }
 
-        if (!manager.isManager()) {
-             throw InsufficientPermissionException("Only managers can assign team leaders")
-        }
-
-        if (!team.belongsToCompany(manager.company.requireId())) {
-             throw CrossCompanyAccessException("You can only assign leaders to teams in your company")
-        }
-        
         val newLeader = userRepository.findById(newLeaderId)
             .orElseThrow { UserNotFoundException("User not found: $newLeaderId") }
 
@@ -137,17 +113,6 @@ class TeamServiceImpl(
     override fun delegateLeader(teamId: Long, currentLeader: User, newLeaderId: Long) {
         val team = teamRepository.findById(teamId)
             .orElseThrow { TeamNotFoundException("Team not found: $teamId") }
-
-        val isManager = currentLeader.isManager()
-        val isCurrentLeader = team.isLeader(currentLeader)
-
-        if (!isManager && !isCurrentLeader) {
-             throw InsufficientPermissionException("You need specific permission to delegate leadership")
-        }
-
-        if (!team.belongsToCompany(currentLeader.company.requireId())) {
-             throw CrossCompanyAccessException("You can only delegate leadership for teams in your company")
-        }
 
         val newLeader = userRepository.findById(newLeaderId)
             .orElseThrow { UserNotFoundException("User not found: $newLeaderId") }
@@ -168,14 +133,6 @@ class TeamServiceImpl(
     override fun dissolveTeam(teamId: Long, requester: User): Unit {
         teamRepository.findById(teamId)
             .orElseThrow { TeamNotFoundException("Team not found: $teamId") }
-            .also { team ->
-                if (!requester.isManager() && !team.isLeader(requester)) {
-                    throw InsufficientPermissionException("You do not have permission to dissolve this team")
-                }
-                if (!team.belongsToCompany(requester.company.requireId())) {
-                    throw CrossCompanyAccessException("You can only dissolve teams in your company")
-                }
-            }
             .let { teamRepository.delete(it) }
     }
 }
