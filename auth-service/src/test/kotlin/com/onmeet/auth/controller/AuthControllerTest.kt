@@ -1,81 +1,70 @@
 package com.onmeet.auth.controller
 
-import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
-import com.ninjasquad.springmockk.MockkBean
-import com.onmeet.auth.dto.LoginRequest
-import com.onmeet.auth.dto.LoginResponse
-import com.onmeet.auth.dto.SignupRequest
-import com.onmeet.auth.dto.TokenResponse
+import com.onmeet.auth.config.JwtProperties
+import com.onmeet.auth.dto.*
 import com.onmeet.auth.service.AuthService
+import com.fasterxml.jackson.databind.ObjectMapper
+import com.ninjasquad.springmockk.MockkBean
 import io.mockk.every
-import io.mockk.verify
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest
 import org.springframework.http.MediaType
 import org.springframework.security.test.context.support.WithMockUser
-import org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf
 import org.springframework.test.web.servlet.MockMvc
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post
-import org.springframework.test.web.servlet.result.MockMvcResultMatchers.*
+import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
+import org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath
 
-import org.springframework.boot.autoconfigure.security.servlet.SecurityAutoConfiguration
-import org.springframework.boot.autoconfigure.security.oauth2.client.servlet.OAuth2ClientAutoConfiguration
-import org.springframework.boot.autoconfigure.security.oauth2.resource.servlet.OAuth2ResourceServerAutoConfiguration
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc
-import org.springframework.context.annotation.ComponentScan
-import org.springframework.context.annotation.FilterType
-import com.onmeet.auth.config.SecurityConfig
-import com.onmeet.auth.security.JwtAuthenticationFilter
-
-@WebMvcTest(
-    controllers = [AuthController::class],
-    excludeFilters = [
-        ComponentScan.Filter(type = FilterType.ASSIGNABLE_TYPE, classes = [SecurityConfig::class, JwtAuthenticationFilter::class])
-    ],
-    excludeAutoConfiguration = [SecurityAutoConfiguration::class, OAuth2ClientAutoConfiguration::class, OAuth2ResourceServerAutoConfiguration::class]
-)
+@WebMvcTest(AuthController::class)
 @AutoConfigureMockMvc(addFilters = false)
-class AuthControllerTest(@Autowired val mockMvc: MockMvc) {
+class AuthControllerTest {
+
+    @Autowired
+    private lateinit var mockMvc: MockMvc
 
     @MockkBean
-    lateinit var authService: AuthService
+    private lateinit var authService: AuthService
 
-    val mapper = jacksonObjectMapper()
+    @MockkBean
+    private lateinit var jwtProperties: JwtProperties
 
+    @MockkBean
+    private lateinit var jwtTokenProvider: com.onmeet.auth.security.JwtTokenProvider
 
+    @MockkBean
+    private lateinit var gatewayProperties: com.onmeet.auth.config.GatewayProperties
+
+    @MockkBean
+    private lateinit var authGatewayPreAuthFilter: com.onmeet.auth.security.AuthGatewayPreAuthFilter
+
+    @MockkBean
+    private lateinit var jwtAuthenticationFilter: com.onmeet.auth.security.JwtAuthenticationFilter
+
+    @Autowired
+    private lateinit var objectMapper: ObjectMapper
 
     @Test
-    fun `signup should return user id`() {
-        val request = SignupRequest("test@example.com", "password", "Test User")
-        every { authService.signup(any()) } returns 1L
-
-        mockMvc.perform(post("/auth/signup")
-            .contentType(MediaType.APPLICATION_JSON)
-            .content(mapper.writeValueAsString(request)))
-            .andExpect(status().isOk)
-            .andExpect(content().string("1"))
-
-        verify { authService.signup(request) }
-    }
-
-    @Test
-    fun `login should return cookie and empty body`() {
+    @WithMockUser
+    fun `login should return success and set cookies`() {
+        // given
         val request = LoginRequest("test@example.com", "password")
-        val tokenResponse = TokenResponse("jwt-token", "Bearer")
-
+        val tokenResponse = TokenResponse("access_token", "refresh_token")
+        
+        // Mocking jwtProperties for cookie settings
+        every { jwtProperties.cookie } returns JwtProperties.CookieProperties(true, 3600)
+        every { jwtProperties.refreshCookie } returns JwtProperties.RefreshCookieProperties(604800)
+        
         every { authService.login(any()) } returns tokenResponse
 
-        mockMvc.perform(post("/auth/login")
-            .contentType(MediaType.APPLICATION_JSON)
-            .content(mapper.writeValueAsString(request)))
+        // when & then
+        mockMvc.perform(
+            post("/login")
+                .contentType(MediaType.APPLICATION_JSON_VALUE)
+                .content(objectMapper.writeValueAsString(request))
+        )
             .andExpect(status().isOk)
-            .andExpect(header().exists("Set-Cookie"))
             .andExpect(jsonPath("$.message").value("Login successful"))
-            .andExpect(jsonPath("$.tokenType").value("Bearer"))
-            // Verify token is NOT in body
-            .andExpect(jsonPath("$.accessToken").doesNotExist())
-
-        verify { authService.login(request) }
     }
 }

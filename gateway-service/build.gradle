@@ -35,8 +35,11 @@ dependencies {
 
     // Security
     implementation 'org.springframework.boot:spring-boot-starter-security'
-    implementation 'org.springframework.security:spring-security-oauth2-resource-server'
+    implementation 'org.springframework.boot:spring-boot-starter-oauth2-resource-server'
     implementation 'org.springframework.security:spring-security-oauth2-jose'
+
+    // Swagger / OpenAPI (WebFlux)
+    implementation 'org.springdoc:springdoc-openapi-starter-webflux-ui:2.6.0'
 
 
     // Test

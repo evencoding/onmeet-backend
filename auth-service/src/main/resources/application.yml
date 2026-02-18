@@ -1,9 +1,15 @@
 server:
   port: ${SERVER_PORT:8081}
+  servlet:
+    context-path: /auth
 
 spring:
   application:
     name: auth-service
+app:
+  team:
+    initial-color: ${INITIAL_TEAM_COLOR:#FFFFFF}
+    initial-description: ${INITIAL_TEAM_DESCRIPTION:Initial team}
   datasource:
     url: ${SPRING_DATASOURCE_URL}
     username: ${SPRING_DATASOURCE_USERNAME}
@@ -12,10 +18,13 @@ spring:
   jpa:
     hibernate:
       ddl-auto: validate
-    show-sql: true
-    properties:
-      hibernate:
-        format-sql: true
+  flyway:
+    baseline-on-migrate: true
+  kafka:
+    bootstrap-servers: ${SPRING_KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
 
 auth:
   encryption-key: ${AUTH_ENCRYPTION_KEY}
@@ -24,19 +33,18 @@ gateway:
 
 jwt:
   validity-in-ms: 3600000 # 1 hour
-  key-id: onmeet-auth-key
+  key-id: ${JWT_KEY_ID:onmeet-auth-key}
   cookie:
     secure: ${COOKIE_SECURE:true}
     max-age: 3600
   refresh-cookie:
     max-age: 604800 # 7 days
 invitation:
-  expiry-days: 7
+  expiry-days: ${INVITATION_EXPIRY_DAYS:7}
 
 management:
   endpoints:
     web:
-      base-path: /auth/actuator
       exposure:
         include: health
 
