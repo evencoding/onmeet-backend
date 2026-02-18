@@ -2,6 +2,7 @@ package com.onmeet.auth.service
 
 import com.onmeet.auth.dto.JobTitleRequest
 import com.onmeet.auth.entity.Company
+import com.onmeet.common.exception.CrossCompanyAccessException
 import com.onmeet.common.exception.InsufficientPermissionException
 import com.onmeet.auth.entity.JobTitle
 import com.onmeet.auth.entity.User
