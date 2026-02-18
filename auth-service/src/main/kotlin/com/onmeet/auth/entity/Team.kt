@@ -31,6 +31,9 @@ class Team(
     @JoinColumn(name = "leader_id")
     var leader: User? = null,
 
+    @OneToMany(mappedBy = "team", fetch = FetchType.LAZY, cascade = [CascadeType.ALL], orphanRemoval = true)
+    var members: MutableSet<TeamMember> = mutableSetOf(),
+
     @Column(nullable = false)
     @Enumerated(EnumType.STRING)
     var status: TeamStatus = TeamStatus.ACTIVE,

@@ -37,30 +37,23 @@ class AuthService(
         // 1. Create Company
         val company = companyService.createCompany(request.companyName)
 
-        // 2. Create Initial Team (from request)
-        val defaultTeam = teamService.createTeam(
-            company.requireId(),
-            request.teamName
-        )
-
-        // 3. Create Default Job Title
+        // 2. Create Default Job Title
         val defaultJobTitle = jobTitleService.createDefaultInitialTitle(company)
 
-        // 4. Create User (Manager)
+        // 3. Create User (Manager)
         val user = User(
             email = request.email,
             passwordHash = passwordEncoder.encode(request.password),
             name = request.name,
             roles = mutableSetOf(User.Role.MANAGER),
             company = company,
-            teams = mutableSetOf(defaultTeam),
             jobTitle = defaultJobTitle,
             status = User.UserStatus.ACTIVE
         )
 
         val savedUser = userRepository.save(user)
-        
-        // 5. Profile Image Logic
+
+        // 4. Profile Image Logic
         processProfileImage(savedUser, profileImage)
 
         return savedUser.requireId()
