@@ -4,6 +4,7 @@ import com.nimbusds.jose.JWSAlgorithm
 import com.nimbusds.jose.JWSHeader
 import com.nimbusds.jose.JWSSigner
 import com.nimbusds.jose.crypto.RSASSASigner
+import com.nimbusds.jose.crypto.RSASSAVerifier
 import com.nimbusds.jwt.JWTClaimsSet
 import com.nimbusds.jwt.SignedJWT
 import com.onmeet.common.security.JwtConstants
@@ -82,9 +83,18 @@ class JwtTokenProvider(
         return signedJWT.serialize()
     }
 
+
+
     fun validateToken(token: String): Boolean {
         return try {
             val signedJWT = SignedJWT.parse(token)
+            val verifier = RSASSAVerifier(keyManager.publicKey)
+            
+            if (!signedJWT.verify(verifier)) {
+                log.warn("JWT signature validation failed")
+                return false
+            }
+
             val now = Date()
             val expirationTime = signedJWT.jwtClaimsSet.expirationTime
             
@@ -96,6 +106,18 @@ class JwtTokenProvider(
         } catch (e: Exception) {
             log.error("Invalid JWT token: {}", e.message)
             false
+        }
+    }
+
+    fun getRemainingTime(token: String): Long {
+        return try {
+            val signedJWT = SignedJWT.parse(token)
+            val expirationTime = signedJWT.jwtClaimsSet.expirationTime ?: return 0
+            val now = Date()
+            val remaining = expirationTime.time - now.time
+            if (remaining < 0) 0 else remaining
+        } catch (e: Exception) {
+            0
         }
     }
 

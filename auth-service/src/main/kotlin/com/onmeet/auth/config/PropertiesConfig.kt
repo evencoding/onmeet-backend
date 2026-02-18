@@ -9,7 +9,8 @@ import org.springframework.context.annotation.Configuration
     AuthProperties::class,
     GatewayProperties::class,
     JwtProperties::class,
-    InvitationProperties::class
+    InvitationProperties::class,
+    TeamProperties::class
 )
 class PropertiesConfig
 
@@ -43,4 +44,10 @@ data class JwtProperties(
 @ConfigurationProperties(prefix = "invitation")
 data class InvitationProperties(
     val expiryDays: Long = 7
+)
+
+@ConfigurationProperties(prefix = "app.team")
+data class TeamProperties(
+    val initialColor: String = "#FFFFFF",
+    val initialDescription: String = "Initial team"
 )

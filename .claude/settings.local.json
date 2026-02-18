@@ -4,7 +4,9 @@
       "Bash(./gradlew compileJava:*)",
       "Bash(chmod:*)",
       "Bash(/Users/chloechoi/InelliJProject/onmeet/onmeet/gradlew:*)",
-      "Bash(./gradlew:*)"
+      "Bash(./gradlew:*)",
+      "Bash(git status:*)",
+      "Bash(git commit:*)"
     ]
   }
 }
