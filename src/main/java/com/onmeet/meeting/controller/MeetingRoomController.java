@@ -15,6 +15,7 @@ import com.onmeet.meeting.dto.RoomStatsResponse;
 import com.onmeet.meeting.dto.RoomUpdateRequest;
 import com.onmeet.meeting.dto.TagCreateRequest;
 import com.onmeet.meeting.dto.TimelineEntry;
+import com.onmeet.meeting.entity.RoomAccessScope;
 import com.onmeet.meeting.entity.RoomStatus;
 import com.onmeet.meeting.entity.RoomType;
 import com.onmeet.meeting.service.MeetingRoomService;
@@ -54,9 +55,10 @@ public class MeetingRoomController {
     @GetMapping
     public ApiResponse<Page<MeetingRoomResponse>> list(@RequestParam(required = false) RoomStatus status,
                                                        @RequestParam(required = false) RoomType type,
+                                                       @RequestParam(required = false) RoomAccessScope accessScope,
                                                        @RequestParam(required = false) Long hostUserId,
                                                        @PageableDefault(size = 20) Pageable pageable) {
-        return ApiResponse.ok(meetingRoomService.list(status, type, hostUserId, pageable));
+        return ApiResponse.ok(meetingRoomService.list(status, type, accessScope, hostUserId, pageable));
     }
 
     @GetMapping("/{roomId}")

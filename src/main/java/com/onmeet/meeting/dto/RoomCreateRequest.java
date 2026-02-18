@@ -1,5 +1,6 @@
 package com.onmeet.meeting.dto;
 
+import com.onmeet.meeting.entity.RoomAccessScope;
 import com.onmeet.meeting.entity.RoomType;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
@@ -12,6 +13,8 @@ public record RoomCreateRequest(
     RoomType type,
     @Min(2) @Max(100) Integer maxParticipants,
     String password,
-    Instant scheduledAt
+    Instant scheduledAt,
+    RoomAccessScope accessScope,
+    Long teamId
 ) {
 }
