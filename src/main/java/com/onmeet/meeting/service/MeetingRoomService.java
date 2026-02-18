@@ -29,6 +29,7 @@ import com.onmeet.meeting.entity.RoomParticipant;
 import com.onmeet.meeting.entity.RoomSettings;
 import com.onmeet.meeting.entity.RoomStatus;
 import com.onmeet.meeting.entity.RoomTag;
+import com.onmeet.meeting.entity.RoomAccessScope;
 import com.onmeet.meeting.entity.RoomType;
 import com.onmeet.meeting.event.MeetingEvent;
 import com.onmeet.meeting.event.MeetingEventPublisher;
@@ -91,6 +92,9 @@ public class MeetingRoomService {
     public MeetingRoomResponse create(RoomCreateRequest request, Long hostUserId) {
         RoomType type = request.type() != null ? request.type() : RoomType.INSTANT;
         int maxParticipants = request.maxParticipants() != null ? request.maxParticipants() : 10;
+        RoomAccessScope accessScope = request.accessScope() != null ? request.accessScope() : RoomAccessScope.ALL;
+
+        validateAccessScope(accessScope, request.teamId());
 
         MeetingRoom room = new MeetingRoom(
             request.title(),
@@ -99,7 +103,9 @@ public class MeetingRoomService {
             type,
             maxParticipants,
             request.password(),
-            request.scheduledAt()
+            request.scheduledAt(),
+            accessScope,
+            request.teamId()
         );
 
         while (roomRepository.existsByRoomCode(room.getRoomCode())) {
@@ -126,8 +132,9 @@ public class MeetingRoomService {
     }
 
     @Transactional(readOnly = true)
-    public Page<MeetingRoomResponse> list(RoomStatus status, RoomType type, Long hostUserId, Pageable pageable) {
-        return roomRepository.findAllWithFilters(status, type, hostUserId, pageable)
+    public Page<MeetingRoomResponse> list(RoomStatus status, RoomType type, RoomAccessScope accessScope,
+                                          Long hostUserId, Pageable pageable) {
+        return roomRepository.findAllWithFilters(status, type, accessScope, hostUserId, pageable)
             .map(this::toResponse);
     }
 
@@ -392,6 +399,9 @@ public class MeetingRoomService {
     @Transactional
     public MeetingRoomResponse schedule(RoomScheduleRequest request, Long userId) {
         int maxParticipants = request.maxParticipants() != null ? request.maxParticipants() : 10;
+        RoomAccessScope accessScope = request.accessScope() != null ? request.accessScope() : RoomAccessScope.ALL;
+
+        validateAccessScope(accessScope, request.teamId());
 
         MeetingRoom room = new MeetingRoom(
             request.title(),
@@ -400,7 +410,9 @@ public class MeetingRoomService {
             RoomType.SCHEDULED,
             maxParticipants,
             request.password(),
-            request.scheduledAt()
+            request.scheduledAt(),
+            accessScope,
+            request.teamId()
         );
 
         while (roomRepository.existsByRoomCode(room.getRoomCode())) {
@@ -580,6 +592,12 @@ public class MeetingRoomService {
             .orElseThrow(() -> new BizException(ErrorCode.FORBIDDEN, "Only host or co-host can perform this action"));
     }
 
+    private void validateAccessScope(RoomAccessScope accessScope, Long teamId) {
+        if (accessScope == RoomAccessScope.TEAM && teamId == null) {
+            throw new BizException(ErrorCode.INVALID_REQUEST, "teamId is required when accessScope is TEAM");
+        }
+    }
+
     private MeetingRoomResponse toResponse(MeetingRoom room) {
         return new MeetingRoomResponse(
             room.getId(),
@@ -589,6 +607,8 @@ public class MeetingRoomService {
             room.getHostUserId(),
             room.getStatus(),
             room.getType(),
+            room.getAccessScope(),
+            room.getTeamId(),
             room.getMaxParticipants(),
             room.isLocked(),
             room.getScheduledAt(),
@@ -609,6 +629,8 @@ public class MeetingRoomService {
             room.getHostUserId(),
             room.getStatus(),
             room.getType(),
+            room.getAccessScope(),
+            room.getTeamId(),
             room.getMaxParticipants(),
             room.isLocked(),
             room.getScheduledAt(),
