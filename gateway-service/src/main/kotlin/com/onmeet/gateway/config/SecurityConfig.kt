@@ -1,6 +1,7 @@
 package com.onmeet.gateway.config
 
 import com.onmeet.gateway.security.CookieServerAuthenticationConverter
+import com.onmeet.gateway.security.CsrfCookieFilter
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
@@ -24,12 +25,13 @@ class SecurityConfig(
 ) {
 
     @Bean
-    fun springSecurityFilterChain(http: ServerHttpSecurity): SecurityWebFilterChain {
+    fun springSecurityFilterChain(http: ServerHttpSecurity, csrfCookieFilter: CsrfCookieFilter): SecurityWebFilterChain {
         http
             .csrf { csrf ->
                 csrf.csrfTokenRepository(CookieServerCsrfTokenRepository.withHttpOnlyFalse())
-                csrf.csrfTokenRequestHandler(ServerCsrfTokenRequestAttributeHandler())
+                    .csrfTokenRequestHandler(ServerCsrfTokenRequestAttributeHandler())
             }
+            .addFilterAfter(csrfCookieFilter, org.springframework.security.config.web.server.SecurityWebFiltersOrder.CSRF)
             .authorizeExchange { exchanges ->
                 // Public endpoints
                 exchanges.pathMatchers("/auth/**", "/.well-known/**", "/actuator/**", "/*/actuator/**").permitAll()

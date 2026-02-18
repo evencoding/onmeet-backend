@@ -38,4 +38,6 @@ class Invitation(
 
     @Column(nullable = false)
     var expiresAt: LocalDateTime
-)
+) {
+    fun requireId(): Long = id ?: throw IllegalStateException("Invitation ID is required but was null")
+}
