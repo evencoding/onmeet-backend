@@ -5,6 +5,7 @@ import com.onmeet.auth.entity.User
 import com.onmeet.auth.exception.*
 import com.onmeet.auth.repository.jpa.JobTitleRepository
 import com.onmeet.auth.repository.jpa.UserRepository
+import com.onmeet.common.exception.CrossCompanyAccessException
 import com.onmeet.common.exception.EntityNotFoundException
 import com.onmeet.common.exception.InsufficientPermissionException
 import org.springframework.stereotype.Service
@@ -27,7 +28,7 @@ class UserServiceImpl(
         if (!requester.isSelf(user) && !requester.isManager()) {
             throw InsufficientPermissionException("No permission to update this profile")
         }
-        
+
         if (requester.isManager() && !user.belongsToCompany(requester.company.requireId())) {
             throw CrossCompanyAccessException("Manager can only update users in their own company")
         }
@@ -49,11 +50,11 @@ class UserServiceImpl(
     override fun getUserInfo(userId: Long, requester: User): UserResponseDto {
         val user = userRepository.findById(userId)
             .orElseThrow { UserNotFoundException("User not found: $userId") }
-        
+
         if (!user.belongsToCompany(requester.company.requireId())) {
             throw CrossCompanyAccessException("You cannot access user info from another company")
         }
-        
+
         return user.toResponseDto()
     }
 
@@ -78,12 +79,12 @@ class UserServiceImpl(
     override fun getUserPermissions(userId: Long): UserPermissionResponse {
         val user = userRepository.findById(userId)
             .orElseThrow { UserNotFoundException("User not found: $userId") }
-        
+
         return UserPermissionResponse(
             userId = user.requireId(),
             roles = user.roles.map { it.name }.toSet(),
             companyId = user.company.id,
-            teamIds = user.teams.mapNotNull { it.id }
+            teamIds = user.getTeams().mapNotNull { it.id }
         )
     }
 

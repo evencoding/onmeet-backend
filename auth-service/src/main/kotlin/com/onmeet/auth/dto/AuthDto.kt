@@ -8,18 +8,15 @@ import org.springframework.data.domain.Page
 data class CompanySignupRequest(
     @Schema(description = "이메일 주소", example = "admin@company.com")
     val email: String,
-    
+
     @Schema(description = "비밀번호", example = "Password123!")
     val password: String,
-    
+
     @Schema(description = "관리자 이름", example = "John Doe")
     val name: String,
-    
+
     @Schema(description = "회사명", example = "Acme Corp")
-    val companyName: String,
-    
-    @Schema(description = "초기 팀 이름", example = "General")
-    val teamName: String = "General"
+    val companyName: String
 )
 
 @Schema(description = "로그인 요청")
@@ -93,7 +90,11 @@ data class TeamRequest(
     @Schema(description = "팀 설명", example = "Backend Development Team")
     val description: String?,
     @Schema(description = "팀 색상 (Hex Code)", example = "#FF5733")
-    val color: String?
+    val color: String?,
+    @Schema(description = "팀원 ID 목록 (MANAGER 권한 전용)", example = "[1, 2, 3]")
+    val memberIds: List<Long>? = null,
+    @Schema(description = "팀장 ID (MANAGER 권한 전용, memberIds 중 한 명이어야 함)", example = "1")
+    val leaderId: Long? = null
 )
 
 @Schema(description = "초대 요청")
