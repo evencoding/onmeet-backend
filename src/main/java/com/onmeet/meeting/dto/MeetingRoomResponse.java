@@ -1,5 +1,6 @@
 package com.onmeet.meeting.dto;
 
+import com.onmeet.meeting.entity.RoomAccessScope;
 import com.onmeet.meeting.entity.RoomStatus;
 import com.onmeet.meeting.entity.RoomType;
 import java.time.Instant;
@@ -12,6 +13,8 @@ public record MeetingRoomResponse(
     Long hostUserId,
     RoomStatus status,
     RoomType type,
+    RoomAccessScope accessScope,
+    Long teamId,
     int maxParticipants,
     boolean locked,
     Instant scheduledAt,

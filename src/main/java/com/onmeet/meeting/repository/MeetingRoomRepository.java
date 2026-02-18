@@ -1,6 +1,7 @@
 package com.onmeet.meeting.repository;
 
 import com.onmeet.meeting.entity.MeetingRoom;
+import com.onmeet.meeting.entity.RoomAccessScope;
 import com.onmeet.meeting.entity.RoomStatus;
 import com.onmeet.meeting.entity.RoomType;
 import java.util.List;
@@ -22,10 +23,12 @@ public interface MeetingRoomRepository extends JpaRepository<MeetingRoom, Long> 
     @Query("SELECT r FROM MeetingRoom r WHERE "
         + "(:status IS NULL OR r.status = :status) AND "
         + "(:type IS NULL OR r.type = :type) AND "
+        + "(:accessScope IS NULL OR r.accessScope = :accessScope) AND "
         + "(:hostUserId IS NULL OR r.hostUserId = :hostUserId)")
     Page<MeetingRoom> findAllWithFilters(
         @Param("status") RoomStatus status,
         @Param("type") RoomType type,
+        @Param("accessScope") RoomAccessScope accessScope,
         @Param("hostUserId") Long hostUserId,
         Pageable pageable);
 

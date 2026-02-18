@@ -61,6 +61,12 @@ public class MeetingRoom {
     @Column(nullable = false)
     private int maxParticipants;
 
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 20)
+    private RoomAccessScope accessScope;
+
+    private Long teamId;
+
     @Column(nullable = false)
     private boolean locked;
 
@@ -84,7 +90,8 @@ public class MeetingRoom {
     private Instant updatedAt;
 
     public MeetingRoom(String title, String description, Long hostUserId,
-                       RoomType type, int maxParticipants, String password, Instant scheduledAt) {
+                       RoomType type, int maxParticipants, String password, Instant scheduledAt,
+                       RoomAccessScope accessScope, Long teamId) {
         this.roomCode = generateRoomCode();
         this.livekitRoomName = "onmeet-" + UUID.randomUUID();
         this.title = title;
@@ -92,6 +99,8 @@ public class MeetingRoom {
         this.hostUserId = hostUserId;
         this.status = RoomStatus.WAITING;
         this.type = type;
+        this.accessScope = accessScope != null ? accessScope : RoomAccessScope.ALL;
+        this.teamId = teamId;
         this.maxParticipants = maxParticipants;
         this.locked = password != null && !password.isBlank();
         this.password = password;
