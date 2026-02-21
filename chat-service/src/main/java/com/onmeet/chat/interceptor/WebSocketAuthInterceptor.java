@@ -1,6 +1,8 @@
 package com.onmeet.chat.interceptor;
 
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.lang.NonNull;
+import org.springframework.lang.Nullable;
 import org.springframework.messaging.Message;
 import org.springframework.messaging.MessageChannel;
 import org.springframework.messaging.simp.stomp.StompCommand;
@@ -8,6 +10,8 @@ import org.springframework.messaging.simp.stomp.StompHeaderAccessor;
 import org.springframework.messaging.support.ChannelInterceptor;
 import org.springframework.messaging.support.MessageHeaderAccessor;
 import org.springframework.stereotype.Component;
+
+import java.util.Map;
 
 /**
  * WebSocket 연결 시 인증 처리
@@ -20,9 +24,8 @@ import org.springframework.stereotype.Component;
 public class WebSocketAuthInterceptor implements ChannelInterceptor {
 
     @Override
-    public Message<?> preSend(Message<?> message, MessageChannel channel) {
-        StompHeaderAccessor accessor =
-                MessageHeaderAccessor.getAccessor(message, StompHeaderAccessor.class);
+    public Message<?> preSend(@NonNull Message<?> message, @NonNull MessageChannel channel) {
+        StompHeaderAccessor accessor = MessageHeaderAccessor.getAccessor(message, StompHeaderAccessor.class);
 
         if (accessor != null && StompCommand.CONNECT.equals(accessor.getCommand())) {
             // CONNECT 단계에서 인증 처리
@@ -54,8 +57,13 @@ public class WebSocketAuthInterceptor implements ChannelInterceptor {
 
         // 세션 속성에 사용자 정보 저장
         // 이 정보는 @MessageMapping 메서드에서 SimpMessageHeaderAccessor로 접근 가능
-        accessor.getSessionAttributes().put("userId", userId);
-        accessor.getSessionAttributes().put("userName", userName);
+        Map<String, Object> sessionAttributes = accessor.getSessionAttributes();
+        if (sessionAttributes != null) {
+            sessionAttributes.put("userId", userId);
+            sessionAttributes.put("userName", userName);
+        } else {
+            log.warn("Session attributes are null for session: {}", accessor.getSessionId());
+        }
 
         log.info("User authenticated - userId: {}, userName: {}, sessionId: {}",
                 userId, userName, accessor.getSessionId());
@@ -83,15 +91,17 @@ public class WebSocketAuthInterceptor implements ChannelInterceptor {
      * 연결 해제 시 로깅 (선택사항)
      */
     @Override
-    public void afterSendCompletion(Message<?> message, MessageChannel channel,
-                                    boolean sent, Exception ex) {
-        StompHeaderAccessor accessor =
-                MessageHeaderAccessor.getAccessor(message, StompHeaderAccessor.class);
+    public void afterSendCompletion(@NonNull Message<?> message, @NonNull MessageChannel channel,
+            boolean sent, @Nullable Exception ex) {
+        StompHeaderAccessor accessor = MessageHeaderAccessor.getAccessor(message, StompHeaderAccessor.class);
 
         if (accessor != null && StompCommand.DISCONNECT.equals(accessor.getCommand())) {
-            String userName = (String) accessor.getSessionAttributes().get("userName");
-            log.info("User disconnected - userName: {}, sessionId: {}",
-                    userName, accessor.getSessionId());
+            Map<String, Object> sessionAttributes = accessor.getSessionAttributes();
+            if (sessionAttributes != null) {
+                String userName = (String) sessionAttributes.get("userName");
+                log.info("User disconnected - userName: {}, sessionId: {}",
+                        userName, accessor.getSessionId());
+            }
         }
     }
 }

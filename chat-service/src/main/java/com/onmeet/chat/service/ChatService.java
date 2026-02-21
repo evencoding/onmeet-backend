@@ -31,8 +31,7 @@ public class ChatService {
             ChatSendRequestDto req,
             Long senderId,
             String senderName,
-            String senderType
-    ) {
+            String senderType) {
         if (validator != null) {
             validator.validate(req);
         }
@@ -42,8 +41,7 @@ public class ChatService {
         Chat saved;
         if ("TEXT".equals(type)) {
             saved = chatRepository.save(
-                    Chat.ofText(req.meetRoomId(), senderId, senderName, senderType, req.content())
-            );
+                    Chat.ofText(req.meetRoomId(), senderId, senderName, senderType, req.content()));
         } else {
             // IMAGE/FILE/PDF
             saved = chatRepository.save(
@@ -53,10 +51,11 @@ public class ChatService {
                             senderName,
                             senderType,
                             type,
-                            req.content(),          // caption 용도(없으면 null/"" 가능)
-                            req.attachmentJson()
-                    )
-            );
+                            req.content(), // caption 용도(없으면 null/"" 가능)
+                            req.attachmentJson()));
+        }
+        if (saved == null) {
+            throw new IllegalStateException("Failed to save chat message");
         }
 
         return toResponse(saved);
@@ -97,8 +96,7 @@ public class ChatService {
                 meetRoomId,
                 messages,
                 nextBeforeId,
-                hasMore
-        );
+                hasMore);
     }
 
     private ChatMessageResponseDto toResponse(Chat c) {
@@ -111,13 +109,11 @@ public class ChatService {
                 c.getMessageType(),
                 c.getMessageContent(),
                 c.getAttachmentJson(),
-                c.getCreatedAt()
-        );
+                c.getCreatedAt());
     }
 
     private String normalize(String messageType) {
         return (messageType == null) ? "" : messageType.trim().toUpperCase();
     }
-
 
 }

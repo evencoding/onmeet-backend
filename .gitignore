@@ -43,6 +43,7 @@ out/
 # Secrets
 .env
 auth-service/http/http-client.env.json
+**/serviceAccountKey.json
 
 # Logs
 docker_build.log

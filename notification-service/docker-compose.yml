@@ -2,6 +2,8 @@ services:
   mysql-notification:
     image: mysql:9.0
     container_name: mysql-notification
+    env_file:
+      - ../.env
     environment:
       MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD}
       MYSQL_DATABASE: notification_db
@@ -17,6 +19,8 @@ services:
     container_name: notification-service
     ports:
       - "8085:8085"
+    env_file:
+      - ../.env
     environment:
       - SPRING_DATASOURCE_URL=jdbc:mysql://mysql-notification:3306/notification_db?useSSL=false&allowPublicKeyRetrieval=true&characterEncoding=UTF-8&serverTimezone=UTC
       - SPRING_DATASOURCE_USERNAME=${DB_USERNAME}
