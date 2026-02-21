@@ -7,10 +7,12 @@ import jakarta.servlet.http.HttpServletResponse
 import org.springframework.security.core.context.SecurityContextHolder
 import org.springframework.stereotype.Component
 import org.springframework.web.filter.OncePerRequestFilter
+import org.springframework.data.redis.core.StringRedisTemplate
 
 @Component
 class JwtAuthenticationFilter(
-    private val jwtTokenProvider: JwtTokenProvider
+    private val jwtTokenProvider: JwtTokenProvider,
+    private val redisTemplate: StringRedisTemplate
 ) : OncePerRequestFilter() {
 
     override fun doFilterInternal(
@@ -21,6 +23,13 @@ class JwtAuthenticationFilter(
         val token = resolveToken(request)
 
         if (token != null && jwtTokenProvider.validateToken(token)) {
+            // Check Blacklist
+            if (redisTemplate.hasKey("blacklist:$token") == true) {
+                // Token is blacklisted
+                response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Token is blacklisted")
+                return
+            }
+
             val authentication = jwtTokenProvider.getAuthentication(token)
             SecurityContextHolder.getContext().authentication = authentication
         }

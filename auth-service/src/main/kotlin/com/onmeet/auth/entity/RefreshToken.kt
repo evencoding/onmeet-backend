@@ -10,5 +10,7 @@ class RefreshToken(
     val mobileOrEmail: String,
     @Indexed
     val token: String,
-    val authority: String
+    val authority: String,
+    @org.springframework.data.redis.core.TimeToLive
+    var expiration: Long? = null
 )
