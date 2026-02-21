@@ -44,8 +44,8 @@ public class NotificationService {
 
     public SseEmitter subscribe(Long userId) {
         SseEmitter emitter = new SseEmitter(DEFAULT_TIMEOUT);
-        // Unique ID for this connection: userId + timestamp (as requested)
-        String emitterId = userId + "_" + System.currentTimeMillis();
+        // Unique ID for this connection: userId + UUID (collision-safe)
+        String emitterId = userId + "_" + java.util.UUID.randomUUID();
 
         saveNotificationStream(userId, emitterId);
 
@@ -122,9 +122,14 @@ public class NotificationService {
                 recipient.markAsSent();
             }
 
-            // FCM 푸시도 함께 전송 (SSE 성공 여부와 무관)
-            fcmService.sendPush(dto.getUserId(), notification.getTitle(),
-                    notification.getBody(), notification.getDeeplink());
+            // FCM 푸시도 함께 전송 (SSE 성공 여부와 무관, 실패해도 API 응답에 영향 없음)
+            try {
+                fcmService.sendPush(dto.getUserId(), notification.getTitle(),
+                        notification.getBody(), notification.getDeeplink());
+            } catch (Exception e) {
+                log.warn("FCM push failed but notification was saved: userId={}, error={}",
+                        dto.getUserId(), e.getMessage());
+            }
         }
     }
 
