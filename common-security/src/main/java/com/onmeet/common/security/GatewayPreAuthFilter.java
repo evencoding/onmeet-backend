@@ -7,6 +7,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.lang.NonNull;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
@@ -27,23 +28,25 @@ public class GatewayPreAuthFilter extends OncePerRequestFilter {
     }
 
     private static final java.util.Set<String> ALLOWED_PATHS = java.util.Set.of(
-        "/actuator/health",
-        "/actuator/info"
-    );
+            "/actuator/health",
+            "/actuator/info");
 
     @Override
-    protected boolean shouldNotFilter(HttpServletRequest request) throws ServletException {
+    protected boolean shouldNotFilter(@NonNull HttpServletRequest request) throws ServletException {
         String path = request.getRequestURI();
         return ALLOWED_PATHS.contains(path) || path.startsWith("/actuator/");
     }
 
     @Override
-    protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
+    protected void doFilterInternal(@NonNull HttpServletRequest request, @NonNull HttpServletResponse response,
+            @NonNull FilterChain filterChain)
             throws ServletException, IOException {
 
         // Validate Gateway Shared Secret to prevent spoofing
         String gatewaySecret = request.getHeader("X-Gateway-Secret");
-        if (gatewaySecret == null || !java.security.MessageDigest.isEqual(gatewaySecret.getBytes(java.nio.charset.StandardCharsets.UTF_8), gatewaySharedSecret.getBytes(java.nio.charset.StandardCharsets.UTF_8))) {
+        if (gatewaySecret == null
+                || !java.security.MessageDigest.isEqual(gatewaySecret.getBytes(java.nio.charset.StandardCharsets.UTF_8),
+                        gatewaySharedSecret.getBytes(java.nio.charset.StandardCharsets.UTF_8))) {
             response.sendError(HttpServletResponse.SC_FORBIDDEN, "Invalid Gateway Secret");
             return;
         }
