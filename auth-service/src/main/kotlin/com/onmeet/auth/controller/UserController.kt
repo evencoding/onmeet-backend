@@ -91,16 +91,22 @@ class UserController(
     fun getUserPermissions(@PathVariable userId: Long): ResponseEntity<com.onmeet.auth.dto.UserPermissionResponse> =
         ResponseEntity.ok(userService.getUserPermissions(userId))
 
-    @Operation(summary = "[내부용] 사용자 팀 정보 조회")
+    @Operation(summary = "[내부용] 사용자 팀 정보 조회", description = "타 서비스에서 사용자가 속한 팀 목록을 조회합니다.")
+    @ApiResponses(value = [
+        ApiResponse(responseCode = "200", description = "조회 성공"),
+        ApiResponse(responseCode = "404", description = "사용자를 찾을 수 없음")
+    ])
     @GetMapping("/internal/{userId}/teams")
     fun getUserTeams(@PathVariable userId: Long): ResponseEntity<List<com.onmeet.auth.dto.TeamInfoDto>> =
         ResponseEntity.ok(userService.getUserPermissions(userId).teamIds.map { teamId ->
-            // Simple mapping or better - add a service method if needed. 
-            // For now, mapping from the aggregated permission response is efficient.
             com.onmeet.auth.dto.TeamInfoDto(id = teamId, name = "Team $teamId", color = null)
         })
 
-    @Operation(summary = "[내부용] 사용자 회사 정보 조회")
+    @Operation(summary = "[내부용] 사용자 회사 정보 조회", description = "타 서비스에서 사용자의 소속 회사 정보를 조회합니다.")
+    @ApiResponses(value = [
+        ApiResponse(responseCode = "200", description = "조회 성공"),
+        ApiResponse(responseCode = "404", description = "사용자를 찾을 수 없음")
+    ])
     @GetMapping("/internal/{userId}/company")
     fun getUserCompany(@PathVariable userId: Long): ResponseEntity<com.onmeet.auth.dto.CompanyInfoDto> =
         userService.getUserPermissions(userId).let { 

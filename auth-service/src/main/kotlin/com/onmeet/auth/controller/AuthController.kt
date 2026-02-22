@@ -165,6 +165,12 @@ class AuthController(
     fun me(principal: Principal): ResponseEntity<String> =
         ResponseEntity.ok("Hello, ${principal.name}! You are authenticated.")
 
+    @Operation(summary = "프로필 이미지 초기화", description = "사용자의 프로필 이미지를 기본 이미지로 초기화합니다.")
+    @ApiResponses(value = [
+        ApiResponse(responseCode = "204", description = "초기화 성공"),
+        ApiResponse(responseCode = "401", description = "인증되지 않은 사용자"),
+        ApiResponse(responseCode = "404", description = "사용자를 찾을 수 없음")
+    ])
     @DeleteMapping("/users/{userId}/profile-image")
     fun resetProfileImage(
         @PathVariable userId: Long,
@@ -185,6 +191,11 @@ class AuthController(
 
     @DeleteMapping("/users/me")
     @Operation(summary = "회원 탈퇴", description = "비밀번호 검증 후 회원을 탈퇴 처리(Soft Delete & Archive)합니다.")
+    @ApiResponses(value = [
+        ApiResponse(responseCode = "204", description = "탈퇴 성공"),
+        ApiResponse(responseCode = "400", description = "비밀번호 불일치"),
+        ApiResponse(responseCode = "401", description = "인증되지 않은 사용자")
+    ])
     fun withdraw(
         @RequestBody @Valid request: WithdrawRequest,
         authentication: Authentication
@@ -196,6 +207,11 @@ class AuthController(
 
     @PatchMapping("/users/me")
     @Operation(summary = "회원 정보 수정", description = "이름, 직함 등 회원 정보를 수정합니다.")
+    @ApiResponses(value = [
+        ApiResponse(responseCode = "200", description = "수정 성공"),
+        ApiResponse(responseCode = "400", description = "잘못된 요청 (유효성 검사 실패)"),
+        ApiResponse(responseCode = "401", description = "인증되지 않은 사용자")
+    ])
     fun updateProfile(
         @RequestBody @Valid request: UpdateProfileRequest,
         authentication: Authentication
@@ -207,6 +223,11 @@ class AuthController(
 
     @PutMapping("/users/me/password")
     @Operation(summary = "비밀번호 변경", description = "기존 비밀번호 확인 후 새 비밀번호로 변경합니다.")
+    @ApiResponses(value = [
+        ApiResponse(responseCode = "200", description = "변경 성공"),
+        ApiResponse(responseCode = "400", description = "기존 비밀번호 불일치 또는 새 비밀번호 유효성 검사 실패"),
+        ApiResponse(responseCode = "401", description = "인증되지 않은 사용자")
+    ])
     fun changePassword(
         @RequestBody @Valid request: ChangePasswordRequest,
         authentication: Authentication

@@ -22,7 +22,8 @@ class JobTitleController(
 
     @Operation(summary = "직급 목록 조회", description = "현재 소속된 회사의 모든 직급 목록을 조회합니다.")
     @ApiResponses(value = [
-        ApiResponse(responseCode = "200", description = "조회 성공")
+        ApiResponse(responseCode = "200", description = "조회 성공"),
+        ApiResponse(responseCode = "401", description = "인증되지 않은 사용자")
     ])
     @GetMapping
     fun getJobTitles(@AuthenticationPrincipal user: User): ResponseEntity<List<JobTitleResponse>> =
