@@ -4,11 +4,12 @@ import com.onmeet.auth.dto.UserProfileUpdateRequest
 import com.onmeet.auth.entity.Company
 import com.onmeet.auth.entity.JobTitle
 import com.onmeet.auth.entity.User
-import com.onmeet.auth.exception.CrossCompanyAccessException
+import com.onmeet.auth.exception.CompanyMismatchException
 import com.onmeet.auth.exception.UserNotFoundException
 import com.onmeet.auth.repository.jpa.JobTitleRepository
 import com.onmeet.auth.repository.jpa.UserRepository
 import com.onmeet.common.exception.InsufficientPermissionException
+import com.onmeet.common.exception.CrossCompanyAccessException
 import io.mockk.every
 import io.mockk.impl.annotations.InjectMockKs
 import io.mockk.impl.annotations.MockK
@@ -18,6 +19,7 @@ import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtendWith
 import java.util.*
+import org.springframework.boot.test.context.SpringBootTest
 
 @ExtendWith(MockKExtension::class)
 class UserServiceImplTest {
@@ -32,6 +34,7 @@ class UserServiceImplTest {
     private lateinit var userService: UserServiceImpl
 
     @Test
+    // [Essential] 본인 프로필 수정 권한 및 필드 업데이트 검증
     fun `updateUserProfile should update profile when requester is self`() {
         // given
         val company = Company(id = 1L, name = "TestCo")
@@ -82,13 +85,13 @@ class UserServiceImplTest {
 
         every { userRepository.findById(20L) } returns Optional.of(userFromOtherCo)
 
-        // when & then
         assertThrows(CrossCompanyAccessException::class.java) {
             userService.updateUserProfile(20L, manager, request)
         }
     }
 
     @Test
+    // [Essential] 사용자 비활성화 로직 및 관리자 권한 검증
     fun `deactivateUser should change user status to INACTIVE`() {
         // given
         val company = Company(id = 1L, name = "TestCo")

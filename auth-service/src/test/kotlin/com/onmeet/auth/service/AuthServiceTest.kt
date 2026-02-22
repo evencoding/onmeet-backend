@@ -53,6 +53,7 @@ class AuthServiceTest {
     // ...
 
     @Test
+    // [Essential] 사용자 프로필 업데이트 비즈니스 로직 검증
     fun `updateProfile should update name and job title`() {
         // given
         val company = Company(id = 1L, name = "TestCompany")
@@ -99,6 +100,7 @@ class AuthServiceTest {
     }
 
     @Test
+    // [Essential] 비밀번호 변경 로직 및 해싱 검증
     fun `changePassword should update password if old password matches`() {
         // given
         val user = User(
@@ -140,14 +142,14 @@ class AuthServiceTest {
 
 
     @Test
+    // [Essential] 기업 회원가입 및 초기 설정(팀/직무) 로직 검증
     fun `signupCompany should save manager and return id`() {
         // given
         val request = CompanySignupRequest(
             email = "test@example.com",
             password = "password",
             name = "Manager",
-            companyName = "TestCompany",
-            teamName = "Development"
+            companyName = "TestCompany"
         )
         val company = Company(id = 1L, name = "TestCompany")
         val team = Team(id = 1L, name = "Development", description = "Initial team", color = "#FFFFFF", company = company)
@@ -187,6 +189,7 @@ class AuthServiceTest {
     // ... (existing tests) ...
 
     @Test
+    // [Essential] 프로필 이미지 초기화 권한 및 연동 로직 검증 (관리자 권한 포함)
     fun `resetUserProfileImage should delete old image and generate new default when manager requests`() {
         // given
         val company = Company(id = 1L, name = "TestCompany")
@@ -254,8 +257,7 @@ class AuthServiceTest {
             email = "exists@example.com",
             password = "password",
             name = "Manager",
-            companyName = "TestCompany",
-            teamName = "Development"
+            companyName = "TestCompany"
         )
         every { userRepository.existsByEmail("exists@example.com") } returns true
 
