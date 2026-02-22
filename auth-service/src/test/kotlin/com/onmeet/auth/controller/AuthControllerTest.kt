@@ -17,7 +17,7 @@ import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath
 
-@WebMvcTest(AuthController::class)
+@WebMvcTest(AuthController::class) // [Necessary Infrastructure] AuthController 슬라이스 테스트 설정
 @AutoConfigureMockMvc(addFilters = false)
 class AuthControllerTest {
 
@@ -47,6 +47,7 @@ class AuthControllerTest {
 
     @Test
     @WithMockUser
+    // [Essential] 로그인 기능 검증 - 인증의 핵심 엔드포인트
     fun `login should return success and set cookies`() {
         // given
         val request = LoginRequest("test@example.com", "password")
@@ -60,7 +61,7 @@ class AuthControllerTest {
 
         // when & then
         mockMvc.perform(
-            post("/login")
+            post("/v1/login")
                 .contentType(MediaType.APPLICATION_JSON_VALUE)
                 .content(objectMapper.writeValueAsString(request))
         )

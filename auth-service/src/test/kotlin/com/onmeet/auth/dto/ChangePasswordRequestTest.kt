@@ -8,9 +8,11 @@ import org.junit.jupiter.api.Test
 
 class ChangePasswordRequestTest {
 
+    // [Necessary Infrastructure] Validator 인스턴스 초기화
     private val validator: Validator = Validation.buildDefaultValidatorFactory().validator
 
     @Test
+    // [Essential] 비밀번호 복잡성 요구사항(정규식) 검증 - 보안 요구사항의 핵심 로직
     fun `should fail when password does not meet complexity requirements`() {
         // Missing special char
         val result1 = validator.validate(ChangePasswordRequest("old", "Password123"))
@@ -31,6 +33,7 @@ class ChangePasswordRequestTest {
     }
 
     @Test
+    // [Essential] 올바른 비밀번호 형식 통과 검증
     fun `should pass when password meets requirements`() {
         // Fails until implemented
         val request = ChangePasswordRequest("old", "Password123!")

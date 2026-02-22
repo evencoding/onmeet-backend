@@ -47,6 +47,7 @@ class CookieAuthenticationTest {
 
 
     @Test
+    // [Essential] 쿠키 기반 인증 필터 검증 - 세션/토큰 관리의 핵심 로직
     fun `resetProfileImage should authenticate via cookie and call service`() {
         // given
         val token = "valid_token_value"
@@ -74,7 +75,7 @@ class CookieAuthenticationTest {
 
         // when
         mockMvc.perform(
-            delete("/users/$userId/profile-image")
+            delete("/v1/users/$userId/profile-image")
                 .cookie(cookie)
                 .contentType(MediaType.APPLICATION_JSON)
         )
