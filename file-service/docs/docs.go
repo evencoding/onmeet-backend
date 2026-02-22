@@ -44,10 +44,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "$ref": "#/definitions/handler.GenerateProfileRequest"
                         }
                     }
                 ],
@@ -300,6 +297,27 @@ const docTemplate = `{
         }
     },
     "definitions": {
+        "handler.GenerateProfileRequest": {
+            "type": "object",
+            "properties": {
+                "color": {
+                    "type": "string",
+                    "example": "#FF5733"
+                },
+                "name": {
+                    "type": "string",
+                    "example": "John Doe"
+                },
+                "ownerId": {
+                    "type": "string",
+                    "example": "123"
+                },
+                "ownerType": {
+                    "type": "string",
+                    "example": "USER"
+                }
+            }
+        },
         "model.FileMetadata": {
             "type": "object",
             "properties": {

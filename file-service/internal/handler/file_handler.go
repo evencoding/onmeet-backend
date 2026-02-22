@@ -14,6 +14,14 @@ type FileHandler struct {
 	svc service.FileService
 }
 
+// GenerateProfileRequest defines the body for generating a default profile image.
+type GenerateProfileRequest struct {
+	Name      string `json:"name" example:"John Doe"`
+	Color     string `json:"color" example:"#FF5733"`
+	OwnerType string `json:"ownerType" example:"USER"`
+	OwnerId   string `json:"ownerId" example:"123"`
+}
+
 func NewFileHandler(svc service.FileService) *FileHandler {
 	return &FileHandler{svc: svc}
 }
@@ -157,17 +165,12 @@ func (h *FileHandler) DeleteFile(c *gin.Context) {
 // @Tags         file
 // @Accept       json
 // @Produce      json
-// @Param        request body map[string]string true "Request Body"
+// @Param        request body GenerateProfileRequest true "Request Body"
 // @Success      200  {object}  model.FileMetadata
 // @Failure      500  {object}  map[string]string
 // @Router       /profile/default [post]
 func (h *FileHandler) GenerateProfileImage(c *gin.Context) {
-	var req struct {
-		Name      string `json:"name"`
-		Color     string `json:"color"`
-		OwnerType string `json:"ownerType"`
-		OwnerId   string `json:"ownerId"`
-	}
+	var req GenerateProfileRequest
 
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})

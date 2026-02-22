@@ -1,5 +1,20 @@
 basePath: /file
 definitions:
+  handler.GenerateProfileRequest:
+    properties:
+      color:
+        example: '#FF5733'
+        type: string
+      name:
+        example: John Doe
+        type: string
+      ownerId:
+        example: "123"
+        type: string
+      ownerType:
+        example: USER
+        type: string
+    type: object
   model.FileMetadata:
     properties:
       category:
@@ -105,9 +120,7 @@ paths:
         name: request
         required: true
         schema:
-          additionalProperties:
-            type: string
-          type: object
+          $ref: '#/definitions/handler.GenerateProfileRequest'
       produces:
       - application/json
       responses:
