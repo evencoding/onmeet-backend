@@ -63,6 +63,12 @@ dependencies {
     testImplementation 'org.testcontainers:mysql'
 }
 
+dependencyManagement {
+    imports {
+        mavenBom "org.springframework.cloud:spring-cloud-dependencies:${springCloudVersion}"
+    }
+}
+
 tasks.named('test') {
     useJUnitPlatform()
 }
