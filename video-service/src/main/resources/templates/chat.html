@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chat Test - LiveKit DataChannel Simulation</title>
+    <script src="https://cdn.jsdelivr.net/npm/sockjs-client@1/dist/sockjs.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/stomp.js/2.3.3/stomp.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f0f2f5; height: 100vh; display: flex; justify-content: center; align-items: center; }
+        .container { width: 480px; height: 700px; background: #fff; border-radius: 12px; box-shadow: 0 2px 12px rgba(0,0,0,0.1); display: flex; flex-direction: column; overflow: hidden; }
+        .header { background: #4a90d9; color: #fff; padding: 16px 20px; font-size: 16px; font-weight: 600; display: flex; justify-content: space-between; align-items: center; }
+        .header .room-info { font-size: 12px; font-weight: 400; opacity: 0.85; }
+        .join-form { padding: 40px 24px; display: flex; flex-direction: column; gap: 16px; flex: 1; justify-content: center; }
+        .join-form h2 { text-align: center; color: #333; margin-bottom: 8px; }
+        .join-form input { padding: 12px 16px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px; outline: none; transition: border-color 0.2s; }
+        .join-form input:focus { border-color: #4a90d9; }
+        .join-form button { padding: 12px; background: #4a90d9; color: #fff; border: none; border-radius: 8px; font-size: 15px; font-weight: 600; cursor: pointer; transition: background 0.2s; }
+        .join-form button:hover { background: #3a7bc8; }
+        .chat-area { flex: 1; display: flex; flex-direction: column; display: none; }
+        .messages { flex: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 8px; }
+        .message { max-width: 75%; padding: 10px 14px; border-radius: 16px; font-size: 14px; line-height: 1.4; word-break: break-word; }
+        .message.mine { align-self: flex-end; background: #4a90d9; color: #fff; border-bottom-right-radius: 4px; }
+        .message.other { align-self: flex-start; background: #e9ecef; color: #333; border-bottom-left-radius: 4px; }
+        .message .sender { font-size: 11px; font-weight: 600; margin-bottom: 2px; }
+        .message.mine .sender { color: rgba(255,255,255,0.8); }
+        .message.other .sender { color: #666; }
+        .message .meta { font-size: 10px; margin-top: 4px; opacity: 0.6; }
+        .message.system { align-self: center; background: transparent; color: #999; font-size: 12px; padding: 4px 12px; max-width: 100%; text-align: center; }
+        .input-area { padding: 12px 16px; border-top: 1px solid #eee; display: flex; gap: 8px; }
+        .input-area input { flex: 1; padding: 10px 16px; border: 1px solid #ddd; border-radius: 20px; font-size: 14px; outline: none; }
+        .input-area input:focus { border-color: #4a90d9; }
+        .input-area button { padding: 10px 20px; background: #4a90d9; color: #fff; border: none; border-radius: 20px; font-size: 14px; font-weight: 600; cursor: pointer; }
+        .input-area button:hover { background: #3a7bc8; }
+        .hidden { display: none !important; }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="header">
+        <span>LiveKit DataChannel Chat</span>
+        <span class="room-info" id="roomInfo"></span>
+    </div>
+
+    <div class="join-form" id="joinForm">
+        <h2>채팅방 입장</h2>
+        <input type="text" id="roomIdInput" placeholder="방 번호 (예: room-1)">
+        <input type="text" id="nicknameInput" placeholder="닉네임">
+        <button onclick="connect()">입장</button>
+    </div>
+
+    <div class="chat-area" id="chatArea">
+        <div class="messages" id="messages"></div>
+        <div class="input-area">
+            <input type="text" id="messageInput" placeholder="메시지를 입력하세요..." onkeypress="if(event.key==='Enter') sendMessage()">
+            <button onclick="sendMessage()">전송</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    let stompClient = null;
+    let roomId = '';
+    let senderId = '';
+    let senderName = '';
+
+    function connect() {
+        roomId = document.getElementById('roomIdInput').value.trim();
+        senderName = document.getElementById('nicknameInput').value.trim();
+        if (!roomId || !senderName) {
+            alert('방 번호와 닉네임을 입력하세요.');
+            return;
+        }
+        senderId = crypto.randomUUID();
+
+        const socket = new SockJS('/ws-chat');
+        stompClient = Stomp.over(socket);
+        stompClient.debug = null;
+
+        stompClient.connect({}, function () {
+            document.getElementById('joinForm').classList.add('hidden');
+            document.getElementById('chatArea').style.display = 'flex';
+            document.getElementById('roomInfo').textContent = 'Room: ' + roomId;
+
+            stompClient.subscribe('/topic/room/' + roomId, function (frame) {
+                const msg = JSON.parse(frame.body);
+                displayMessage(msg);
+            });
+
+            appendSystemMessage(senderName + '님이 입장했습니다.');
+        }, function (error) {
+            alert('연결 실패: ' + error);
+        });
+    }
+
+    function sendMessage() {
+        const input = document.getElementById('messageInput');
+        const content = input.value.trim();
+        if (!content || !stompClient) return;
+
+        stompClient.send('/app/chat/' + roomId, {}, JSON.stringify({
+            type: 'CHAT',
+            senderId: senderId,
+            senderName: senderName,
+            content: content,
+            roomId: roomId
+        }));
+        input.value = '';
+    }
+
+    function displayMessage(msg) {
+        const container = document.getElementById('messages');
+        const div = document.createElement('div');
+        const isMine = msg.senderId === senderId;
+        div.className = 'message ' + (isMine ? 'mine' : 'other');
+
+        const time = new Date(msg.timestamp).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' });
+        div.innerHTML =
+            '<div class="sender">' + escapeHtml(msg.senderName) + '</div>' +
+            '<div>' + escapeHtml(msg.content) + '</div>' +
+            '<div class="meta">' + time + ' · ' + msg.messageId.substring(0, 8) + '</div>';
+
+        container.appendChild(div);
+        container.scrollTop = container.scrollHeight;
+    }
+
+    function appendSystemMessage(text) {
+        const container = document.getElementById('messages');
+        const div = document.createElement('div');
+        div.className = 'message system';
+        div.textContent = text;
+        container.appendChild(div);
+    }
+
+    function escapeHtml(str) {
+        const div = document.createElement('div');
+        div.appendChild(document.createTextNode(str));
+        return div.innerHTML;
+    }
+</script>
+</body>
+</html>
