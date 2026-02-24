@@ -47,11 +47,12 @@ class SecurityConfig(
             .sessionManagement { it.sessionCreationPolicy(SessionCreationPolicy.STATELESS) }
             .authorizeHttpRequests { auth ->
                 auth.requestMatchers(
-                    "/register/**", "/invitations/validate",
-                    "/login/**", "/refresh", "/logout", "/check",
+                    "/v1/auth/**",
+                    "/v1/internal/**",
                     "/actuator/**", "/.well-known/jwks.json",
                     "/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html"
                 ).permitAll()
+                auth.requestMatchers("/v1/manager/**").hasAnyRole("MANAGER", "ADMIN")
                 auth.anyRequest().authenticated()
             }
             .addFilterBefore(authGatewayPreAuthFilter, UsernamePasswordAuthenticationFilter::class.java)

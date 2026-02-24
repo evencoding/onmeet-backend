@@ -16,8 +16,16 @@ import org.springframework.data.domain.Pageable
 @Transactional(readOnly = true)
 class UserServiceImpl(
     private val userRepository: UserRepository,
-    private val jobTitleRepository: JobTitleRepository
+    private val jobTitleRepository: JobTitleRepository,
+    private val fileClient: com.onmeet.auth.client.FileClient
 ) : UserService {
+
+    @Transactional
+    override fun deleteMyProfileImage(requester: User): UserResponseDto {
+        fileClient.deleteMyProfileImage()
+        requester.profileImageId = null
+        return userRepository.save(requester).toResponseDto()
+    }
 
     @Transactional
     override fun updateUserProfile(userId: Long, requester: User, request: UserProfileUpdateRequest): UserResponseDto {
@@ -106,6 +114,10 @@ class UserServiceImpl(
         validateManagerPermission(manager, user)
         user.activate()
         return userRepository.save(user).toResponseDto()
+    }
+
+    override fun getMyInfo(user: User): UserResponseDto {
+        return user.toResponseDto()
     }
 
     private fun validateManagerPermission(manager: User, targetUser: User) {

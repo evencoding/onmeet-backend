@@ -145,10 +145,14 @@ class TeamServiceImpl(
     }
 
     @Transactional
-    override fun rejectTeam(teamId: Long, approver: User): Unit {
-        teamRepository.findById(teamId)
+    override fun rejectTeam(teamId: Long, approver: User, reason: String?): Unit {
+        val team = teamRepository.findById(teamId)
             .orElseThrow { TeamNotFoundException("Team not found: $teamId") }
-            .let { teamRepository.delete(it) }
+        
+        team.status = Team.TeamStatus.REJECTED
+        team.rejectionReason = reason
+        
+        teamRepository.save(team)
     }
 
     @Transactional
@@ -232,5 +236,21 @@ class TeamServiceImpl(
         teamRepository.findById(teamId)
             .orElseThrow { TeamNotFoundException("Team not found: $teamId") }
             .let { teamRepository.delete(it) }
+    }
+
+    @Transactional
+    override fun cancelTeamRequest(teamId: Long, requester: User): Unit {
+        val team = teamRepository.findById(teamId)
+            .orElseThrow { TeamNotFoundException("Team not found: $teamId") }
+
+        if (team.status != Team.TeamStatus.PENDING_APPROVAL) {
+            throw IllegalStateException("Only pending team requests can be cancelled")
+        }
+
+        if (team.leader?.id != requester.id) {
+            throw InsufficientPermissionException("Only the requester can cancel the team creation request")
+        }
+
+        teamRepository.delete(team)
     }
 }

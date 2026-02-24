@@ -11,6 +11,7 @@ type FileRepository interface {
 	Save(metadata *model.FileMetadata) error
 	FindByID(id uint) (*model.FileMetadata, error)
 	Delete(id uint) error
+	FindByUploaderAndCategory(uploaderId int64, category string) ([]*model.FileMetadata, error)
 }
 
 // postgresFileRepository는 FileRepository 인터페이스의 실제 구현체입니다.
@@ -46,4 +47,10 @@ func (r *postgresFileRepository) FindByID(id uint) (*model.FileMetadata, error) 
 func (r *postgresFileRepository) Delete(id uint) error {
 	// Delete는 데이터를 삭제합니다. model.FileMetadata{}를 넘겨 테이블을 지정합니다.
 	return r.db.Delete(&model.FileMetadata{}, id).Error
+}
+
+func (r *postgresFileRepository) FindByUploaderAndCategory(uploaderId int64, category string) ([]*model.FileMetadata, error) {
+	var results []*model.FileMetadata
+	err := r.db.Where("uploader_id = ? AND category = ?", uploaderId, category).Find(&results).Error
+	return results, err
 }

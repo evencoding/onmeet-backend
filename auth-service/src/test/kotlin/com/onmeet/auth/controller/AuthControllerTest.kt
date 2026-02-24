@@ -28,6 +28,12 @@ class AuthControllerTest {
     private lateinit var authService: AuthService
 
     @MockkBean
+    private lateinit var userService: com.onmeet.auth.service.UserService
+
+    @MockkBean
+    private lateinit var keyManager: com.onmeet.auth.security.KeyManager
+
+    @MockkBean
     private lateinit var jwtProperties: JwtProperties
 
     @MockkBean
@@ -61,7 +67,7 @@ class AuthControllerTest {
 
         // when & then
         mockMvc.perform(
-            post("/v1/login")
+            post("/auth/v1/login").contextPath("/auth")
                 .contentType(MediaType.APPLICATION_JSON_VALUE)
                 .content(objectMapper.writeValueAsString(request))
         )
