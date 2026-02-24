@@ -21,7 +21,7 @@ class VideoControllerTest {
     private MockMvc mockMvc;
 
     @Test
-    @DisplayName("GET /videos/me - 인증된 사용자 정보 조회 성공")
+    @DisplayName("GET /v1/me - 인증된 사용자 정보 조회 성공")
     void me_Success() throws Exception {
         UsernamePasswordAuthenticationToken auth = new UsernamePasswordAuthenticationToken(
                 "test-user-id",
@@ -29,7 +29,7 @@ class VideoControllerTest {
                 Collections.singletonList(new SimpleGrantedAuthority("ROLE_USER"))
         );
 
-        mockMvc.perform(get("/videos/me").with(authentication(auth)))
+        mockMvc.perform(get("/v1/me").with(authentication(auth)))
                 .andExpect(status().isOk())
                 .andExpect(content().string("Hello from Video Service! User ID: test-user-id"));
     }
