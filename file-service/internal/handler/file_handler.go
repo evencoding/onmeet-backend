@@ -159,6 +159,31 @@ func (h *FileHandler) DeleteFile(c *gin.Context) {
 	c.Status(http.StatusNoContent)
 }
 
+// DeleteMyProfile godoc
+// @Summary      Delete my profile image
+// @Description  Delete all profile images uploaded by the current user.
+// @Tags         file
+// @Success      204
+// @Failure      500  {object}  map[string]string
+// @Router       /me/profile [delete]
+func (h *FileHandler) DeleteMyProfile(c *gin.Context) {
+	var uploaderId int64
+	if idStr, exists := c.Get("userId"); exists {
+		uploaderId, _ = strconv.ParseInt(idStr.(string), 10, 64)
+	} else {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+		return
+	}
+
+	err := h.svc.DeleteMyProfile(uploaderId)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.Status(http.StatusNoContent)
+}
+
 // GenerateProfileImage godoc
 // @Summary      Generate default profile image
 // @Description  Generate a default profile image based on name and color.

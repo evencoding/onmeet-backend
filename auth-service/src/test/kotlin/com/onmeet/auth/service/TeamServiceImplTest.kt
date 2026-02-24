@@ -165,15 +165,19 @@ class TeamServiceImplTest {
     }
 
     @Test
-    @DisplayName("팀 생성을 거절하면 팀 엔티티가 삭제된다")
+    @DisplayName("팀 생성을 거절하면 REJECTED 상태가 되고 사유가 저장된다")
     fun rejectTeamSuccess() {
         val team = Team(id = 100L, name = "Pending Team", company = company, leader = normalUser, status = Team.TeamStatus.PENDING_APPROVAL)
+        val reason = "Inappropriate team name"
+        
         every { teamRepository.findById(100L) } returns Optional.of(team)
-        every { teamRepository.delete(team) } returns Unit
+        every { teamRepository.save(any()) } returns team
 
-        teamService.rejectTeam(100L, managerUser)
+        teamService.rejectTeam(100L, managerUser, reason)
 
-        verify(exactly = 1) { teamRepository.delete(team) }
+        assertEquals(Team.TeamStatus.REJECTED, team.status)
+        assertEquals(reason, team.rejectionReason)
+        verify(exactly = 1) { teamRepository.save(team) }
     }
 
     @Test
@@ -229,5 +233,40 @@ class TeamServiceImplTest {
         teamService.dissolveTeam(100L, managerUser)
 
         verify(exactly = 1) { teamRepository.delete(team) }
+    }
+
+    @Test
+    @DisplayName("승인 대기 중인 팀 생성 요청을 취소하면 팀 엔티티가 삭제된다")
+    fun cancelTeamRequestSuccess() {
+        val team = Team(id = 100L, name = "Pending Team", company = company, leader = normalUser, status = Team.TeamStatus.PENDING_APPROVAL)
+        every { teamRepository.findById(100L) } returns Optional.of(team)
+        every { teamRepository.delete(team) } returns Unit
+
+        teamService.cancelTeamRequest(100L, normalUser)
+
+        verify(exactly = 1) { teamRepository.delete(team) }
+    }
+
+    @Test
+    @DisplayName("승인 대기 상태가 아닌 팀 생성 요청을 취소하려고 하면 예외 발생")
+    fun cancelTeamRequestInvalidStatus() {
+        val team = Team(id = 100L, name = "Active Team", company = company, leader = normalUser, status = Team.TeamStatus.ACTIVE)
+        every { teamRepository.findById(100L) } returns Optional.of(team)
+
+        assertThrows<IllegalStateException> {
+            teamService.cancelTeamRequest(100L, normalUser)
+        }
+    }
+
+    @Test
+    @DisplayName("팀 생성 요청자가 아닌 사용자가 취소를 시도하면 예외 발생")
+    fun cancelTeamRequestUnauthorized() {
+        val team = Team(id = 100L, name = "Pending Team", company = company, leader = normalUser, status = Team.TeamStatus.PENDING_APPROVAL)
+        val otherUser = User(id = 999L, email = "other@test.com", passwordHash = "hash", name = "Other", company = company)
+        every { teamRepository.findById(100L) } returns Optional.of(team)
+
+        assertThrows<com.onmeet.common.exception.InsufficientPermissionException> {
+            teamService.cancelTeamRequest(100L, otherUser)
+        }
     }
 }

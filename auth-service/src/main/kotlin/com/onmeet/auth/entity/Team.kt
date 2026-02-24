@@ -37,6 +37,9 @@ class Team(
     @Column(nullable = false)
     @Enumerated(EnumType.STRING)
     var status: TeamStatus = TeamStatus.ACTIVE,
+    
+    @Column
+    var rejectionReason: String? = null,
 
     @CreatedDate
     @Column(nullable = false, updatable = false)
@@ -47,7 +50,7 @@ class Team(
     var updatedAt: LocalDateTime? = null
 ) {
     enum class TeamStatus {
-        ACTIVE, INACTIVE, PENDING_APPROVAL
+        ACTIVE, INACTIVE, PENDING_APPROVAL, REJECTED
     }
 
     fun isLeader(user: User): Boolean = leader?.id == user.id

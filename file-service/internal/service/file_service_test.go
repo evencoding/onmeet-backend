@@ -44,6 +44,14 @@ func (m *mockFileRepository) Delete(id uint) error {
 	return args.Error(0)
 }
 
+func (m *mockFileRepository) FindByUploaderAndCategory(uploaderId int64, category string) ([]*model.FileMetadata, error) {
+	args := m.Called(uploaderId, category)
+	if files, ok := args.Get(0).([]*model.FileMetadata); ok {
+		return files, args.Error(1)
+	}
+	return nil, args.Error(1)
+}
+
 // [Necessary Infrastructure / 인프라 필수] Mock 구조체 정의 및 초기화
 type MockS3Service struct {
 	mock.Mock
@@ -194,7 +202,8 @@ func TestFileService_DeleteFile(t *testing.T) {
 	t.Run("본인 파일 삭제 성공", func(t *testing.T) {
 		repoMock := new(mockFileRepository)
 		s3Mock := new(MockS3Service)
-		fs := NewFileService(repoMock, s3Mock, nil, nil, nil)
+		authMock := new(MockAuthClient)
+		fs := NewFileService(repoMock, s3Mock, nil, authMock, nil)
 
 		uploaderId := int64(123)
 		meta := &model.FileMetadata{
@@ -205,7 +214,13 @@ func TestFileService_DeleteFile(t *testing.T) {
 			UploaderID: &uploaderId,
 		}
 
+		companyId := int64(1)
 		repoMock.On("FindByID", uint(1)).Return(meta, nil)
+		authMock.On("GetUserPermissions", int64(123), "cookie").Return(&client.UserPermissionResponse{
+			UserID:    123,
+			CompanyID: &companyId,
+			Roles:     []string{"MANAGER"},
+		}, nil)
 		s3Mock.On("DeleteFile", "USER/123/docs/test.pdf").Return(nil)
 		repoMock.On("Delete", uint(1)).Return(nil)
 
@@ -214,6 +229,7 @@ func TestFileService_DeleteFile(t *testing.T) {
 		assert.NoError(t, err)
 		repoMock.AssertExpectations(t)
 		s3Mock.AssertExpectations(t)
+		authMock.AssertExpectations(t)
 	})
 
 	t.Run("권한 미달로 인한 삭제 실패", func(t *testing.T) {

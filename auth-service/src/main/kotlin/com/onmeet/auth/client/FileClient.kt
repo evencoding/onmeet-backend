@@ -67,10 +67,23 @@ class FileClient(
     @io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker(name = "fileService", fallbackMethod = "deleteFileFallback")
     fun deleteFile(fileId: Long) {
         val url = "$fileServiceUrl/file/$fileId"
-        restTemplate.delete(url)
+        deleteWithAuth(url)
     }
 
     fun deleteFileFallback(fileId: Long, t: Throwable) {
         log.error("Failed to delete file $fileId. Error: ${t.message}")
+    }
+
+    /**
+     * 자신의 프로필 이미지를 삭제합니다.
+     */
+    @io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker(name = "fileService", fallbackMethod = "deleteMyProfileImageFallback")
+    fun deleteMyProfileImage() {
+        val url = "$fileServiceUrl/file/me/profile"
+        deleteWithAuth(url)
+    }
+
+    fun deleteMyProfileImageFallback(t: Throwable) {
+        log.error("Failed to delete my profile image. Error: ${t.message}")
     }
 }

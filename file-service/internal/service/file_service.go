@@ -24,6 +24,7 @@ type FileService interface {
 	UploadFiles(files []*multipart.FileHeader, category string, uploaderId *int64, ownerType, ownerId string) ([]*model.FileMetadata, error)
 	GetFile(id uint) (*model.FileMetadata, error)
 	DeleteFile(id uint, requesterId int64, cookie string) error
+	DeleteMyProfile(uploaderId int64) error
 	// UploadFileAsync는 비동기 업로드를 지원합니다.
 	UploadFileAsync(file *multipart.FileHeader, category string, uploaderId *int64, ownerType, ownerId, callbackTopic, correlationId string)
 	GenerateDefaultProfileImage(name string, color string, uploaderId *int64, ownerType, ownerId string) (*model.FileMetadata, error)
@@ -127,44 +128,43 @@ func (s *fileService) DeleteFile(id uint, requesterId int64, cookie string) erro
 		return err
 	}
 
-	// 1. 권한 체크 로직
-	// 기본적으로 본인이 업로드한 파일은 삭제 가능합니다.
-	canDelete := metadata.UploaderID != nil && *metadata.UploaderID == requesterId
+	// 1. 권한 체크 로직 (MANAGER 이상만 가능하도록 수정)
+	requesterPerms, err := s.authClient.GetUserPermissions(requesterId, cookie)
+	if err != nil {
+		return fmt.Errorf("failed to get user permissions: %v", err)
+	}
 
-	// 2. 관리자(MANAGER) 권한 체크
-	// 본인이 아니더라도 같은 회사의 관리자라면 삭제가 가능해야 합니다.
-	if !canDelete {
-		requesterPerms, err := s.authClient.GetUserPermissions(requesterId, cookie)
-		if err == nil {
-			isManager := false
-			for _, role := range requesterPerms.Roles {
-				if role == "MANAGER" || role == "ADMIN" {
-					isManager = true
-					break
-				}
+	canDelete := false
+	for _, role := range requesterPerms.Roles {
+		if role == "MANAGER" || role == "ADMIN" {
+			canDelete = true
+			break
+		}
+	}
+
+	if canDelete {
+		// 파일의 소유주가 회사인 경우: 해당 회사의 ID와 관리자의 회사 ID가 같은지 확인
+		if metadata.OwnerType == "COMPANY" {
+			fileCompanyId, _ := strconv.ParseInt(metadata.OwnerID, 10, 64)
+			if requesterPerms.CompanyID != nil && *requesterPerms.CompanyID == fileCompanyId {
+				canDelete = true
+			} else {
+				canDelete = false
 			}
-
-			if isManager {
-				// 파일의 소유주가 회사인 경우: 해당 회사의 ID와 관리자의 회사 ID가 같은지 확인
-				if metadata.OwnerType == "COMPANY" {
-					fileCompanyId, _ := strconv.ParseInt(metadata.OwnerID, 10, 64)
-					if requesterPerms.CompanyID != nil && *requesterPerms.CompanyID == fileCompanyId {
-						canDelete = true
-					}
-				} else if metadata.UploaderID != nil {
-					// 파일의 소유주가 유저인 경우: 업로더가 관리자와 같은 회사 소속인지 확인
-					uploaderPerms, err := s.authClient.GetUserPermissions(*metadata.UploaderID, cookie)
-					if err == nil && uploaderPerms.CompanyID != nil && requesterPerms.CompanyID != nil &&
-						*uploaderPerms.CompanyID == *requesterPerms.CompanyID {
-						canDelete = true
-					}
-				}
+		} else if metadata.UploaderID != nil {
+			// 파일의 소유주가 유저인 경우: 업로더가 관리자와 같은 회사 소속인지 확인
+			uploaderPerms, err := s.authClient.GetUserPermissions(*metadata.UploaderID, cookie)
+			if err == nil && uploaderPerms.CompanyID != nil && requesterPerms.CompanyID != nil &&
+				*uploaderPerms.CompanyID == *requesterPerms.CompanyID {
+				canDelete = true
+			} else {
+				canDelete = false
 			}
 		}
 	}
 
 	if !canDelete {
-		return fmt.Errorf("permission denied: you do not have permission to delete this file")
+		return fmt.Errorf("permission denied: only managers can delete files by ID")
 	}
 
 	// S3 Key 추출 (S3URL: https://domain/ownerType/ownerId/category/uuid.ext)
@@ -180,6 +180,22 @@ func (s *fileService) DeleteFile(id uint, requesterId int64, cookie string) erro
 
 	// DB 메타데이터 삭제
 	return s.repo.Delete(id)
+}
+
+func (s *fileService) DeleteMyProfile(uploaderId int64) error {
+	files, err := s.repo.FindByUploaderAndCategory(uploaderId, "profile")
+	if err != nil {
+		return err
+	}
+
+	for _, metadata := range files {
+		savedKey := fmt.Sprintf("%s/%s/%s/%s", metadata.OwnerType, metadata.OwnerID, metadata.Category, metadata.FileName)
+		_ = s.s3.DeleteFile(savedKey)
+		s.fileCache.Delete(metadata.ID)
+		_ = s.repo.Delete(metadata.ID)
+	}
+
+	return nil
 }
 
 // UploadFileAsync는 고루틴(Goroutine)을 사용하여 비동기적으로 파일을 처리합니다.

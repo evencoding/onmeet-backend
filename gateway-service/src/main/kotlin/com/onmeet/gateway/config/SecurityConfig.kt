@@ -34,11 +34,18 @@ class SecurityConfig(
             .csrf { it.disable() }
             .cors { it.configurationSource(corsConfigurationSource()) }
             .authorizeExchange { exchanges ->
-                // Public endpoints
+                // Public endpoints - Authentication
                 exchanges.pathMatchers(
-                    "/auth/**", 
-                    "/.well-known/**", 
-                    "/actuator/**", 
+                    "/auth/v1/register/**",
+                    "/auth/v1/login/**",
+                    "/auth/v1/invitations/validate",
+                    "/auth/v1/check",
+                    "/.well-known/**"
+                ).permitAll()
+
+                // Public endpoints - Infrastructure
+                exchanges.pathMatchers(
+                    "/actuator/**",
                     "/*/actuator/**",
                     "/swagger-ui.html",
                     "/swagger-ui/**",
@@ -47,10 +54,11 @@ class SecurityConfig(
                     "/swagger-resources/**",
                     "/*/v3/api-docs/**",
                     "/file/doc.json",
-                    "/file/swagger/**"
+                    "/file/swagger/**",
+                    "/file/actuator/**",
+                    "/error"
                 ).permitAll()
-                exchanges.pathMatchers("/error").permitAll()
-                
+
                 // All other requests require authentication
                 exchanges.anyExchange().authenticated()
             }

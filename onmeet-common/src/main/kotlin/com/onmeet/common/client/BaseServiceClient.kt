@@ -94,4 +94,17 @@ abstract class BaseServiceClient(
         val entity = HttpEntity(body, headers)
         return restTemplate.postForObject(url, entity, responseType)
     }
+
+    /**
+     * 현재 요청의 쿠키를 포함하여 DELETE 요청을 보냅니다.
+     */
+    protected fun deleteWithAuth(url: String) {
+        val headers = HttpHeaders().apply {
+            (RequestContextHolder.getRequestAttributes() as? ServletRequestAttributes)?.request?.getHeader(HttpHeaders.COOKIE)?.let {
+                add(HttpHeaders.COOKIE, it)
+            }
+        }
+        val entity = HttpEntity<Unit>(headers)
+        restTemplate.exchange(url, HttpMethod.DELETE, entity, Unit::class.java)
+    }
 }
