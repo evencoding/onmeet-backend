@@ -10,49 +10,50 @@ spring:
         - id: auth-service
           uri: ${AUTH_SERVICE_URL:http://auth-service:8081}
           predicates:
-            - Path=/v1/auth/**
+            - Path=/auth/v1/**
           filters:
-            - RewritePath=/v1/auth/(?<segment>.*), /auth/v1/${segment}
             - UserHeaderFilter
             - AddRequestHeader=X-Gateway-Secret, ${GATEWAY_SHARED_SECRET}
         - id: ai-service
           uri: ${AI_SERVICE_URL:http://ai-service:8082}
           predicates:
-            - Path=/v1/ai/**
+            - Path=/ai/v1/**
           filters:
-            - RewritePath=/v1/ai/(?<segment>.*), /ai/v1/${segment}
             - UserHeaderFilter
         - id: video-service
           uri: ${VIDEO_SERVICE_URL:http://video-service:8083}
           predicates:
-            - Path=/v1/video/**
+            - Path=/video/v1/**
           filters:
-            - RewritePath=/v1/video/(?<segment>.*), /video/v1/${segment}
             - UserHeaderFilter
         - id: chat-service
           uri: ${CHAT_SERVICE_URL:http://chat-service:8084}
           predicates:
-            - Path=/v1/chat/**
+            - Path=/chat/v1/**
           filters:
-            - RewritePath=/v1/chat/(?<segment>.*), /chat/v1/${segment}
             - UserHeaderFilter
         - id: notification-service
           uri: ${NOTIFICATION_SERVICE_URL:http://notification-service:8085}
           predicates:
-            - Path=/v1/notification/**
+            - Path=/notification/v1/**
           filters:
-            - RewritePath=/v1/notification/(?<segment>.*), /notification/v1/${segment}
             - UserHeaderFilter
         - id: email-service
           uri: ${EMAIL_SERVICE_URL:http://email-service:8087}
           predicates:
-            - Path=/email/**
+            - Path=/email/v1/**
           filters:
             - UserHeaderFilter
         - id: file-service
           uri: ${FILE_SERVICE_URL:http://file-service:8086}
           predicates:
-            - Path=/file/**
+            - Path=/file/v1/**
+          filters:
+            - UserHeaderFilter
+        - id: file-service-public
+          uri: ${FILE_SERVICE_URL:http://file-service:8086}
+          predicates:
+            - Path=/file/doc.json,/file/swagger/**,/file/actuator/**
           filters:
             - UserHeaderFilter
       default-filters:
@@ -87,7 +88,7 @@ spring:
     oauth2:
       resourceserver:
         jwt:
-          jwk-set-uri: ${AUTH_SERVICE_URL:http://auth-service:8081}/auth/.well-known/jwks.json
+          jwk-set-uri: ${AUTH_SERVICE_URL:http://auth-service:8081}/auth/v1/.well-known/jwks.json
 
 springdoc:
   api-docs:
@@ -96,17 +97,17 @@ springdoc:
     enabled: true
     urls:
       - name: auth-service
-        url: /v1/auth/v3/api-docs
+        url: /auth/v1/v3/api-docs
       - name: ai-service
-        url: /v1/ai/v3/api-docs
+        url: /ai/v1/v3/api-docs
       - name: video-service
-        url: /v1/video/v3/api-docs
+        url: /video/v1/v3/api-docs
       - name: chat-service
-        url: /v1/chat/v3/api-docs
+        url: /chat/v1/v3/api-docs
       - name: notification-service
-        url: /v1/notification/v3/api-docs
+        url: /notification/v1/v3/api-docs
       - name: email-service
-        url: /email/v3/api-docs
+        url: /email/v1/v3/api-docs
 
       - name: file-service
         url: /file/doc.json

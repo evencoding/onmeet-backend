@@ -49,6 +49,11 @@ func (m *MockFileService) RenderFile(id uint) ([]byte, string, error) {
 	return args.Get(0).([]byte), args.String(1), args.Error(2)
 }
 
+func (m *MockFileService) DeleteMyProfile(uploaderId int64) error {
+	args := m.Called(uploaderId)
+	return args.Error(0)
+}
+
 // Ensure MockFileService implements service.FileService
 var _ service.FileService = (*MockFileService)(nil)
 

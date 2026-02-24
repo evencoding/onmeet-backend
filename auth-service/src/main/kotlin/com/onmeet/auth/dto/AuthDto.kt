@@ -67,16 +67,6 @@ data class JoinRequest(
     val employeeId: String? = null
 )
 
-@Schema(description = "유저 정보 수정 요청")
-data class UserProfileUpdateRequest(
-    @Schema(description = "이름", example = "Jane Doe")
-    val name: String?,
-    @Schema(description = "사번", example = "EMP-001")
-    val employeeId: String?,
-    @Schema(description = "직급 ID", example = "1")
-    val jobTitleId: Long?
-)
-
 @Schema(description = "회사 정보 수정 요청")
 data class CompanyRequest(
     @Schema(description = "회사명")

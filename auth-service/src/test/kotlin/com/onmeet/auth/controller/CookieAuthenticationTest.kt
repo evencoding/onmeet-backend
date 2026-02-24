@@ -28,7 +28,7 @@ import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
 import jakarta.servlet.http.Cookie
 import java.util.Collections
 
-@WebMvcTest(AuthController::class)
+@WebMvcTest(ManagerController::class)
 @Import(CookieAuthenticationTest.TestSecurityConfig::class, JwtAuthenticationFilter::class, PropertiesConfig::class)
 class CookieAuthenticationTest {
 
@@ -67,15 +67,15 @@ class CookieAuthenticationTest {
         // Mock JWT Validation and Parsing
         every { jwtTokenProvider.validateToken(token) } returns true
         val authentication = UsernamePasswordAuthenticationToken(
-            userEmail, 
-            null, 
+            userEmail,
+            null,
             Collections.singletonList(SimpleGrantedAuthority("ROLE_MANAGER"))
         )
         every { jwtTokenProvider.getAuthentication(token) } returns authentication
 
         // when
         mockMvc.perform(
-            delete("/v1/users/$userId/profile-image")
+            delete("/v1/manager/employees/$userId/profile-image")
                 .cookie(cookie)
                 .contentType(MediaType.APPLICATION_JSON)
         )
@@ -92,6 +92,18 @@ class CookieAuthenticationTest {
     class TestSecurityConfig {
         @Bean
         fun authService(): AuthService = mockk(relaxed = true)
+
+        @Bean
+        fun userService(): com.onmeet.auth.service.UserService = mockk(relaxed = true)
+
+        @Bean
+        fun teamService(): com.onmeet.auth.service.TeamService = mockk(relaxed = true)
+
+        @Bean
+        fun invitationService(): com.onmeet.auth.service.InvitationService = mockk(relaxed = true)
+
+        @Bean
+        fun jobTitleService(): com.onmeet.auth.service.JobTitleService = mockk(relaxed = true)
 
         @Bean
         fun jwtTokenProvider(): JwtTokenProvider = mockk(relaxed = true)

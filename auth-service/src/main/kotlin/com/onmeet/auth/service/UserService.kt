@@ -15,4 +15,6 @@ interface UserService {
     fun getUserPermissions(userId: Long): com.onmeet.auth.dto.UserPermissionResponse
     fun deactivateUser(userId: Long, manager: User): UserResponseDto
     fun activateUser(userId: Long, manager: User): UserResponseDto
+    fun deleteMyProfileImage(requester: User): UserResponseDto
+    fun getMyInfo(user: User): UserResponseDto
 }

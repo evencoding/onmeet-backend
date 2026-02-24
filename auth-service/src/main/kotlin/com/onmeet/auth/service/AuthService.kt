@@ -148,13 +148,12 @@ class AuthService(
         val requester = userRepository.findByEmail(requesterEmail)
             .orElseThrow { UserNotFoundException("Requester not found: $requesterEmail") }
 
-        // 권한 체크: 본인이거나, 같은 회사의 매니저여야 함
-        val isSelf = targetUser.id == requester.id
+        // 권한 체크: 같은 회사의 매니저여야 함
         val isManager = requester.roles.contains(User.Role.MANAGER) && 
                         requester.company.id == targetUser.company.id
 
-        if (!isSelf && !isManager) {
-            throw UnauthorizedException("You do not have permission to modify this user's profile.")
+        if (!isManager) {
+            throw UnauthorizedException("Only managers can reset other users' profile images.")
         }
 
         // 기존 이미지가 있다면 삭제 요청
@@ -168,10 +167,8 @@ class AuthService(
             }
         }
 
-        val name = if (isSelf) "Deleted User" else targetUser.name 
-
         // 기본 이미지 생성 및 할당
-        fileClient.generateDefaultProfileImage(name)?.let {
+        fileClient.generateDefaultProfileImage(targetUser.name)?.let {
             targetUser.profileImageId = it.id
             userRepository.save(targetUser)
         }
@@ -203,28 +200,6 @@ class AuthService(
         user.status = User.UserStatus.INACTIVE
         user.profileImageId = null 
         // Logic to delete profile image from file-service can be added here if needed.
-        
-        userRepository.save(user)
-    }
-
-    @Transactional
-    fun updateProfile(email: String, request: UpdateProfileRequest) {
-        val user = userRepository.findByEmail(email)
-            .orElseThrow { UserNotFoundException("User not found: $email") }
-
-        request.name?.let {
-            if (it.isNotBlank()) user.name = it
-        }
-
-        request.jobTitle?.let { titleName ->
-            if (titleName.isBlank()) {
-                user.jobTitle = null
-            } else {
-                val jobTitle = jobTitleService.getJobTitleByName(user.company, titleName)
-                    ?: throw JobTitleNotFoundException("Job title not found: $titleName")
-                user.jobTitle = jobTitle
-            }
-        }
         
         userRepository.save(user)
     }

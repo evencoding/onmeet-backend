@@ -30,6 +30,9 @@ class UserServiceImplTest {
     @MockK
     private lateinit var jobTitleRepository: JobTitleRepository
 
+    @MockK
+    private lateinit var fileClient: com.onmeet.auth.client.FileClient
+
     @InjectMockKs
     private lateinit var userService: UserServiceImpl
 
@@ -124,5 +127,39 @@ class UserServiceImplTest {
         assertThrows(InsufficientPermissionException::class.java) {
             userService.deactivateUser(2L, user)
         }
+    }
+
+    @Test
+    fun `deleteMyProfileImage should call fileClient and clear profileImageId`() {
+        // given
+        val company = Company(id = 1L, name = "TestCo")
+        val user = User(id = 1L, email = "user@test.com", passwordHash = "hash", name = "User", 
+                       profileImageId = 100L, company = company)
+        
+        every { fileClient.deleteMyProfileImage() } returns Unit
+        every { userRepository.save(any()) } returns user
+
+        // when
+        val result = userService.deleteMyProfileImage(user)
+
+        // then
+        assertNull(user.profileImageId)
+        verify { fileClient.deleteMyProfileImage() }
+        verify { userRepository.save(user) }
+    }
+
+    @Test
+    fun `getMyInfo should return user response dto`() {
+        // given
+        val company = Company(id = 1L, name = "TestCo")
+        val user = User(id = 1L, email = "user@test.com", passwordHash = "hash", name = "Test User", company = company)
+
+        // when
+        val result = userService.getMyInfo(user)
+
+        // then
+        assertEquals(user.id, result.id)
+        assertEquals(user.name, result.name)
+        assertEquals(user.email, result.email)
     }
 }

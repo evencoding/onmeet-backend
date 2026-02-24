@@ -53,53 +53,6 @@ class AuthServiceTest {
     // ...
 
     @Test
-    // [Essential] 사용자 프로필 업데이트 비즈니스 로직 검증
-    fun `updateProfile should update name and job title`() {
-        // given
-        val company = Company(id = 1L, name = "TestCompany")
-        val jobTitle = JobTitle(id = 10L, name = "Developer", company = company)
-        val user = User(
-            id = 1L, email = "test@example.com", passwordHash = "pw", name = "OldName", 
-            roles = mutableSetOf(User.Role.USER), company = company, status = User.UserStatus.ACTIVE
-        )
-        val request = UpdateProfileRequest(name = "NewName", jobTitle = "Developer")
-
-        every { userRepository.findByEmail("test@example.com") } returns java.util.Optional.of(user)
-        every { jobTitleService.getJobTitleByName(company, "Developer") } returns jobTitle
-        every { userRepository.save(any()) } returns user
-
-        // when
-        authService.updateProfile("test@example.com", request)
-
-        // then
-        assertEquals("NewName", user.name)
-        assertEquals(jobTitle, user.jobTitle)
-        verify { userRepository.save(user) }
-    }
-
-    @Test
-    fun `updateProfile should clear job title if blank`() {
-        // given
-        val company = Company(id = 1L, name = "TestCompany")
-        val user = User(
-            id = 1L, email = "test@example.com", passwordHash = "pw", name = "Name", 
-            roles = mutableSetOf(User.Role.USER), company = company, status = User.UserStatus.ACTIVE
-        ).apply { jobTitle = JobTitle(name = "OldTitle", company = company) }
-        
-        val request = UpdateProfileRequest(name = null, jobTitle = "")
-
-        every { userRepository.findByEmail("test@example.com") } returns java.util.Optional.of(user)
-        every { userRepository.save(any()) } returns user
-
-        // when
-        authService.updateProfile("test@example.com", request)
-
-        // then
-        assertNull(user.jobTitle)
-        verify { userRepository.save(user) }
-    }
-
-    @Test
     // [Essential] 비밀번호 변경 로직 및 해싱 검증
     fun `changePassword should update password if old password matches`() {
         // given
@@ -233,7 +186,30 @@ class AuthServiceTest {
     }
 
     @Test
-    fun `resetUserProfileImage should throw UnauthorizedException when requester is not manager nor self`() {
+    fun `resetUserProfileImage should throw UnauthorizedException when requester is self but not a manager`() {
+        // given
+        val company = Company(id = 1L, name = "TestCompany")
+        val employee = User(
+            id = 2L, 
+            email = "employee@example.com", 
+            passwordHash = "pw", 
+            name = "Employee", 
+            roles = mutableSetOf(User.Role.USER), 
+            company = company,
+            status = User.UserStatus.ACTIVE
+        )
+
+        every { userRepository.findById(2L) } returns java.util.Optional.of(employee)
+        every { userRepository.findByEmail("employee@example.com") } returns java.util.Optional.of(employee)
+
+        // when & then
+        assertThrows(UnauthorizedException::class.java) {
+            authService.resetUserProfileImage(2L, "employee@example.com")
+        }
+    }
+
+    @Test
+    fun `resetUserProfileImage should throw UnauthorizedException when requester is not a manager`() {
         // given
         val company = Company(id = 1L, name = "TestCompany")
         val otherUser = User(id = 3L, email = "other@example.com", passwordHash = "pw", name = "Other", roles = mutableSetOf(User.Role.USER), company = company, status = User.UserStatus.ACTIVE)

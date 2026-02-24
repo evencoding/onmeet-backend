@@ -32,7 +32,7 @@ import (
 // @license.url     http://www.apache.org/licenses/LICENSE-2.0.html
 
 // @host            localhost:8086
-// @BasePath        /file
+// @BasePath        /file/v1
 
 // main 함수는 프로그램의 시작점입니다. Java의 public static void main과 같습니다.
 func main() {
@@ -76,17 +76,18 @@ func main() {
 	publicGroup := r.Group("/file")
 	{
 		// Swagger UI 설정을 명시적으로 지정 (Gateway 뒤에서 동작할 때 경로 문제 방지)
-		// Swagger UI 설정을 명시적으로 지정 (Gateway 뒤에서 동작할 때 경로 문제 방지)
 		publicGroup.StaticFile("/doc.json", "./docs/swagger.json")
 		url := ginSwagger.URL("/file/doc.json")
 		publicGroup.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler, url))
-		publicGroup.GET("/actuator/health", func(c *gin.Context) {
-			c.JSON(200, gin.H{"status": "UP"})
-		})
 	}
 
-	// Protected Group (API)
-	protectedGroup := r.Group("/file")
+	// Health Check (Public, without /v1)
+	r.GET("/file/actuator/health", func(c *gin.Context) {
+		c.JSON(200, gin.H{"status": "UP"})
+	})
+
+	// Protected Group (API with /v1)
+	protectedGroup := r.Group("/file/v1")
 	protectedGroup.Use(middleware.SecurityMiddleware(cfg))
 	{
 		protectedGroup.POST("/upload", h.Upload)
@@ -95,6 +96,7 @@ func main() {
 		protectedGroup.GET("/render/:fileId", h.RenderFile)
 		protectedGroup.GET("/:fileId", h.GetFileInfo)
 		protectedGroup.DELETE("/:fileId", h.DeleteFile)
+		protectedGroup.DELETE("/me/profile", h.DeleteMyProfile)
 	}
 
 	// 8. 서버 실행
