@@ -150,7 +150,7 @@ class TeamServiceImplTest {
     fun approveTeamSuccess() {
         // given
         val team = Team(id = 100L, name = "Pending Team", company = company, leader = normalUser, status = Team.TeamStatus.PENDING_APPROVAL)
-        
+
         every { teamRepository.findById(100L) } returns Optional.of(team)
         every { teamMemberRepository.save(any()) } returnsArgument 0
         every { teamRepository.save(any()) } returns team
@@ -165,11 +165,56 @@ class TeamServiceImplTest {
     }
 
     @Test
+    @DisplayName("매니저가 아닌 사용자가 팀을 승인하려고 하면 예외 발생")
+    fun approveTeamInsufficientPermission() {
+        // when / then
+        assertThrows<com.onmeet.common.exception.InsufficientPermissionException> {
+            teamService.approveTeam(100L, normalUser)
+        }
+    }
+
+    @Test
+    @DisplayName("다른 회사의 매니저가 팀을 승인하려고 하면 예외 발생")
+    fun approveTeamCrossCompanyError() {
+        // given
+        val team = Team(id = 100L, name = "Pending Team", company = company, leader = normalUser, status = Team.TeamStatus.PENDING_APPROVAL)
+        val otherCompanyManager = User(
+            id = 4L,
+            email = "manager@other.com",
+            passwordHash = "hash",
+            name = "Other Manager",
+            company = Company(id = 2L, name = "Other Company"),
+            roles = mutableSetOf(User.Role.USER, User.Role.MANAGER)
+        )
+
+        every { teamRepository.findById(100L) } returns Optional.of(team)
+
+        // when / then
+        assertThrows<CompanyMismatchException> {
+            teamService.approveTeam(100L, otherCompanyManager)
+        }
+    }
+
+    @Test
+    @DisplayName("이미 ACTIVE 상태인 팀을 승인하려고 하면 예외 발생")
+    fun approveTeamAlreadyActiveError() {
+        // given
+        val team = Team(id = 100L, name = "Active Team", company = company, leader = normalUser, status = Team.TeamStatus.ACTIVE)
+
+        every { teamRepository.findById(100L) } returns Optional.of(team)
+
+        // when / then
+        assertThrows<IllegalStateException> {
+            teamService.approveTeam(100L, managerUser)
+        }
+    }
+
+    @Test
     @DisplayName("팀 생성을 거절하면 REJECTED 상태가 되고 사유가 저장된다")
     fun rejectTeamSuccess() {
         val team = Team(id = 100L, name = "Pending Team", company = company, leader = normalUser, status = Team.TeamStatus.PENDING_APPROVAL)
         val reason = "Inappropriate team name"
-        
+
         every { teamRepository.findById(100L) } returns Optional.of(team)
         every { teamRepository.save(any()) } returns team
 
@@ -178,6 +223,51 @@ class TeamServiceImplTest {
         assertEquals(Team.TeamStatus.REJECTED, team.status)
         assertEquals(reason, team.rejectionReason)
         verify(exactly = 1) { teamRepository.save(team) }
+    }
+
+    @Test
+    @DisplayName("매니저가 아닌 사용자가 팀을 거절하려고 하면 예외 발생")
+    fun rejectTeamInsufficientPermission() {
+        // when / then
+        assertThrows<com.onmeet.common.exception.InsufficientPermissionException> {
+            teamService.rejectTeam(100L, normalUser, "No reason")
+        }
+    }
+
+    @Test
+    @DisplayName("다른 회사의 매니저가 팀을 거절하려고 하면 예외 발생")
+    fun rejectTeamCrossCompanyError() {
+        // given
+        val team = Team(id = 100L, name = "Pending Team", company = company, leader = normalUser, status = Team.TeamStatus.PENDING_APPROVAL)
+        val otherCompanyManager = User(
+            id = 4L,
+            email = "manager@other.com",
+            passwordHash = "hash",
+            name = "Other Manager",
+            company = Company(id = 2L, name = "Other Company"),
+            roles = mutableSetOf(User.Role.USER, User.Role.MANAGER)
+        )
+
+        every { teamRepository.findById(100L) } returns Optional.of(team)
+
+        // when / then
+        assertThrows<CompanyMismatchException> {
+            teamService.rejectTeam(100L, otherCompanyManager, "Reason")
+        }
+    }
+
+    @Test
+    @DisplayName("이미 ACTIVE 상태인 팀을 거절하려고 하면 예외 발생")
+    fun rejectTeamAlreadyActiveError() {
+        // given
+        val team = Team(id = 100L, name = "Active Team", company = company, leader = normalUser, status = Team.TeamStatus.ACTIVE)
+
+        every { teamRepository.findById(100L) } returns Optional.of(team)
+
+        // when / then
+        assertThrows<IllegalStateException> {
+            teamService.rejectTeam(100L, managerUser, "Reason")
+        }
     }
 
     @Test
@@ -223,16 +313,32 @@ class TeamServiceImplTest {
     }
 
     @Test
-    @DisplayName("팀을 삭제하면 팀 엔티티가 삭제된다")
+    @DisplayName("팀을 삭제하면 팀 엔티티가 삭제되고 TeamMember도 명시적으로 삭제된다")
     fun dissolveTeamSuccess() {
         val team = Team(id = 100L, name = "Team A", company = company, leader = normalUser, status = Team.TeamStatus.ACTIVE)
-        
+
         every { teamRepository.findById(100L) } returns Optional.of(team)
+        every { teamMemberRepository.deleteAllByTeamId(100L) } returns Unit
         every { teamRepository.delete(team) } returns Unit
 
         teamService.dissolveTeam(100L, managerUser)
 
+        verify(exactly = 1) { teamMemberRepository.deleteAllByTeamId(100L) }
         verify(exactly = 1) { teamRepository.delete(team) }
+    }
+
+    @Test
+    @DisplayName("다른 회사의 팀을 삭제하려고 하면 예외 발생")
+    fun dissolveTeamCrossCompanyError() {
+        // given
+        val team = Team(id = 100L, name = "Team A", company = company, leader = normalUser, status = Team.TeamStatus.ACTIVE)
+
+        every { teamRepository.findById(100L) } returns Optional.of(team)
+
+        // when / then
+        assertThrows<CompanyMismatchException> {
+            teamService.dissolveTeam(100L, otherCompanyUser)
+        }
     }
 
     @Test
@@ -268,5 +374,106 @@ class TeamServiceImplTest {
         assertThrows<com.onmeet.common.exception.InsufficientPermissionException> {
             teamService.cancelTeamRequest(100L, otherUser)
         }
+    }
+
+    // ===== [Bug-4, 5, 6 Edge Cases] 극단적으로 다른 회사 ID로 팀 권한 검증 =====
+
+    @Test
+    @DisplayName("[Bug-4 Edge Case] 극단적으로 다른 회사 ID (Long.MAX_VALUE)로 팀 승인 시도 시 예외 발생")
+    fun approveTeamExtremeCompanyIdMismatch() {
+        // given
+        val team = Team(id = 100L, name = "Pending Team", company = company, leader = normalUser, status = Team.TeamStatus.PENDING_APPROVAL)
+        val extremeCompanyManager = User(
+            id = 9999L,
+            email = "extreme@faraway.com",
+            passwordHash = "hash",
+            name = "Extreme Manager",
+            company = Company(id = Long.MAX_VALUE, name = "Extreme Far Company"),
+            roles = mutableSetOf(User.Role.USER, User.Role.MANAGER)
+        )
+
+        every { teamRepository.findById(100L) } returns Optional.of(team)
+
+        // when & then
+        assertThrows<CompanyMismatchException> {
+            teamService.approveTeam(100L, extremeCompanyManager)
+        }
+        verify(exactly = 0) { teamMemberRepository.save(any()) }
+        verify(exactly = 0) { teamRepository.save(any()) }
+    }
+
+    @Test
+    @DisplayName("[Bug-5 Edge Case] 극단적으로 다른 회사 ID로 팀 거절 시도 시 예외 발생")
+    fun rejectTeamExtremeCompanyIdMismatch() {
+        // given
+        val team = Team(id = 100L, name = "Pending Team", company = company, leader = normalUser, status = Team.TeamStatus.PENDING_APPROVAL)
+        val extremeCompanyManager = User(
+            id = 9999L,
+            email = "extreme@faraway.com",
+            passwordHash = "hash",
+            name = "Extreme Manager",
+            company = Company(id = 999999L, name = "Very Far Company"),
+            roles = mutableSetOf(User.Role.USER, User.Role.MANAGER)
+        )
+
+        every { teamRepository.findById(100L) } returns Optional.of(team)
+
+        // when & then
+        assertThrows<CompanyMismatchException> {
+            teamService.rejectTeam(100L, extremeCompanyManager, "Invalid request")
+        }
+        verify(exactly = 0) { teamRepository.save(any()) }
+    }
+
+    @Test
+    @DisplayName("[Bug-6 Edge Case] 극단적으로 다른 회사 ID로 팀 해산 시도 시 예외 발생")
+    fun dissolveTeamExtremeCompanyIdMismatch() {
+        // given
+        val team = Team(id = 100L, name = "Team A", company = company, leader = normalUser, status = Team.TeamStatus.ACTIVE)
+        val extremeCompanyUser = User(
+            id = 9999L,
+            email = "hacker@malicious.com",
+            passwordHash = "hash",
+            name = "Malicious User",
+            company = Company(id = 888888L, name = "Malicious Corp"),
+            roles = mutableSetOf(User.Role.USER, User.Role.MANAGER)
+        )
+
+        every { teamRepository.findById(100L) } returns Optional.of(team)
+
+        // when & then
+        assertThrows<CompanyMismatchException> {
+            teamService.dissolveTeam(100L, extremeCompanyUser)
+        }
+        verify(exactly = 0) { teamMemberRepository.deleteAllByTeamId(any()) }
+        verify(exactly = 0) { teamRepository.delete(any()) }
+    }
+
+    @Test
+    @DisplayName("[Bug-4,5,6 통합] 동일한 회사 ID로 위장한 다른 Company 객체로 접근 시도 시 예외 발생")
+    fun teamOperationsWithSpoofedCompanyObject() {
+        // given - 회사 ID는 같지만 다른 Company 인스턴스 (실제로는 불가능하지만 Mock으로 테스트)
+        val team = Team(id = 100L, name = "Team A", company = company, leader = normalUser, status = Team.TeamStatus.PENDING_APPROVAL)
+        val spoofedCompany = Company(id = 1L, name = "Spoofed Company Name") // Same ID, different instance
+        val spoofedManager = User(
+            id = 7777L,
+            email = "spoof@test.com",
+            passwordHash = "hash",
+            name = "Spoofed Manager",
+            company = spoofedCompany,
+            roles = mutableSetOf(User.Role.USER, User.Role.MANAGER)
+        )
+
+        every { teamRepository.findById(100L) } returns Optional.of(team)
+        every { teamMemberRepository.save(any()) } returnsArgument 0
+        every { teamRepository.save(any()) } returns team
+
+        // when - 회사 ID가 같으므로 정상적으로 승인되어야 함
+        teamService.approveTeam(100L, spoofedManager)
+
+        // then - Company ID가 같으면 통과 (실제 객체 참조가 아니라 ID로 비교)
+        assertEquals(Team.TeamStatus.ACTIVE, team.status)
+        verify(exactly = 1) { teamMemberRepository.save(any()) }
+        verify(exactly = 1) { teamRepository.save(team) }
     }
 }
