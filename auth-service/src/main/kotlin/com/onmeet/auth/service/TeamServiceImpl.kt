@@ -126,8 +126,23 @@ class TeamServiceImpl(
 
     @Transactional
     override fun approveTeam(teamId: Long, approver: User): Unit {
+        // Service layer permission validation (defense in depth with Controller's @PreAuthorize)
+        if (!approver.isManager()) {
+            throw InsufficientPermissionException("Only managers can approve teams")
+        }
+
         val team = teamRepository.findById(teamId)
             .orElseThrow { TeamNotFoundException("Team not found: $teamId") }
+
+        // Verify the manager belongs to the same company
+        if (!team.belongsToCompany(approver.company.requireId())) {
+            throw CompanyMismatchException("Manager can only approve teams in their own company")
+        }
+
+        // Only pending teams can be approved
+        if (team.status != Team.TeamStatus.PENDING_APPROVAL) {
+            throw IllegalStateException("Only pending teams can be approved (current: ${team.status})")
+        }
 
         team.status = Team.TeamStatus.ACTIVE
 
@@ -146,12 +161,27 @@ class TeamServiceImpl(
 
     @Transactional
     override fun rejectTeam(teamId: Long, approver: User, reason: String?): Unit {
+        // Service layer permission validation (defense in depth with Controller's @PreAuthorize)
+        if (!approver.isManager()) {
+            throw InsufficientPermissionException("Only managers can reject teams")
+        }
+
         val team = teamRepository.findById(teamId)
             .orElseThrow { TeamNotFoundException("Team not found: $teamId") }
-        
+
+        // Verify the manager belongs to the same company
+        if (!team.belongsToCompany(approver.company.requireId())) {
+            throw CompanyMismatchException("Manager can only reject teams in their own company")
+        }
+
+        // Only pending teams can be rejected
+        if (team.status != Team.TeamStatus.PENDING_APPROVAL) {
+            throw IllegalStateException("Only pending teams can be rejected (current: ${team.status})")
+        }
+
         team.status = Team.TeamStatus.REJECTED
         team.rejectionReason = reason
-        
+
         teamRepository.save(team)
     }
 
@@ -233,9 +263,19 @@ class TeamServiceImpl(
 
     @Transactional
     override fun dissolveTeam(teamId: Long, requester: User): Unit {
-        teamRepository.findById(teamId)
+        val team = teamRepository.findById(teamId)
             .orElseThrow { TeamNotFoundException("Team not found: $teamId") }
-            .let { teamRepository.delete(it) }
+
+        // Verify the requester belongs to the same company
+        if (!team.belongsToCompany(requester.company.requireId())) {
+            throw CompanyMismatchException("Cannot dissolve teams in another company")
+        }
+
+        // Explicitly delete all TeamMember associations before deleting the team
+        // (defense in depth even though cascade should handle it)
+        teamMemberRepository.deleteAllByTeamId(teamId)
+
+        teamRepository.delete(team)
     }
 
     @Transactional
