@@ -12,7 +12,9 @@ ext {
     springDocVersion = '2.6.0'
     springDocWebFluxVersion = '2.2.0'
     lombokVersion = '1.18.36'
+    mapstructVersion = '1.6.2'
     lombokMapstructBindingVersion = '0.2.0'
+    resilience4jVersion = '2.2.0'
 }
 
 subprojects {

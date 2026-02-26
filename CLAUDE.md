@@ -67,3 +67,8 @@ docker compose down                      # Stop all
 - Main branch: `develop`
 - Feature branches: `feat/ONMEET-<ticket>`
 - Commit style: `type(scope): description` (e.g., `feat(auth-service): Add profile management`)
+
+## Antigravity (Architect) & Claude Code (Developer) Collaboration Guidelines
+- **Interactive Review**: 상위 기획자(Antigravity)는 CC에게 작업을 단순히 던지고 끝내는 것이 아니라, PTY나 파이프라인을 통해 상호작용하며 CC의 산출물을 중간 점검합니다.
+- **Course Correction**: CC가 잘못된 방향으로 코딩하거나 아키텍처 원칙(MSA, 의존성 격리 등)을 어길 경우, 즉각 개입하여 토론하고 더 나은 설계 방향으로 수정(Refactoring)을 지시합니다.
+- **Scope of Intervention**: 보안(Security), 트랜잭션(Transaction), 성능(Performance) 최적화 및 공통 모듈 설계 시 특히 꼼꼼하게 검토(Review)합니다.
