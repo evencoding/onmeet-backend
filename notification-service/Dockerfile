@@ -9,7 +9,7 @@ COPY gradle gradle
 COPY . .
 
 # 빌드 수행
-RUN ./gradlew :notification-service:build -x test --no-daemon
+RUN ./gradlew clean :notification-service:build -x test --no-daemon
 
 
 

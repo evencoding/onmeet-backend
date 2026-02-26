@@ -49,6 +49,16 @@ dependencies {
 
     // Swagger / OpenAPI
     implementation "org.springdoc:springdoc-openapi-starter-webmvc-ui:${springDocVersion}"
+
+    // Observability - Micrometer (Prometheus & Brave Tracing)
+    implementation 'io.micrometer:micrometer-registry-prometheus'
+    implementation 'io.micrometer:micrometer-tracing-bridge-brave'
+    implementation 'io.zipkin.reporter2:zipkin-reporter-brave'
+
+    // Resilience4j Circuit Breaker
+    implementation "io.github.resilience4j:resilience4j-spring-boot3:${resilience4jVersion}"
+    implementation "io.github.resilience4j:resilience4j-circuitbreaker:${resilience4jVersion}"
+    implementation 'org.springframework.boot:spring-boot-starter-aop'
 }
 
 dependencyManagement {
