@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"strconv"
 
+	"com.onmeet.file/internal/model"
 	"com.onmeet.file/internal/service"
 	"github.com/gin-gonic/gin"
 )
@@ -37,11 +38,15 @@ func NewFileHandler(svc service.FileService) *FileHandler {
 // @Param        ownerType formData string false "Owner Type (e.g., USER, TEAM)"
 // @Param        ownerId formData string false "Owner ID"
 // @Success      200  {array}   model.FileMetadata
-// @Failure      500  {object}  map[string]string
+// @Failure      500  {object}  model.ErrorResponse
 // @Router       /upload [post]
 func (h *FileHandler) Upload(c *gin.Context) {
 	// MultipartForm 데이터를 파싱합니다.
-	form, _ := c.MultipartForm()
+	form, err := c.MultipartForm()
+	if err != nil {
+		c.JSON(http.StatusBadRequest, model.NewErrorResponse(http.StatusBadRequest, "Invalid multipart form: "+err.Error()))
+		return
+	}
 	files := form.File["files"]
 	category := c.PostForm("category")
 	ownerType := c.PostForm("ownerType")
@@ -58,7 +63,7 @@ func (h *FileHandler) Upload(c *gin.Context) {
 	results, err := h.svc.UploadFiles(files, category, uploaderId, ownerType, ownerId)
 	if err != nil {
 		// 에러 발생 시 JSON 형태로 에러 메시지를 응답합니다.
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.JSON(http.StatusInternalServerError, model.NewErrorResponse(http.StatusInternalServerError, err.Error()))
 		return
 	}
 
@@ -81,7 +86,11 @@ func (h *FileHandler) Upload(c *gin.Context) {
 // @Success      202  {object}  map[string]interface{}
 // @Router       /upload-async [post]
 func (h *FileHandler) UploadAsync(c *gin.Context) {
-	form, _ := c.MultipartForm()
+	form, err := c.MultipartForm()
+	if err != nil {
+		c.JSON(http.StatusBadRequest, model.NewErrorResponse(http.StatusBadRequest, "Invalid multipart form: "+err.Error()))
+		return
+	}
 	files := form.File["files"]
 	category := c.PostForm("category")
 	ownerType := c.PostForm("ownerType")
@@ -113,16 +122,20 @@ func (h *FileHandler) UploadAsync(c *gin.Context) {
 // @Produce      json
 // @Param        fileId path int true "File ID"
 // @Success      200  {object}  model.FileMetadata
-// @Failure      404  {object}  map[string]string
+// @Failure      404  {object}  model.ErrorResponse
 // @Router       /{fileId} [get]
 func (h *FileHandler) GetFileInfo(c *gin.Context) {
 	// URL 경로 파라미터(/:fileId)를 가져옵니다. @PathVariable과 같습니다.
 	idStr := c.Param("fileId")
-	id, _ := strconv.ParseUint(idStr, 10, 64)
+	id, err := strconv.ParseUint(idStr, 10, 64)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, model.NewErrorResponse(http.StatusBadRequest, "Invalid file ID: "+idStr))
+		return
+	}
 
 	metadata, err := h.svc.GetFile(uint(id))
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "File not found"})
+		c.JSON(http.StatusNotFound, model.NewErrorResponse(http.StatusNotFound, "File not found"))
 		return
 	}
 
@@ -135,11 +148,15 @@ func (h *FileHandler) GetFileInfo(c *gin.Context) {
 // @Tags         file
 // @Param        fileId path int true "File ID"
 // @Success      204
-// @Failure      500  {object}  map[string]string
+// @Failure      500  {object}  model.ErrorResponse
 // @Router       /{fileId} [delete]
 func (h *FileHandler) DeleteFile(c *gin.Context) {
 	idStr := c.Param("fileId")
-	id, _ := strconv.ParseUint(idStr, 10, 64)
+	id, err := strconv.ParseUint(idStr, 10, 64)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, model.NewErrorResponse(http.StatusBadRequest, "Invalid file ID: "+idStr))
+		return
+	}
 
 	var requesterId int64
 	if idStrVal, exists := c.Get("userId"); exists {
@@ -149,9 +166,9 @@ func (h *FileHandler) DeleteFile(c *gin.Context) {
 	// 요청 헤더에서 쿠키 정보를 추출합니다.
 	cookie := c.GetHeader("Cookie")
 
-	err := h.svc.DeleteFile(uint(id), requesterId, cookie)
+	err = h.svc.DeleteFile(uint(id), requesterId, cookie)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.JSON(http.StatusInternalServerError, model.NewErrorResponse(http.StatusInternalServerError, err.Error()))
 		return
 	}
 
@@ -164,20 +181,20 @@ func (h *FileHandler) DeleteFile(c *gin.Context) {
 // @Description  Delete all profile images uploaded by the current user.
 // @Tags         file
 // @Success      204
-// @Failure      500  {object}  map[string]string
+// @Failure      500  {object}  model.ErrorResponse
 // @Router       /me/profile [delete]
 func (h *FileHandler) DeleteMyProfile(c *gin.Context) {
 	var uploaderId int64
 	if idStr, exists := c.Get("userId"); exists {
 		uploaderId, _ = strconv.ParseInt(idStr.(string), 10, 64)
 	} else {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+		c.JSON(http.StatusUnauthorized, model.NewErrorResponse(http.StatusUnauthorized, "Unauthorized"))
 		return
 	}
 
 	err := h.svc.DeleteMyProfile(uploaderId)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.JSON(http.StatusInternalServerError, model.NewErrorResponse(http.StatusInternalServerError, err.Error()))
 		return
 	}
 
@@ -192,13 +209,13 @@ func (h *FileHandler) DeleteMyProfile(c *gin.Context) {
 // @Produce      json
 // @Param        request body GenerateProfileRequest true "Request Body"
 // @Success      200  {object}  model.FileMetadata
-// @Failure      500  {object}  map[string]string
+// @Failure      500  {object}  model.ErrorResponse
 // @Router       /profile/default [post]
 func (h *FileHandler) GenerateProfileImage(c *gin.Context) {
 	var req GenerateProfileRequest
 
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.JSON(http.StatusBadRequest, model.NewErrorResponse(http.StatusBadRequest, err.Error()))
 		return
 	}
 
@@ -210,7 +227,7 @@ func (h *FileHandler) GenerateProfileImage(c *gin.Context) {
 
 	metadata, err := h.svc.GenerateDefaultProfileImage(req.Name, req.Color, uploaderId, req.OwnerType, req.OwnerId)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.JSON(http.StatusInternalServerError, model.NewErrorResponse(http.StatusInternalServerError, err.Error()))
 		return
 	}
 
@@ -223,15 +240,19 @@ func (h *FileHandler) GenerateProfileImage(c *gin.Context) {
 // @Tags         file
 // @Param        fileId path int true "File ID"
 // @Success      200  {string}  binary
-// @Failure      404  {object}  map[string]string
+// @Failure      404  {object}  model.ErrorResponse
 // @Router       /render/{fileId} [get]
 func (h *FileHandler) RenderFile(c *gin.Context) {
 	idStr := c.Param("fileId")
-	id, _ := strconv.ParseUint(idStr, 10, 64)
+	id, err := strconv.ParseUint(idStr, 10, 64)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, model.NewErrorResponse(http.StatusBadRequest, "Invalid file ID: "+idStr))
+		return
+	}
 
 	content, contentType, err := h.svc.RenderFile(uint(id))
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "File not found or render error"})
+		c.JSON(http.StatusNotFound, model.NewErrorResponse(http.StatusNotFound, "File not found or render error"))
 		return
 	}
 

@@ -12,6 +12,7 @@ import (
 	"com.onmeet.file/internal/client"
 	"com.onmeet.file/internal/config"
 	"com.onmeet.file/internal/model"
+	"github.com/patrickmn/go-cache"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 )
@@ -306,15 +307,147 @@ func TestFileService_RenderFile(t *testing.T) {
 	assert.Equal(t, "file content", string(content))
 	assert.Equal(t, "text/plain", contentType)
 
-	// [Scenario 2] Cache Hit - 두 번째 요청시 S3를 호출하지 않고 인메모리 캐시에서 반환
-	repoMock.On("FindByID", uint(1)).Return(meta, nil)
-
+	// [Scenario 2] Cache Hit - 두 번째 요청시 S3와 DB 모두 호출하지 않음 (Bug-10 수정 검증)
 	content2, contentType2, err2 := fs.RenderFile(1)
 
 	assert.NoError(t, err2)
 	assert.Equal(t, "file content", string(content2))
 	assert.Equal(t, "text/plain", contentType2)
 
+	repoMock.AssertExpectations(t) // FindByID는 한 번만 호출됨
+	s3Mock.AssertExpectations(t)   // GetFile도 한 번만 호출됨
+}
+
+func TestFileService_DeleteMyProfile_PartialFailure(t *testing.T) {
+	// [Bug-3 수정 검증] DeleteMyProfile에서 부분 실패 시 에러 수집 및 반환
+	repoMock := new(mockFileRepository)
+	s3Mock := new(MockS3Service)
+	fs := NewFileService(repoMock, s3Mock, nil, nil, nil)
+
+	uploaderId := int64(123)
+	files := []*model.FileMetadata{
+		{ID: 1, OwnerType: "USER", OwnerID: "123", Category: "profile", FileName: "file1.jpg"},
+		{ID: 2, OwnerType: "USER", OwnerID: "123", Category: "profile", FileName: "file2.jpg"},
+		{ID: 3, OwnerType: "USER", OwnerID: "123", Category: "profile", FileName: "file3.jpg"},
+	}
+
+	repoMock.On("FindByUploaderAndCategory", uploaderId, "profile").Return(files, nil)
+	s3Mock.On("DeleteFile", "USER/123/profile/file1.jpg").Return(nil)
+	s3Mock.On("DeleteFile", "USER/123/profile/file2.jpg").Return(assert.AnError) // S3 삭제 실패
+	s3Mock.On("DeleteFile", "USER/123/profile/file3.jpg").Return(nil)
+	repoMock.On("Delete", uint(1)).Return(nil)
+	repoMock.On("Delete", uint(3)).Return(assert.AnError) // DB 삭제 실패
+
+	err := fs.DeleteMyProfile(uploaderId)
+
+	// 부분 실패가 발생하므로 에러가 반환되어야 함
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "partial delete errors")
+	assert.Contains(t, err.Error(), "S3 delete failed")
+	assert.Contains(t, err.Error(), "DB delete failed")
+
+	repoMock.AssertExpectations(t)
+	s3Mock.AssertExpectations(t)
+}
+
+func TestFileService_UploadFileAsync_GoroutineSafety(t *testing.T) {
+	// [Bug-11 수정 검증] 고루틴 진입 전 파일 복사로 안전성 확보
+	repoMock := new(mockFileRepository)
+	s3Mock := new(MockS3Service)
+	epMock := new(MockEventProducer)
+	cfg := &config.Config{CloudFrontDomain: "cdn.test.com"}
+	fs := NewFileService(repoMock, s3Mock, epMock, nil, cfg)
+
+	header, err := createMultipartFileHeader("async_safe.txt", []byte("safe content"))
+	assert.NoError(t, err)
+
+	uploaderId := int64(789)
+
+	s3Mock.On("UploadFile", mock.AnythingOfType("string"), mock.Anything, mock.AnythingOfType("string")).Return(nil)
+	repoMock.On("Save", mock.AnythingOfType("*model.FileMetadata")).Return(nil)
+	epMock.On("SendFileUploadEvent", mock.AnythingOfType("string"), mock.AnythingOfType("uint"), mock.AnythingOfType("string"), mock.AnythingOfType("string"), uploaderId, "corr-id").Return(nil)
+
+	// 고루틴 실행
+	fs.UploadFileAsync(header, "safe_docs", &uploaderId, "USER", "789", "topic", "corr-id")
+
+	// 고루틴 완료 대기
+	time.Sleep(200 * time.Millisecond)
+
+	s3Mock.AssertExpectations(t)
+	repoMock.AssertExpectations(t)
+	epMock.AssertExpectations(t)
+}
+
+func TestFileService_RenderFile_CacheTTLExpiration(t *testing.T) {
+	// [Bug-9, 10 Edge Case] 캐시 TTL 만료 후 재호출 시 캐시 miss 및 DB/S3 재조회 검증
+	repoMock := new(mockFileRepository)
+	s3Mock := new(MockS3Service)
+
+	// 매우 짧은 TTL(50ms)로 fileService를 직접 생성하여 테스트
+	cfg := &config.Config{CloudFrontDomain: "cdn.test.com"}
+	uploaderId := int64(123)
+
+	// fileService를 직접 만들되, TTL을 매우 짧게 설정
+	fs := &fileService{
+		repo:       repoMock,
+		s3:         s3Mock,
+		cfg:        cfg,
+		fileCache:  cache.New(50*time.Millisecond, 10*time.Millisecond), // TTL: 50ms, Cleanup: 10ms
+	}
+
+	meta := &model.FileMetadata{
+		OwnerType:   "USER",
+		OwnerID:     "123",
+		Category:    "docs",
+		FileName:    "test.txt",
+		ContentType: "text/plain",
+		UploaderID:  &uploaderId,
+	}
+
+	// [Phase 1] 첫 번째 호출 - DB와 S3에서 데이터를 가져오고 캐시에 저장
+	repoMock.On("FindByID", uint(1)).Return(meta, nil).Once()
+	s3Mock.On("GetFile", "USER/123/docs/test.txt").Return(
+		io.NopCloser(bytes.NewReader([]byte("cached content"))),
+		"text/plain",
+		nil,
+	).Once()
+
+	content1, contentType1, err1 := fs.RenderFile(1)
+
+	assert.NoError(t, err1)
+	assert.Equal(t, "cached content", string(content1))
+	assert.Equal(t, "text/plain", contentType1)
+
+	// [Phase 2] TTL이 만료되기 전 즉시 재호출 - 캐시 히트 (DB/S3 호출 없음)
+	content2, contentType2, err2 := fs.RenderFile(1)
+
+	assert.NoError(t, err2)
+	assert.Equal(t, "cached content", string(content2))
+	assert.Equal(t, "text/plain", contentType2)
+
+	// Mock 검증: FindByID와 GetFile은 여전히 1회만 호출됨 (캐시 히트)
+	repoMock.AssertExpectations(t)
+	s3Mock.AssertExpectations(t)
+
+	// [Phase 3] TTL 만료 대기 (100ms > 50ms TTL)
+	time.Sleep(100 * time.Millisecond)
+
+	// TTL 만료 후 재호출을 위한 Mock 설정 (두 번째 호출)
+	repoMock.On("FindByID", uint(1)).Return(meta, nil).Once()
+	s3Mock.On("GetFile", "USER/123/docs/test.txt").Return(
+		io.NopCloser(bytes.NewReader([]byte("fresh content after expiry"))),
+		"text/plain",
+		nil,
+	).Once()
+
+	// TTL 만료 후 재호출 - 캐시 미스로 DB와 S3를 다시 조회해야 함
+	content3, contentType3, err3 := fs.RenderFile(1)
+
+	assert.NoError(t, err3)
+	assert.Equal(t, "fresh content after expiry", string(content3))
+	assert.Equal(t, "text/plain", contentType3)
+
+	// Mock 검증: FindByID와 GetFile이 각각 2회씩 호출됨 (첫 호출 + TTL 만료 후 재호출)
 	repoMock.AssertExpectations(t)
 	s3Mock.AssertExpectations(t)
 }

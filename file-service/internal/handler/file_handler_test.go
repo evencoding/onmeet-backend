@@ -246,3 +246,203 @@ func TestFileHandler_RenderFile(t *testing.T) {
 	assert.Equal(t, "preview data", w.Body.String())
 	mockService.AssertExpectations(t)
 }
+
+// --- Bug-7 수정 검증 테스트: 에러 파싱 누락 수정 ---
+
+func TestFileHandler_Upload_InvalidMultipartForm(t *testing.T) {
+	// [Bug-7 수정 검증] 잘못된 multipart form 요청 시 400 에러 반환
+	gin.SetMode(gin.TestMode)
+	mockService := new(MockFileService)
+	handler := NewFileHandler(mockService)
+
+	router := gin.Default()
+	router.POST("/upload", handler.Upload)
+
+	// 잘못된 Content-Type (multipart가 아님)
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest("POST", "/upload", bytes.NewBuffer([]byte("invalid")))
+	req.Header.Set("Content-Type", "application/json")
+	router.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusBadRequest, w.Code)
+	assert.Contains(t, w.Body.String(), "Invalid multipart form")
+}
+
+func TestFileHandler_UploadAsync_InvalidMultipartForm(t *testing.T) {
+	// [Bug-7 수정 검증] 비동기 업로드에서 잘못된 multipart form 요청 시 400 에러 반환
+	gin.SetMode(gin.TestMode)
+	mockService := new(MockFileService)
+	handler := NewFileHandler(mockService)
+
+	router := gin.Default()
+	router.POST("/upload-async", handler.UploadAsync)
+
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest("POST", "/upload-async", bytes.NewBuffer([]byte("invalid")))
+	req.Header.Set("Content-Type", "text/plain")
+	router.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusBadRequest, w.Code)
+	assert.Contains(t, w.Body.String(), "Invalid multipart form")
+}
+
+func TestFileHandler_GetFileInfo_InvalidFileId(t *testing.T) {
+	// [Bug-7 수정 검증] 잘못된 파일 ID 형식 요청 시 400 에러 반환
+	gin.SetMode(gin.TestMode)
+	mockService := new(MockFileService)
+	handler := NewFileHandler(mockService)
+
+	router := gin.Default()
+	router.GET("/:fileId", handler.GetFileInfo)
+
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest("GET", "/invalid-id", nil)
+	router.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusBadRequest, w.Code)
+	assert.Contains(t, w.Body.String(), "Invalid file ID")
+}
+
+func TestFileHandler_DeleteFile_InvalidFileId(t *testing.T) {
+	// [Bug-7 수정 검증] 잘못된 파일 ID로 삭제 요청 시 400 에러 반환
+	gin.SetMode(gin.TestMode)
+	mockService := new(MockFileService)
+	handler := NewFileHandler(mockService)
+
+	router := gin.Default()
+	router.DELETE("/:fileId", handler.DeleteFile)
+
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest("DELETE", "/abc123", nil)
+	router.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusBadRequest, w.Code)
+	assert.Contains(t, w.Body.String(), "Invalid file ID")
+}
+
+func TestFileHandler_RenderFile_InvalidFileId(t *testing.T) {
+	// [Bug-7 수정 검증] 잘못된 파일 ID로 렌더링 요청 시 400 에러 반환
+	gin.SetMode(gin.TestMode)
+	mockService := new(MockFileService)
+	handler := NewFileHandler(mockService)
+
+	router := gin.Default()
+	router.GET("/render/:fileId", handler.RenderFile)
+
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest("GET", "/render/not-a-number", nil)
+	router.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusBadRequest, w.Code)
+	assert.Contains(t, w.Body.String(), "Invalid file ID")
+}
+
+// ===== [Bug-7 Extreme Edge Cases] 극단적인 파싱 에러 케이스 =====
+
+func TestFileHandler_GetFileInfo_MaxUint64Overflow(t *testing.T) {
+	// [Bug-7 Extreme Edge Case] MaxUint64를 초과하는 숫자로 요청 시 400 에러 반환
+	gin.SetMode(gin.TestMode)
+	mockService := new(MockFileService)
+	handler := NewFileHandler(mockService)
+
+	router := gin.Default()
+	router.GET("/:fileId", handler.GetFileInfo)
+
+	// MaxUint64 = 18446744073709551615, 이보다 큰 숫자
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest("GET", "/18446744073709551616", nil)
+	router.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusBadRequest, w.Code)
+	assert.Contains(t, w.Body.String(), "Invalid file ID")
+}
+
+func TestFileHandler_DeleteFile_NegativeFileId(t *testing.T) {
+	// [Bug-7 Extreme Edge Case] 음수 파일 ID로 삭제 요청 시 400 에러 반환
+	gin.SetMode(gin.TestMode)
+	mockService := new(MockFileService)
+	handler := NewFileHandler(mockService)
+
+	router := gin.Default()
+	router.DELETE("/:fileId", handler.DeleteFile)
+
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest("DELETE", "/-1", nil)
+	router.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusBadRequest, w.Code)
+	assert.Contains(t, w.Body.String(), "Invalid file ID")
+}
+
+func TestFileHandler_RenderFile_VeryLargeNumber(t *testing.T) {
+	// [Bug-7 Extreme Edge Case] 매우 큰 숫자 문자열로 렌더링 요청 시 400 에러 반환
+	gin.SetMode(gin.TestMode)
+	mockService := new(MockFileService)
+	handler := NewFileHandler(mockService)
+
+	router := gin.Default()
+	router.GET("/render/:fileId", handler.RenderFile)
+
+	// 100자리 숫자 (ParseUint가 처리할 수 없는 크기)
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest("GET", "/render/99999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999", nil)
+	router.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusBadRequest, w.Code)
+	assert.Contains(t, w.Body.String(), "Invalid file ID")
+}
+
+func TestFileHandler_GetFileInfo_SpecialCharacters(t *testing.T) {
+	// [Bug-7 Extreme Edge Case] 특수문자가 포함된 파일 ID로 요청 시 400 에러 반환
+	gin.SetMode(gin.TestMode)
+	mockService := new(MockFileService)
+	handler := NewFileHandler(mockService)
+
+	router := gin.Default()
+	router.GET("/:fileId", handler.GetFileInfo)
+
+	testCases := []string{
+		"123abc!@#",
+		"12.34",
+		"0x1234", // hexadecimal
+		"1e10",   // scientific notation
+		"",       // empty string (Gin may handle this differently)
+	}
+
+	for _, tc := range testCases {
+		w := httptest.NewRecorder()
+		req, _ := http.NewRequest("GET", "/"+tc, nil)
+		router.ServeHTTP(w, req)
+
+		// Empty string may route to a different handler, so we only check non-empty cases
+		if tc != "" {
+			assert.Equal(t, http.StatusBadRequest, w.Code, "Failed for input: "+tc)
+			assert.Contains(t, w.Body.String(), "Invalid file ID", "Failed for input: "+tc)
+		}
+	}
+}
+
+func TestFileHandler_DeleteFile_ZeroFileId(t *testing.T) {
+	// [Bug-7 Edge Case] 0번 파일 ID는 유효한 uint이지만 실제로는 존재하지 않는 ID
+	// (DB의 auto-increment는 보통 1부터 시작)
+	gin.SetMode(gin.TestMode)
+	mockService := new(MockFileService)
+	handler := NewFileHandler(mockService)
+
+	router := gin.Default()
+	router.DELETE("/:fileId", func(c *gin.Context) {
+		c.Set("userId", "123")
+		handler.DeleteFile(c)
+	})
+
+	// 0은 파싱은 성공하지만 서비스 레이어에서 NotFound로 처리될 가능성이 높음
+	mockService.On("DeleteFile", uint(0), int64(123), mock.Anything).Return(assert.AnError)
+
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest("DELETE", "/0", nil)
+	router.ServeHTTP(w, req)
+
+	// 0은 유효한 uint이므로 파싱은 성공, 하지만 서비스에서 에러 발생
+	assert.NotEqual(t, http.StatusBadRequest, w.Code) // 파싱 에러는 아님
+	mockService.AssertExpectations(t)
+}

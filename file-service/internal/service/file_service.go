@@ -1,6 +1,7 @@
 package service
 
 import (
+	"bytes"
 	"fmt"
 	"io"
 	"log"
@@ -9,13 +10,14 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
-	"sync"
+	"time"
 
 	"com.onmeet.file/internal/client"
 	"com.onmeet.file/internal/config"
 	"com.onmeet.file/internal/model"
 	"com.onmeet.file/internal/repository"
 	"github.com/google/uuid"
+	"github.com/patrickmn/go-cache"
 )
 
 // FileService 인터페이스는 파일 서비스의 핵심 비즈니스 로직을 정의합니다.
@@ -31,13 +33,19 @@ type FileService interface {
 	RenderFile(id uint) ([]byte, string, error)
 }
 
+// cachedFile은 캐시에 저장되는 파일 데이터와 메타데이터를 담는 구조체입니다.
+type cachedFile struct {
+	Data        []byte
+	ContentType string
+}
+
 type fileService struct {
 	repo          repository.FileRepository
 	s3            S3Service
 	eventProducer EventProducer
 	authClient    client.AuthClient
 	cfg           *config.Config
-	fileCache     sync.Map // 간단한 인메모리 캐시 (Key: fileId, Value: []byte)
+	fileCache     *cache.Cache // TTL 기반 캐시 (Key: fileId, Value: cachedFile)
 }
 
 // NewFileService는 서비스 구현체를 생성하며 의존성(Repo, S3, Kafka, AuthClient)을 주입받습니다.
@@ -49,7 +57,7 @@ func NewFileService(repo repository.FileRepository, s3 S3Service, ep EventProduc
 		eventProducer: ep,
 		authClient:    auth,
 		cfg:           cfg,
-		fileCache:     sync.Map{},
+		fileCache:     cache.New(1*time.Hour, 10*time.Minute), // TTL: 1시간, Cleanup: 10분
 	}
 }
 
@@ -74,7 +82,12 @@ func (s *fileService) processFileUpload(fileHeader *multipart.FileHeader, catego
 	}
 	defer file.Close()
 
-	ext := filepath.Ext(fileHeader.Filename)
+	return s.processFileUploadFromReader(file, fileHeader.Filename, fileHeader.Size, fileHeader.Header.Get("Content-Type"), category, uploaderId, ownerType, ownerId)
+}
+
+// processFileUploadFromReader는 io.Reader로부터 파일 업로드를 처리합니다 (고루틴 안전).
+func (s *fileService) processFileUploadFromReader(reader io.Reader, originalFilename string, fileSize int64, contentType, category string, uploaderId *int64, ownerType, ownerId string) (*model.FileMetadata, error) {
+	ext := filepath.Ext(originalFilename)
 	fileName := uuid.New().String() + ext
 
 	// 기본값 처리 로직
@@ -90,7 +103,7 @@ func (s *fileService) processFileUpload(fileHeader *multipart.FileHeader, catego
 	savedKey := fmt.Sprintf("%s/%s/%s/%s", ownerType, ownerId, category, fileName)
 
 	// 1. S3 업로드 실행
-	err = s.s3.UploadFile(savedKey, file, fileHeader.Header.Get("Content-Type"))
+	err := s.s3.UploadFile(savedKey, reader, contentType)
 	if err != nil {
 		return nil, err
 	}
@@ -99,10 +112,10 @@ func (s *fileService) processFileUpload(fileHeader *multipart.FileHeader, catego
 	metadata := &model.FileMetadata{
 		FileName:         fileName,
 		Category:         category,
-		OriginalFileName: fileHeader.Filename,
+		OriginalFileName: originalFilename,
 		S3URL:            fmt.Sprintf("https://%s/%s", s.cfg.CloudFrontDomain, savedKey),
-		FileSize:         fileHeader.Size,
-		ContentType:      fileHeader.Header.Get("Content-Type"),
+		FileSize:         fileSize,
+		ContentType:      contentType,
 		OwnerType:        ownerType,
 		OwnerID:          ownerId,
 		UploaderID:       uploaderId,
@@ -176,7 +189,7 @@ func (s *fileService) DeleteFile(id uint, requesterId int64, cookie string) erro
 	}
 
 	// 캐시 삭제 (데이터 불일치 방지)
-	s.fileCache.Delete(id)
+	s.fileCache.Delete(fmt.Sprintf("%d", id))
 
 	// DB 메타데이터 삭제
 	return s.repo.Delete(id)
@@ -188,20 +201,50 @@ func (s *fileService) DeleteMyProfile(uploaderId int64) error {
 		return err
 	}
 
+	var errs []string
 	for _, metadata := range files {
 		savedKey := fmt.Sprintf("%s/%s/%s/%s", metadata.OwnerType, metadata.OwnerID, metadata.Category, metadata.FileName)
-		_ = s.s3.DeleteFile(savedKey)
-		s.fileCache.Delete(metadata.ID)
-		_ = s.repo.Delete(metadata.ID)
+		if err := s.s3.DeleteFile(savedKey); err != nil {
+			errs = append(errs, fmt.Sprintf("S3 delete failed for %s: %v", savedKey, err))
+			continue // S3 실패 시 DB 삭제 시도하지 않음 (고아 방지)
+		}
+		s.fileCache.Delete(fmt.Sprintf("%d", metadata.ID))
+		if err := s.repo.Delete(metadata.ID); err != nil {
+			errs = append(errs, fmt.Sprintf("DB delete failed for ID %d: %v", metadata.ID, err))
+		}
 	}
-
+	if len(errs) > 0 {
+		return fmt.Errorf("partial delete errors: %s", strings.Join(errs, "; "))
+	}
 	return nil
 }
 
 // UploadFileAsync는 고루틴(Goroutine)을 사용하여 비동기적으로 파일을 처리합니다.
+// Bug-11 수정: 고루틴 진입 전에 파일 내용을 복사하여 안전성 확보
 func (s *fileService) UploadFileAsync(fileHeader *multipart.FileHeader, category string, uploaderId *int64, ownerType, ownerId, callbackTopic, correlationId string) {
+	// 고루틴 바깥에서 파일을 읽어 복사본 생성
+	file, err := fileHeader.Open()
+	if err != nil {
+		log.Printf("Failed to open file for async upload: %v", err)
+		return
+	}
+
+	// 파일 내용을 메모리로 복사
+	var buf bytes.Buffer
+	if _, err := io.Copy(&buf, file); err != nil {
+		file.Close()
+		log.Printf("Failed to copy file content: %v", err)
+		return
+	}
+	file.Close()
+
+	// 메타데이터 복사 (고루틴에서 안전하게 사용)
+	filename := fileHeader.Filename
+	size := fileHeader.Size
+	contentType := fileHeader.Header.Get("Content-Type")
+
 	go func() {
-		metadata, err := s.processFileUpload(fileHeader, category, uploaderId, ownerType, ownerId)
+		metadata, err := s.processFileUploadFromReader(&buf, filename, size, contentType, category, uploaderId, ownerType, ownerId)
 		if err != nil {
 			log.Printf("Async upload failed: %v", err)
 			return
@@ -308,17 +351,10 @@ func (s *fileService) GenerateDefaultProfileImage(name string, color string, upl
 }
 
 func (s *fileService) RenderFile(id uint) ([]byte, string, error) {
-	// 1. 캐시 조회
-	if val, ok := s.fileCache.Load(id); ok {
-		// 캐시된 데이터 반환시, Content-Type도 어딘가 저장해야 하지만,
-		// 일단 DB조회는 빠르므로 메타데이터는 DB에서 가져오고 내용은 캐시에서 가져오는 전략
-		// 혹은, 캐시에 구조체를 저장. 간단히 []byte만 저장하고 메타데이터는 DB 조회.
-		// 성능 최적화를 위해 메타데이터도 캐싱하면 좋지만, Content-Type 확인을 위해 DB 조회는 감수.
-		metadata, err := s.repo.FindByID(id)
-		if err != nil {
-			return nil, "", err
-		}
-		return val.([]byte), metadata.ContentType, nil
+	// 1. 캐시 조회 (Bug-10 수정: ContentType도 캐시에 저장하여 DB 조회 제거)
+	if val, found := s.fileCache.Get(fmt.Sprintf("%d", id)); found {
+		cached := val.(cachedFile)
+		return cached.Data, cached.ContentType, nil
 	}
 
 	// 2. 캐시 미스 -> DB 조회
@@ -342,10 +378,12 @@ func (s *fileService) RenderFile(id uint) ([]byte, string, error) {
 		return nil, "", err
 	}
 
-	// 4. 캐시 저장 (메모리 관리 주의: 프로필 이미지는 보통 작지만, 큰 파일 캐싱은 위험할 수 있음)
-	// SVG나 작은 이미지만 캐싱하도록 제한을 걸 수도 있음 (예: 1MB 이하)
-	if len(content) < 1024*1024 { // 1MB 미만만 캐싱
-		s.fileCache.Store(id, content)
+	// 4. 캐시 저장 (메모리 관리 주의: 1MB 미만만 캐싱)
+	if len(content) < 1024*1024 {
+		s.fileCache.Set(fmt.Sprintf("%d", id), cachedFile{
+			Data:        content,
+			ContentType: contentType,
+		}, cache.DefaultExpiration) // 1시간 TTL 적용
 	}
 
 	return content, contentType, nil
