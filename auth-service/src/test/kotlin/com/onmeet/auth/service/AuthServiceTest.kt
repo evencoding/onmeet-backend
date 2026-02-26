@@ -295,7 +295,7 @@ class AuthServiceTest {
         val request = LoginRequest("test@example.com", "password")
         val authentication = io.mockk.mockk<org.springframework.security.core.Authentication>()
         val tokenResponse = TokenResponse("access_token", "refresh_token")
-        
+
         every { authenticationManager.authenticate(any()) } returns authentication
         every { tokenService.issueTokens(authentication, "test@example.com") } returns tokenResponse
 
@@ -306,5 +306,233 @@ class AuthServiceTest {
         assertEquals("access_token", response.accessToken)
         assertEquals("refresh_token", response.refreshToken)
         verify { tokenService.issueTokens(authentication, "test@example.com") }
+    }
+
+    @Test
+    // [Bug-1, Bug-2 FIX] 회원 탈퇴 시 프로필 이미지 삭제 및 토큰 무효화 검증
+    fun `withdraw should delete profile image, archive user, anonymize data, and revoke tokens`() {
+        // given
+        val company = Company(id = 1L, name = "TestCompany")
+        val user = User(
+            id = 1L,
+            email = "user@example.com",
+            passwordHash = "hashed_password",
+            name = "User Name",
+            roles = mutableSetOf(User.Role.USER),
+            company = company,
+            status = User.UserStatus.ACTIVE
+        ).apply { profileImageId = 100L }
+        val request = WithdrawRequest(password = "password", reason = "Just leaving")
+
+        every { userRepository.findByEmail("user@example.com") } returns java.util.Optional.of(user)
+        every { passwordEncoder.matches("password", "hashed_password") } returns true
+        every { withdrawnUserRepository.save(any()) } returns io.mockk.mockk()
+        every { fileClient.deleteMyProfileImage() } returns Unit
+        every { userRepository.save(any()) } returns user
+        every { tokenService.revokeTokens(null, "user@example.com") } returns Unit
+
+        // when
+        authService.withdraw("user@example.com", request)
+
+        // then
+        verify { fileClient.deleteMyProfileImage() }
+        verify { withdrawnUserRepository.save(match {
+            it.originalUserId == 1L && it.email == "user@example.com" && it.reason == "Just leaving"
+        }) }
+        verify { userRepository.save(match {
+            it.email == "withdrawn_1@onmeet.deleted" &&
+            it.name == "Withdrawn User" &&
+            it.passwordHash == "" &&
+            it.status == User.UserStatus.INACTIVE &&
+            it.profileImageId == null
+        }) }
+        verify { tokenService.revokeTokens(null, "user@example.com") }
+    }
+
+    @Test
+    fun `withdraw should succeed even if profile image deletion fails`() {
+        // given
+        val company = Company(id = 1L, name = "TestCompany")
+        val user = User(
+            id = 1L,
+            email = "user@example.com",
+            passwordHash = "hashed_password",
+            name = "User Name",
+            roles = mutableSetOf(User.Role.USER),
+            company = company,
+            status = User.UserStatus.ACTIVE
+        ).apply { profileImageId = 100L }
+        val request = WithdrawRequest(password = "password", reason = "Leaving")
+
+        every { userRepository.findByEmail("user@example.com") } returns java.util.Optional.of(user)
+        every { passwordEncoder.matches("password", "hashed_password") } returns true
+        every { withdrawnUserRepository.save(any()) } returns io.mockk.mockk()
+        every { fileClient.deleteMyProfileImage() } throws RuntimeException("S3 error")
+        every { userRepository.save(any()) } returns user
+        every { tokenService.revokeTokens(null, "user@example.com") } returns Unit
+
+        // when
+        authService.withdraw("user@example.com", request)
+
+        // then - should complete successfully despite file deletion failure
+        verify { withdrawnUserRepository.save(any()) }
+        verify { userRepository.save(any()) }
+        verify { tokenService.revokeTokens(null, "user@example.com") }
+    }
+
+    @Test
+    fun `withdraw should not attempt to delete profile image when user has none`() {
+        // given
+        val company = Company(id = 1L, name = "TestCompany")
+        val user = User(
+            id = 1L,
+            email = "user@example.com",
+            passwordHash = "hashed_password",
+            name = "User Name",
+            roles = mutableSetOf(User.Role.USER),
+            company = company,
+            status = User.UserStatus.ACTIVE
+        ) // profileImageId is null
+        val request = WithdrawRequest(password = "password", reason = "Leaving")
+
+        every { userRepository.findByEmail("user@example.com") } returns java.util.Optional.of(user)
+        every { passwordEncoder.matches("password", "hashed_password") } returns true
+        every { withdrawnUserRepository.save(any()) } returns io.mockk.mockk()
+        every { userRepository.save(any()) } returns user
+        every { tokenService.revokeTokens(null, "user@example.com") } returns Unit
+
+        // when
+        authService.withdraw("user@example.com", request)
+
+        // then
+        verify(exactly = 0) { fileClient.deleteMyProfileImage() }
+        verify { withdrawnUserRepository.save(any()) }
+        verify { userRepository.save(any()) }
+        verify { tokenService.revokeTokens(null, "user@example.com") }
+    }
+
+    @Test
+    fun `withdraw should throw InvalidPasswordException when password does not match`() {
+        // given
+        val company = Company(id = 1L, name = "TestCompany")
+        val user = User(
+            id = 1L,
+            email = "user@example.com",
+            passwordHash = "hashed_password",
+            name = "User Name",
+            roles = mutableSetOf(User.Role.USER),
+            company = company,
+            status = User.UserStatus.ACTIVE
+        )
+        val request = WithdrawRequest(password = "wrong_password", reason = "Leaving")
+
+        every { userRepository.findByEmail("user@example.com") } returns java.util.Optional.of(user)
+        every { passwordEncoder.matches("wrong_password", "hashed_password") } returns false
+
+        // when & then
+        assertThrows(InvalidPasswordException::class.java) {
+            authService.withdraw("user@example.com", request)
+        }
+        verify(exactly = 0) { withdrawnUserRepository.save(any()) }
+        verify(exactly = 0) { tokenService.revokeTokens(any(), any()) }
+    }
+
+    @Test
+    // [Bug-8 Edge Case] 기존 프로필 이미지가 있는 사용자가 회원가입 시 기존 이미지가 삭제되어야 함
+    fun `signupCompany should delete old profile image when user already has profileImageId`() {
+        // given
+        val request = CompanySignupRequest(
+            email = "test@example.com",
+            password = "password",
+            name = "Manager",
+            companyName = "TestCompany"
+        )
+        val company = Company(id = 1L, name = "TestCompany")
+        val team = Team(id = 1L, name = "Development", description = "Initial team", color = "#FFFFFF", company = company)
+        val jobTitle = JobTitle(name = "CEO", company = company)
+
+        // 기존 프로필 이미지 ID를 가진 사용자 시뮬레이션
+        val userWithOldProfile = User(
+            id = 1L,
+            email = "test@example.com",
+            passwordHash = "hashed_password",
+            name = "Manager",
+            roles = mutableSetOf(User.Role.MANAGER),
+            company = company,
+            status = User.UserStatus.ACTIVE
+        ).apply { profileImageId = 999L } // 기존 프로필 이미지 ID 설정
+
+        every { userRepository.existsByEmail(any()) } returns false
+        every { companyService.createCompany(any()) } returns company
+        every { jobTitleService.createDefaultInitialTitle(any()) } returns jobTitle
+        every { teamService.createTeam(any<Long>(), any()) } returns team
+        every { passwordEncoder.encode(any()) } returns "hashed_password"
+        every { userRepository.save(any()) } returns userWithOldProfile
+        every { fileClient.deleteMyProfileImage() } returns Unit
+        every { fileClient.generateDefaultProfileImage(any()) } returns com.onmeet.auth.client.FileMetadataResponse(
+            id = 200L,
+            fileName = "new.svg",
+            s3Url = "s3://new.svg",
+            contentType = "image/svg+xml"
+        )
+
+        // when
+        val userId = authService.signupCompany(request)
+
+        // then
+        assertEquals(1L, userId)
+        // 기존 프로필 이미지가 있으므로 정확히 1회 삭제 호출되어야 함
+        verify(exactly = 1) { fileClient.deleteMyProfileImage() }
+        verify { fileClient.generateDefaultProfileImage("Manager") }
+        verify { userRepository.save(any()) }
+    }
+
+    @Test
+    // [Bug-8 Edge Case] 프로필 이미지가 없는 사용자는 삭제 호출이 발생하지 않아야 함
+    fun `signupCompany should not delete profile image when user has no profileImageId`() {
+        // given
+        val request = CompanySignupRequest(
+            email = "test@example.com",
+            password = "password",
+            name = "Manager",
+            companyName = "TestCompany"
+        )
+        val company = Company(id = 1L, name = "TestCompany")
+        val team = Team(id = 1L, name = "Development", description = "Initial team", color = "#FFFFFF", company = company)
+        val jobTitle = JobTitle(name = "CEO", company = company)
+
+        // profileImageId가 null인 사용자
+        val userWithoutProfile = User(
+            id = 1L,
+            email = "test@example.com",
+            passwordHash = "hashed_password",
+            name = "Manager",
+            roles = mutableSetOf(User.Role.MANAGER),
+            company = company,
+            status = User.UserStatus.ACTIVE
+        ) // profileImageId is null
+
+        every { userRepository.existsByEmail(any()) } returns false
+        every { companyService.createCompany(any()) } returns company
+        every { jobTitleService.createDefaultInitialTitle(any()) } returns jobTitle
+        every { teamService.createTeam(any<Long>(), any()) } returns team
+        every { passwordEncoder.encode(any()) } returns "hashed_password"
+        every { userRepository.save(any()) } returns userWithoutProfile
+        every { fileClient.generateDefaultProfileImage(any()) } returns com.onmeet.auth.client.FileMetadataResponse(
+            id = 200L,
+            fileName = "new.svg",
+            s3Url = "s3://new.svg",
+            contentType = "image/svg+xml"
+        )
+
+        // when
+        val userId = authService.signupCompany(request)
+
+        // then
+        assertEquals(1L, userId)
+        // 기존 프로필 이미지가 없으므로 삭제 호출이 0회여야 함
+        verify(exactly = 0) { fileClient.deleteMyProfileImage() }
+        verify { fileClient.generateDefaultProfileImage("Manager") }
+        verify { userRepository.save(any()) }
     }
 }

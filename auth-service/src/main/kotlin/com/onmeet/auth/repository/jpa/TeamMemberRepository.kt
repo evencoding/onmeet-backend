@@ -20,4 +20,6 @@ interface TeamMemberRepository : JpaRepository<TeamMember, Long> {
     fun existsByUserIdAndTeamIdAndRole(userId: Long, teamId: Long, role: TeamMember.TeamRole): Boolean
 
     fun deleteByUserIdAndTeamId(userId: Long, teamId: Long)
+
+    fun deleteAllByTeamId(teamId: Long)
 }

@@ -13,6 +13,7 @@ import org.springframework.transaction.annotation.Transactional
 import com.onmeet.auth.repository.WithdrawnUserRepository
 import com.onmeet.auth.entity.WithdrawnUser
 import java.time.LocalDateTime
+import org.slf4j.LoggerFactory
 
 @Service
 class AuthService(
@@ -27,6 +28,9 @@ class AuthService(
     private val fileClient: com.onmeet.auth.client.FileClient,
     private val withdrawnUserRepository: com.onmeet.auth.repository.WithdrawnUserRepository
 ) {
+    companion object {
+        private val log = LoggerFactory.getLogger(AuthService::class.java)
+    }
 
     @Transactional
     fun signupCompany(request: CompanySignupRequest, profileImage: org.springframework.web.multipart.MultipartFile?): Long {
@@ -101,12 +105,21 @@ class AuthService(
     fun joinCompany(request: JoinRequest): Long = joinCompany(request, null)
 
     private fun processProfileImage(user: User, profileImage: org.springframework.web.multipart.MultipartFile?) {
+        // [Bug-8 FIX] Delete old profile image if exists
+        user.profileImageId?.let {
+            try {
+                fileClient.deleteMyProfileImage()
+            } catch (e: Exception) {
+                log.warn("기존 프로필 이미지 삭제 실패 (userId=${user.id}): ${e.message}")
+            }
+        }
+
         val fileResp = if (profileImage != null && !profileImage.isEmpty) {
             fileClient.uploadProfileImage(profileImage, user.requireId().toString())
         } else {
             fileClient.generateDefaultProfileImage(user.name)
         }
-        
+
         fileResp?.let {
             user.profileImageId = it.id
             userRepository.save(user)
@@ -193,15 +206,26 @@ class AuthService(
         )
         withdrawnUserRepository.save(withdrawnUser)
 
+        // [Bug-1 FIX] Delete profile image from file-service
+        user.profileImageId?.let {
+            try {
+                fileClient.deleteMyProfileImage()
+            } catch (e: Exception) {
+                log.warn("탈퇴 처리 중 프로필 이미지 삭제 실패 (userId=${user.id}): ${e.message}")
+            }
+        }
+
         // Anonymize and deactivate user
         user.email = "withdrawn_${user.id}@onmeet.deleted"
         user.name = "Withdrawn User"
         user.passwordHash = "" // Clear password
         user.status = User.UserStatus.INACTIVE
-        user.profileImageId = null 
-        // Logic to delete profile image from file-service can be added here if needed.
-        
+        user.profileImageId = null
+
         userRepository.save(user)
+
+        // [Bug-2 FIX] Revoke all tokens for this user
+        tokenService.revokeTokens(null, email)
     }
 
     @Transactional
