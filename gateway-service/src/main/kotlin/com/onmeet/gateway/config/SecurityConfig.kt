@@ -43,10 +43,14 @@ class SecurityConfig(
                     "/.well-known/**"
                 ).permitAll()
 
-                // Public endpoints - Infrastructure
+                // Public endpoints - Infrastructure (Actuator: only health and info)
                 exchanges.pathMatchers(
-                    "/actuator/**",
-                    "/*/actuator/**",
+                    "/actuator/health",
+                    "/actuator/info",
+                    "/*/actuator/health",
+                    "/*/actuator/info",
+                    "/file/actuator/health",
+                    "/file/actuator/info",
                     "/swagger-ui.html",
                     "/swagger-ui/**",
                     "/webjars/**",
@@ -55,7 +59,6 @@ class SecurityConfig(
                     "/*/v3/api-docs/**",
                     "/file/doc.json",
                     "/file/swagger/**",
-                    "/file/actuator/**",
                     "/error"
                 ).permitAll()
 

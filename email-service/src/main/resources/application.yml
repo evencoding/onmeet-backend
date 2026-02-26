@@ -48,3 +48,13 @@ management:
       base-path: ${MANAGEMENT_ENDPOINTS_WEB_BASE_PATH:/email/actuator}
       exposure:
         include: health, info, metrics, prometheus
+  zipkin:
+    tracing:
+      endpoint: http://zipkin:9411/api/v2/spans
+  tracing:
+    sampling:
+      probability: 1.0
+
+springdoc:
+  api-docs:
+    path: /v1/v3/api-docs
