@@ -52,16 +52,49 @@ sudo apt-get upgrade -y
 print_status "System packages updated"
 
 ###############################################################################
-# 2. Create 8GB Swap File
+# 2. Create Swap File (Auto-detect available space)
 ###############################################################################
-echo -e "\n${YELLOW}Step 2: Creating 8GB Swap memory...${NC}"
+echo -e "\n${YELLOW}Step 2: Creating Swap memory...${NC}"
+
+# Check available disk space
+AVAILABLE_SPACE=$(df / | tail -1 | awk '{print $4}')  # in KB
+AVAILABLE_GB=$((AVAILABLE_SPACE / 1024 / 1024))
+
+echo "Available disk space: ${AVAILABLE_GB}GB"
+
+# Determine swap size based on available space
+if [ $AVAILABLE_GB -ge 12 ]; then
+    SWAP_SIZE="8G"
+    SWAP_SIZE_MB=8192
+    print_status "Creating 8GB swap (sufficient disk space)"
+elif [ $AVAILABLE_GB -ge 8 ]; then
+    SWAP_SIZE="4G"
+    SWAP_SIZE_MB=4096
+    print_warning "Creating 4GB swap (limited disk space)"
+elif [ $AVAILABLE_GB -ge 5 ]; then
+    SWAP_SIZE="2G"
+    SWAP_SIZE_MB=2048
+    print_warning "Creating 2GB swap (very limited disk space)"
+else
+    print_error "Insufficient disk space (${AVAILABLE_GB}GB available)"
+    print_error "Need at least 5GB free. Please expand your disk or free up space."
+    exit 1
+fi
 
 # Check if swap already exists
 if swapon --show | grep -q '/swapfile'; then
     print_warning "Swap file already exists. Skipping swap creation."
 else
-    # Create 8GB swap file
-    sudo fallocate -l 8G /swapfile
+    # Try fallocate first, fall back to dd if it fails
+    print_status "Creating ${SWAP_SIZE} swap file..."
+
+    if ! sudo fallocate -l ${SWAP_SIZE} /swapfile 2>/dev/null; then
+        print_warning "fallocate failed, using dd method (slower but more reliable)..."
+        sudo dd if=/dev/zero of=/swapfile bs=1M count=${SWAP_SIZE_MB} status=progress || {
+            print_error "Failed to create swap file. Disk may be full."
+            exit 1
+        }
+    fi
 
     # Set correct permissions
     sudo chmod 600 /swapfile
@@ -78,10 +111,12 @@ else
     fi
 
     # Optimize swappiness (reduce swap usage preference)
-    echo 'vm.swappiness=10' | sudo tee -a /etc/sysctl.conf
-    sudo sysctl -p
+    if ! grep -q 'vm.swappiness' /etc/sysctl.conf; then
+        echo 'vm.swappiness=10' | sudo tee -a /etc/sysctl.conf
+    fi
+    sudo sysctl vm.swappiness=10
 
-    print_status "8GB Swap created and enabled"
+    print_status "${SWAP_SIZE} Swap created and enabled"
 fi
 
 # Verify swap
