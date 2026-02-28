@@ -43,7 +43,9 @@ subprojects {
                 }
             }
             to {
-                image = "onmeet/${project.name}"
+                // GitHub Actions에서 DOCKER_USERNAME 환경변수로 전달, 기본값은 'onmeet'
+                def dockerRegistry = System.getenv('DOCKER_REGISTRY_PREFIX') ?: 'onmeet'
+                image = "${dockerRegistry}/${project.name}"
                 tags = ['latest', project.version]
             }
             container {
