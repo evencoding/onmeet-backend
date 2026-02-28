@@ -13,6 +13,7 @@ type Config struct {
 	GatewaySharedSecret string
 	AWSRegion           string
 	S3BucketName        string
+	S3Endpoint          string
 	CloudFrontDomain    string
 	KafkaBrokers        string
 	AuthServiceURL      string
@@ -28,6 +29,7 @@ func LoadConfig() *Config {
 		GatewaySharedSecret: getEnv("GATEWAY_SHARED_SECRET", ""),
 		AWSRegion:           getEnv("AWS_REGION", "ap-northeast-2"),
 		S3BucketName:        getEnv("S3_BUCKET_NAME", ""),
+		S3Endpoint:          getEnv("S3_ENDPOINT", ""),
 		CloudFrontDomain:    getEnv("CLOUDFRONT_DOMAIN", ""),
 		KafkaBrokers:        getEnv("KAFKA_BROKERS", "kafka:9092"),
 		AuthServiceURL:      getEnv("AUTH_SERVICE_URL", "http://auth-service:8081"),

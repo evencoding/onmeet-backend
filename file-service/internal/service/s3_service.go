@@ -26,11 +26,45 @@ type s3Service struct {
 
 // NewS3Service는 S3 클라이언트를 초기화하여 서비스 인스턴스를 반환합니다.
 // Go에서는 리턴값이 여러 개일 수 있어 (결과값, 에러)를 함께 반환하는 것이 표준입니다.
+// MinIO 사용 시 S3Endpoint를 설정하면 커스텀 엔드포인트와 경로 스타일을 사용합니다.
 func NewS3Service(cfg *config.Config) (S3Service, error) {
-	// context.TODO()는 비어있는 컨텍스트를 의미하며, 나중에 실제 컨텍스트로 바꿀 수 있는 자리 표시자입니다.
-	sdkConfig, err := s3config.LoadDefaultConfig(context.TODO(), s3config.WithRegion(cfg.AWSRegion))
+	var sdkConfig aws.Config
+	var err error
+
+	// S3Endpoint가 설정되어 있으면 MinIO 등의 S3 호환 스토리지를 사용합니다.
+	if cfg.S3Endpoint != "" {
+		// 커스텀 엔드포인트 리졸버를 사용하여 MinIO 엔드포인트로 요청을 라우팅합니다.
+		customResolver := aws.EndpointResolverWithOptionsFunc(func(service, region string, options ...interface{}) (aws.Endpoint, error) {
+			return aws.Endpoint{
+				URL:               cfg.S3Endpoint,
+				HostnameImmutable: true,
+				SigningRegion:     cfg.AWSRegion,
+			}, nil
+		})
+
+		sdkConfig, err = s3config.LoadDefaultConfig(context.TODO(),
+			s3config.WithRegion(cfg.AWSRegion),
+			s3config.WithEndpointResolverWithOptions(customResolver),
+		)
+		if err != nil {
+			return nil, fmt.Errorf("unable to load SDK config for MinIO, %v", err)
+		}
+
+		// MinIO는 경로 스타일(Path-Style) URL을 사용하므로 UsePathStyle을 true로 설정합니다.
+		// 예: http://minio:9000/bucket/key (경로 스타일) vs http://bucket.s3.amazonaws.com/key (가상 호스트 스타일)
+		client := s3.NewFromConfig(sdkConfig, func(o *s3.Options) {
+			o.UsePathStyle = true
+		})
+
+		return &s3Service{
+			client: client,
+			bucket: cfg.S3BucketName,
+		}, nil
+	}
+
+	// S3Endpoint가 없으면 기존 AWS S3를 사용합니다 (역호환성 유지).
+	sdkConfig, err = s3config.LoadDefaultConfig(context.TODO(), s3config.WithRegion(cfg.AWSRegion))
 	if err != nil {
-		// fmt.Errorf는 에러 메시지를 포맷팅하여 새로운 에러 객체를 만듭니다.
 		return nil, fmt.Errorf("unable to load SDK config, %v", err)
 	}
 
