@@ -238,3 +238,70 @@ Refresh Token을 사용하여 새로운 Access Token을 발급받습니다.
 | `403 Forbidden` | 권한 부족 |
 | `404 Not Found` | 리소스 없음 (User not found 등) - `EntityNotFoundException` |
 | `409 Conflict` | 중복 데이터 (Email already exists 등) |
+
+---
+
+## 내부 권한 검증 API (Internal Security API)
+
+타 마이크로서비스에서 `auth-service`에 권한 검증을 요청할 때 사용하는 API입니다. **반드시 내부 망에서만 호출되어야 하며, `X-Internal-Secret` 헤더 검증이 필요합니다.**
+
+### 10. 팀장 권한 확인 (Leader Check)
+
+- **URL**: `/internal/v1/security/teams/{teamId}/leader-check`
+- **Method**: `GET`
+- **Auth**: Internal Secret Header (`X-Internal-Secret`)
+
+#### Parameters
+| Param | Type | Required | Description |
+|---|---|---|---|
+| `teamId` | Long | Yes | (Path) 대상 팀 ID |
+| `userId` | Long | Yes | (Query) 조회할 사용자 ID |
+
+#### Response (`SecurityCheckResponse`)
+```json
+{
+  "authorized": true
+}
+```
+
+---
+
+### 11. 팀 멤버 권한 확인 (Member Check)
+
+- **URL**: `/internal/v1/security/teams/{teamId}/member-check`
+- **Method**: `GET`
+- **Auth**: Internal Secret Header (`X-Internal-Secret`)
+
+#### Parameters
+| Param | Type | Required | Description |
+|---|---|---|---|
+| `teamId` | Long | Yes | (Path) 대상 팀 ID |
+| `userId` | Long | Yes | (Query) 조회할 사용자 ID |
+
+#### Response (`SecurityCheckResponse`)
+```json
+{
+  "authorized": true
+}
+```
+
+---
+
+### 12. 동일 회사 여부 확인 (Company Check)
+
+- **URL**: `/internal/v1/security/teams/{teamId}/company-check`
+- **Method**: `GET`
+- **Auth**: Internal Secret Header (`X-Internal-Secret`)
+
+#### Parameters
+| Param | Type | Required | Description |
+|---|---|---|---|
+| `teamId` | Long | Yes | (Path) 대상 팀 ID |
+| `userId` | Long | Yes | (Query) 조회할 사용자 ID |
+
+#### Response (`SecurityCheckResponse`)
+```json
+{
+  "authorized": true
+}
+```

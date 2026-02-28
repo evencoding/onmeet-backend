@@ -11,8 +11,9 @@ interface TeamService {
     fun createTeam(companyId: Long, name: String, description: String? = null, color: String? = null): Team
     
     fun approveTeam(teamId: Long, approver: User): Unit
-    fun rejectTeam(teamId: Long, approver: User): Unit
+    fun rejectTeam(teamId: Long, approver: User, reason: String? = null): Unit
     fun assignLeader(teamId: Long, manager: User, newLeaderId: Long)
     fun delegateLeader(teamId: Long, currentLeader: User, newLeaderId: Long)
     fun dissolveTeam(teamId: Long, requester: User): Unit
+    fun cancelTeamRequest(teamId: Long, requester: User): Unit
 }

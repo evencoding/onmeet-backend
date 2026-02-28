@@ -1,0 +1,27 @@
+<component name="ProjectRunConfigurationManager">
+    <configuration default="false" name="Run All Services (Docker)" type="docker-deploy"
+        factoryName="docker-compose.yml" server-name="Docker">
+        <deployment type="docker-compose.yml">
+            <settings>
+                <option name="sourceFilePath" value="docker-compose.yml" />
+            </settings>
+        </deployment>
+        <method v="2">
+            <option name="Gradle.BeforeRunTask" enabled="true" tasks="jibDockerBuild"
+                externalProjectPath="$PROJECT_DIR$/auth-service" vmOptions="" scriptParameters="" />
+            <option name="Gradle.BeforeRunTask" enabled="true" tasks="jibDockerBuild"
+                externalProjectPath="$PROJECT_DIR$/gateway-service" vmOptions="" scriptParameters="" />
+            <option name="Gradle.BeforeRunTask" enabled="true" tasks="jibDockerBuild"
+                externalProjectPath="$PROJECT_DIR$/ai-service" vmOptions="" scriptParameters="" />
+            <option name="Gradle.BeforeRunTask" enabled="true" tasks="jibDockerBuild"
+                externalProjectPath="$PROJECT_DIR$/chat-service" vmOptions="" scriptParameters="" />
+            <option name="Gradle.BeforeRunTask" enabled="true" tasks="jibDockerBuild"
+                externalProjectPath="$PROJECT_DIR$/video-service" vmOptions="" scriptParameters="" />
+            <option name="Gradle.BeforeRunTask" enabled="true" tasks="jibDockerBuild"
+                externalProjectPath="$PROJECT_DIR$/notification-service" vmOptions=""
+                scriptParameters="" />
+            <option name="Gradle.BeforeRunTask" enabled="true" tasks="jibDockerBuild"
+                externalProjectPath="$PROJECT_DIR$/email-service" vmOptions="" scriptParameters="" />
+        </method>
+    </configuration>
+</component>

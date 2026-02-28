@@ -9,4 +9,5 @@ import org.springframework.stereotype.Repository
 interface JobTitleRepository : JpaRepository<JobTitle, Long> {
     fun findAllByCompany(company: Company): List<JobTitle>
     fun findByCompanyAndIsDefaultTrue(company: Company): JobTitle?
+    fun findByCompanyAndName(company: Company, name: String): JobTitle?
 }

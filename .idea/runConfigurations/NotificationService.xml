@@ -1,0 +1,11 @@
+<component name="ProjectRunConfigurationManager">
+    <configuration default="false" name="NotificationService"
+        type="SpringBootApplicationConfigurationType" factoryName="Spring Boot">
+        <module name="onMeet.notification-service.main" />
+        <option name="SPRING_BOOT_MAIN_CLASS"
+            value="com.onmeet.notification.NotificationApplication" />
+        <method v="2">
+            <option name="Make" enabled="true" />
+        </method>
+    </configuration>
+</component>
