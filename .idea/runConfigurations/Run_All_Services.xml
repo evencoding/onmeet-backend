@@ -1,0 +1,13 @@
+<component name="ProjectRunConfigurationManager">
+    <configuration default="false" name="Run All Services" type="CompoundRunConfigurationType">
+        <toRun name="AuthService" type="SpringBootApplicationConfigurationType" />
+        <toRun name="GatewayService" type="SpringBootApplicationConfigurationType" />
+        <toRun name="AiService" type="SpringBootApplicationConfigurationType" />
+        <toRun name="ChatService" type="SpringBootApplicationConfigurationType" />
+        <toRun name="VideoService" type="SpringBootApplicationConfigurationType" />
+        <toRun name="NotificationService" type="SpringBootApplicationConfigurationType" />
+        <toRun name="EmailService" type="SpringBootApplicationConfigurationType" />
+        <toRun name="FileService" type="GoApplicationRunConfiguration" />
+        <method v="2" />
+    </configuration>
+</component>

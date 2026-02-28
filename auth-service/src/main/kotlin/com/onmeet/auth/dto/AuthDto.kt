@@ -8,18 +8,15 @@ import org.springframework.data.domain.Page
 data class CompanySignupRequest(
     @Schema(description = "이메일 주소", example = "admin@company.com")
     val email: String,
-    
+
     @Schema(description = "비밀번호", example = "Password123!")
     val password: String,
-    
+
     @Schema(description = "관리자 이름", example = "John Doe")
     val name: String,
-    
+
     @Schema(description = "회사명", example = "Acme Corp")
-    val companyName: String,
-    
-    @Schema(description = "초기 팀 이름", example = "General")
-    val teamName: String = "General"
+    val companyName: String
 )
 
 @Schema(description = "로그인 요청")
@@ -70,16 +67,6 @@ data class JoinRequest(
     val employeeId: String? = null
 )
 
-@Schema(description = "유저 정보 수정 요청")
-data class UserProfileUpdateRequest(
-    @Schema(description = "이름", example = "Jane Doe")
-    val name: String?,
-    @Schema(description = "사번", example = "EMP-001")
-    val employeeId: String?,
-    @Schema(description = "직급 ID", example = "1")
-    val jobTitleId: Long?
-)
-
 @Schema(description = "회사 정보 수정 요청")
 data class CompanyRequest(
     @Schema(description = "회사명")
@@ -93,7 +80,11 @@ data class TeamRequest(
     @Schema(description = "팀 설명", example = "Backend Development Team")
     val description: String?,
     @Schema(description = "팀 색상 (Hex Code)", example = "#FF5733")
-    val color: String?
+    val color: String?,
+    @Schema(description = "팀원 ID 목록 (MANAGER 권한 전용)", example = "[1, 2, 3]")
+    val memberIds: List<Long>? = null,
+    @Schema(description = "팀장 ID (MANAGER 권한 전용, memberIds 중 한 명이어야 함)", example = "1")
+    val leaderId: Long? = null
 )
 
 @Schema(description = "초대 요청")
@@ -126,7 +117,9 @@ data class UserResponseDto(
     @Schema(description = "직급 정보")
     val jobTitle: JobTitleResponse?,
     @Schema(description = "소속 팀 목록")
-    val teams: List<TeamInfoDto>
+    val teams: List<TeamInfoDto>,
+    @Schema(description = "프로필 이미지 ID")
+    val profileImageId: Long?
 )
 
 @Schema(description = "회사 정보 요약")
@@ -145,6 +138,18 @@ data class TeamInfoDto(
     val name: String,
     @Schema(description = "팀 색상")
     val color: String?
+)
+
+@Schema(description = "유저 권한 및 소속 정보 응답")
+data class UserPermissionResponse(
+    @Schema(description = "User ID")
+    val userId: Long,
+    @Schema(description = "권한 목록")
+    val roles: Set<String>,
+    @Schema(description = "소속 회사 ID")
+    val companyId: Long?,
+    @Schema(description = "소속 팀 ID 목록")
+    val teamIds: List<Long>
 )
 
 @Schema(description = "토큰 갱신 요청")
