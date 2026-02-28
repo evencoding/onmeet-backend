@@ -14,10 +14,17 @@ services:
       retries: 5
     networks:
       - onmeet-network
+    deploy:
+      resources:
+        limits:
+          cpus: '0.25'
+          memory: 256M
+        reservations:
+          cpus: '0.05'
+          memory: 128M
 
   auth-service:
-    image: onmeet/auth-service:latest
-    pull_policy: never
+    image: ${DOCKER_REGISTRY:-onmeet}/auth-service:latest
     container_name: auth-service
     ports:
       - "127.0.0.1:8081:8081"
@@ -62,6 +69,14 @@ services:
       interval: 5s
       timeout: 3s
       retries: 5
+    deploy:
+      resources:
+        limits:
+          cpus: '0.25'
+          memory: 128M
+        reservations:
+          cpus: '0.05'
+          memory: 64M
 
 networks:
   onmeet-network:

@@ -1,7 +1,6 @@
 services:
   email-service:
-    image: onmeet/email-service:latest
-    pull_policy: never
+    image: ${DOCKER_REGISTRY:-onmeet}/email-service:latest
     container_name: email-service
     ports:
       - "127.0.0.1:8086:8086"
