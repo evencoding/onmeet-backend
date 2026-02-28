@@ -1,9 +1,16 @@
 server:
   port: ${SERVER_PORT:8087}
+  servlet:
+    context-path: /email
+  forward-headers-strategy: framework
 
 spring:
   application:
     name: email-service
+
+onmeet:
+  auth:
+    internal-url: ${AUTH_INTERNAL_URL:http://auth-service:8081}
   kafka:
     bootstrap-servers: ${SPRING_KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
     consumer:
@@ -41,3 +48,13 @@ management:
       base-path: ${MANAGEMENT_ENDPOINTS_WEB_BASE_PATH:/email/actuator}
       exposure:
         include: health, info, metrics, prometheus
+  zipkin:
+    tracing:
+      endpoint: http://zipkin:9411/api/v2/spans
+  tracing:
+    sampling:
+      probability: 1.0
+
+springdoc:
+  api-docs:
+    path: /v1/v3/api-docs

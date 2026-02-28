@@ -1,0 +1,2 @@
+ALTER TABLE `teams`
+ADD COLUMN `rejection_reason` VARCHAR(255) DEFAULT NULL;
