@@ -11,6 +11,7 @@ import com.onmeet.common.exception.InsufficientPermissionException
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import org.springframework.data.domain.Pageable
+import org.springframework.web.multipart.MultipartFile
 
 @Service
 @Transactional(readOnly = true)
@@ -28,7 +29,7 @@ class UserServiceImpl(
     }
 
     @Transactional
-    override fun updateUserProfile(userId: Long, requester: User, request: UserProfileUpdateRequest): UserResponseDto {
+    override fun updateUserProfile(userId: Long, requester: User, request: UserProfileUpdateRequest, profileImage: MultipartFile?): UserResponseDto {
         val user = userRepository.findById(userId)
             .orElseThrow { UserNotFoundException("User not found: $userId") }
 
@@ -41,6 +42,7 @@ class UserServiceImpl(
             throw CrossCompanyAccessException("Manager can only update users in their own company")
         }
 
+        // Update text fields
         request.name?.let { user.name = it }
         request.employeeId?.let { user.employeeId = it }
         request.jobTitleId?.let { titleId ->
@@ -50,6 +52,24 @@ class UserServiceImpl(
                 throw CompanyMismatchException("JobTitle does not belong to user's company")
             }
             user.jobTitle = jobTitle
+        }
+
+        // Handle profile image upload if provided
+        if (profileImage != null && !profileImage.isEmpty) {
+            // Delete old profile image if exists
+            user.profileImageId?.let { oldImageId ->
+                try {
+                    fileClient.deleteMyProfileImage()
+                } catch (e: Exception) {
+                    // Log error but continue with upload (old image cleanup failed)
+                    org.slf4j.LoggerFactory.getLogger(UserServiceImpl::class.java)
+                        .error("Failed to delete old profile image for user ${user.requireId()}", e)
+                }
+            }
+
+            // Upload new profile image
+            val uploadResult = fileClient.uploadProfileImage(profileImage, user.requireId().toString())
+            uploadResult?.let { user.profileImageId = it.id }
         }
 
         return userRepository.save(user).toResponseDto()

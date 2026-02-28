@@ -25,6 +25,7 @@ import jakarta.validation.Valid
 import org.springframework.http.ResponseEntity
 import org.springframework.security.core.annotation.AuthenticationPrincipal
 import org.springframework.web.bind.annotation.*
+import org.springframework.web.multipart.MultipartFile
 
 @RestController
 @RequestMapping("/v1/member")
@@ -75,7 +76,10 @@ class MemberController(
     ): ResponseEntity<UserResponseDto> =
         ResponseEntity.ok(userService.getMyInfo(user))
 
-    @Operation(summary = "내 프로필 수정", description = "현재 로그인한 자신의 프로필 정보를 수정합니다.")
+    @Operation(
+        summary = "내 프로필 수정",
+        description = "현재 로그인한 자신의 프로필 정보(텍스트 및 이미지)를 수정합니다."
+    )
     @ApiResponses(value = [
         ApiResponse(
             responseCode = "200",
@@ -87,7 +91,7 @@ class MemberController(
         ),
         ApiResponse(
             responseCode = "400",
-            description = "잘못된 요청 - 유효하지 않은 데이터 또는 필수 필드 누락",
+            description = "잘못된 요청 - 유효하지 않은 데이터, 필수 필드 누락 또는 잘못된 파일 형식",
             content = [Content(
                 mediaType = "application/json",
                 schema = Schema(implementation = ErrorResponse::class),
@@ -119,12 +123,13 @@ class MemberController(
             )]
         )
     ])
-    @PatchMapping("/me")
+    @PatchMapping("/me", consumes = ["multipart/form-data"])
     fun updateProfile(
         @AuthenticationPrincipal user: User,
-        @RequestBody @Valid request: UserProfileUpdateRequest
+        @RequestPart("request") @Valid request: UserProfileUpdateRequest,
+        @RequestPart(value = "profileImage", required = false) profileImage: MultipartFile?
     ): ResponseEntity<UserResponseDto> =
-        ResponseEntity.ok(userService.updateUserProfile(user.requireId(), user, request))
+        ResponseEntity.ok(userService.updateUserProfile(user.requireId(), user, request, profileImage))
 
     @Operation(summary = "비밀번호 변경", description = "기존 비밀번호 확인 후 새 비밀번호로 변경합니다.")
     @ApiResponses(value = [
