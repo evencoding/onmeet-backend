@@ -15,11 +15,15 @@ import io.mockk.impl.annotations.InjectMockKs
 import io.mockk.impl.annotations.MockK
 import io.mockk.junit5.MockKExtension
 import io.mockk.verify
+import io.mockk.mockk
+import io.mockk.justRun
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtendWith
 import java.util.*
 import org.springframework.boot.test.context.SpringBootTest
+import org.springframework.web.multipart.MultipartFile
+import com.onmeet.auth.client.FileMetadataResponse
 
 @ExtendWith(MockKExtension::class)
 class UserServiceImplTest {
@@ -161,5 +165,95 @@ class UserServiceImplTest {
         assertEquals(user.id, result.id)
         assertEquals(user.name, result.name)
         assertEquals(user.email, result.email)
+    }
+
+    @Test
+    fun `updateUserProfile should upload new profile image when profileImage is provided`() {
+        // given
+        val company = Company(id = 1L, name = "TestCo")
+        val user = User(id = 1L, email = "user@test.com", passwordHash = "hash", name = "User", company = company)
+        val request = UserProfileUpdateRequest(name = "Updated", employeeId = null, jobTitleId = null)
+        val mockFile = mockk<MultipartFile>()
+        val uploadedFile = FileMetadataResponse(id = 200L, fileName = "profile.jpg", s3Url = "https://s3.example.com/profile.jpg", contentType = "image/jpeg")
+
+        every { mockFile.isEmpty } returns false
+        every { userRepository.findById(1L) } returns Optional.of(user)
+        every { fileClient.uploadProfileImage(mockFile, "1") } returns uploadedFile
+        every { userRepository.save(any()) } returns user
+
+        // when
+        val result = userService.updateUserProfile(1L, user, request, mockFile)
+
+        // then
+        assertEquals(200L, user.profileImageId)
+        assertEquals("Updated", user.name)
+        verify { fileClient.uploadProfileImage(mockFile, "1") }
+        verify { userRepository.save(user) }
+    }
+
+    @Test
+    fun `updateUserProfile should delete old profile image before uploading new one`() {
+        // given
+        val company = Company(id = 1L, name = "TestCo")
+        val user = User(id = 1L, email = "user@test.com", passwordHash = "hash", name = "User",
+                       profileImageId = 100L, company = company)
+        val request = UserProfileUpdateRequest(name = null, employeeId = null, jobTitleId = null)
+        val mockFile = mockk<MultipartFile>()
+        val uploadedFile = FileMetadataResponse(id = 200L, fileName = "new-profile.jpg", s3Url = "https://s3.example.com/new-profile.jpg", contentType = "image/jpeg")
+
+        every { mockFile.isEmpty } returns false
+        every { userRepository.findById(1L) } returns Optional.of(user)
+        justRun { fileClient.deleteMyProfileImage() }
+        every { fileClient.uploadProfileImage(mockFile, "1") } returns uploadedFile
+        every { userRepository.save(any()) } returns user
+
+        // when
+        userService.updateUserProfile(1L, user, request, mockFile)
+
+        // then
+        assertEquals(200L, user.profileImageId)
+        verify { fileClient.deleteMyProfileImage() }
+        verify { fileClient.uploadProfileImage(mockFile, "1") }
+        verify { userRepository.save(user) }
+    }
+
+    @Test
+    fun `updateUserProfile should not upload image when profileImage is null`() {
+        // given
+        val company = Company(id = 1L, name = "TestCo")
+        val user = User(id = 1L, email = "user@test.com", passwordHash = "hash", name = "User", company = company)
+        val request = UserProfileUpdateRequest(name = "Updated", employeeId = null, jobTitleId = null)
+
+        every { userRepository.findById(1L) } returns Optional.of(user)
+        every { userRepository.save(any()) } returns user
+
+        // when
+        userService.updateUserProfile(1L, user, request, null)
+
+        // then
+        assertEquals("Updated", user.name)
+        verify(exactly = 0) { fileClient.uploadProfileImage(any(), any()) }
+        verify { userRepository.save(user) }
+    }
+
+    @Test
+    fun `updateUserProfile should not upload image when profileImage is empty`() {
+        // given
+        val company = Company(id = 1L, name = "TestCo")
+        val user = User(id = 1L, email = "user@test.com", passwordHash = "hash", name = "User", company = company)
+        val request = UserProfileUpdateRequest(name = "Updated", employeeId = null, jobTitleId = null)
+        val mockFile = mockk<MultipartFile>()
+
+        every { mockFile.isEmpty } returns true
+        every { userRepository.findById(1L) } returns Optional.of(user)
+        every { userRepository.save(any()) } returns user
+
+        // when
+        userService.updateUserProfile(1L, user, request, mockFile)
+
+        // then
+        assertEquals("Updated", user.name)
+        verify(exactly = 0) { fileClient.uploadProfileImage(any(), any()) }
+        verify { userRepository.save(user) }
     }
 }

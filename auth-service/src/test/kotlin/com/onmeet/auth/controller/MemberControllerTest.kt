@@ -112,20 +112,27 @@ import org.springframework.test.web.servlet.setup.MockMvcBuilders
     fun `updateProfile should return updated user info`() {
         // given
         val request = UserProfileUpdateRequest(name = "Updated Name", employeeId = null, jobTitleId = null)
+        val requestPart = org.springframework.mock.web.MockMultipartFile(
+            "request",
+            "",
+            "application/json",
+            objectMapper.writeValueAsBytes(request)
+        )
+        
         val userResponse = UserResponseDto(
             id = 1, email = "test@example.com", name = "Updated Name",
             employeeId = null, roles = setOf("ROLE_USER"), status = "ACTIVE",
             company = null, jobTitle = null, teams = emptyList(), profileImageId = null
         )
-        every { userService.updateUserProfile(any(), any(), any()) } returns userResponse
+        every { userService.updateUserProfile(any(), any(), any(), any()) } returns userResponse
 
         // when & then
         mockMvc.perform(
-            patch("/auth/v1/member/me")
+            org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart("/auth/v1/member/me")
+                .file(requestPart)
+                .with { it.method = "PATCH"; it }
                 .contextPath("/auth")
                 .principal(org.springframework.security.authentication.UsernamePasswordAuthenticationToken("test@example.com", null))
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(request))
         )
             .andExpect(status().isOk)
             .andExpect(jsonPath("$.name").value("Updated Name"))
