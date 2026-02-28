@@ -74,7 +74,8 @@ class SecurityConfig(
         configuration.allowedOriginPatterns = listOf(
             "http://localhost:3000",
             "http://localhost:8080",
-            "https://*.onmeet.com"
+            "https://*.onmeet.com",
+            "https://onmeeteven.netlify.app"
         ) + envOrigins
 
         configuration.allowedMethods = listOf("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH", "HEAD")

@@ -5,9 +5,10 @@ import com.onmeet.auth.dto.UserProfileUpdateRequest
 import com.onmeet.auth.dto.UserResponseDto
 import com.onmeet.auth.entity.User
 import org.springframework.data.domain.Pageable
+import org.springframework.web.multipart.MultipartFile
 
 interface UserService {
-    fun updateUserProfile(userId: Long, requester: User, request: UserProfileUpdateRequest): UserResponseDto
+    fun updateUserProfile(userId: Long, requester: User, request: UserProfileUpdateRequest, profileImage: MultipartFile? = null): UserResponseDto
     fun getUserInfo(userId: Long, requester: User): UserResponseDto
     fun getUserInfo(email: String): UserResponseDto
     fun getAllEmployees(manager: User, pageable: Pageable): PageResponse<UserResponseDto>
