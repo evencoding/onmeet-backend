@@ -119,19 +119,7 @@ jobs:
             echo "file=false" >> $GITHUB_OUTPUT
           fi
 
-          # 첫 릴리즈(v0.1.0)는 모든 서비스 강제 빌드
-          if [ "${{ github.ref_name }}" == "release/v0.1.0" ]; then
-            echo "First release detected - forcing all services build"
-            echo "auth=true" >> $GITHUB_OUTPUT
-            echo "gateway=true" >> $GITHUB_OUTPUT
-            echo "ai=true" >> $GITHUB_OUTPUT
-            echo "video=true" >> $GITHUB_OUTPUT
-            echo "chat=true" >> $GITHUB_OUTPUT
-            echo "notification=true" >> $GITHUB_OUTPUT
-            echo "email=true" >> $GITHUB_OUTPUT
-            echo "file=true" >> $GITHUB_OUTPUT
-            ANY_CHANGED=true
-          fi
+
 
           echo "any-service-changed=$ANY_CHANGED" >> $GITHUB_OUTPUT
 
@@ -290,7 +278,7 @@ jobs:
   deploy:
     name: Deploy to GCP Server
     runs-on: ubuntu-latest
-    needs: build-and-push
+    needs: [detect-changes, build-and-push]
     if: success()
     steps:
       - name: Deploy to GCP via SSH
@@ -308,11 +296,24 @@ jobs:
             export DOCKER_REGISTRY=${{ secrets.DOCKER_USERNAME }}
             echo "${{ secrets.DOCKER_PASSWORD }}" | docker login -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
 
+            # 변경된 서비스만 추출
+            TARGETS=""
+            if [ "${{ needs.detect-changes.outputs.auth }}" == "true" ]; then TARGETS="$TARGETS auth-service"; fi
+            if [ "${{ needs.detect-changes.outputs.gateway }}" == "true" ]; then TARGETS="$TARGETS gateway-service"; fi
+            if [ "${{ needs.detect-changes.outputs.ai }}" == "true" ]; then TARGETS="$TARGETS ai-service"; fi
+            if [ "${{ needs.detect-changes.outputs.video }}" == "true" ]; then TARGETS="$TARGETS video-service"; fi
+            if [ "${{ needs.detect-changes.outputs.chat }}" == "true" ]; then TARGETS="$TARGETS chat-service"; fi
+            if [ "${{ needs.detect-changes.outputs.notification }}" == "true" ]; then TARGETS="$TARGETS notification-service"; fi
+            if [ "${{ needs.detect-changes.outputs.email }}" == "true" ]; then TARGETS="$TARGETS email-service"; fi
+            if [ "${{ needs.detect-changes.outputs.file }}" == "true" ]; then TARGETS="$TARGETS file-service"; fi
+
+            echo "Deploying changed services: $TARGETS"
+
             # 최신 이미지 pull
-            docker compose pull
+            docker compose pull $TARGETS
 
             # 서비스 재시작 (무중단 배포)
-            docker compose up -d --remove-orphans
+            docker compose up -d --remove-orphans $TARGETS
 
             # 사용하지 않는 이미지 정리
             docker image prune -f
