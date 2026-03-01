@@ -45,3 +45,29 @@ data class BatchUserExistsResponse(
     @Schema(description = "사용자 존재 여부 목록")
     val users: List<UserExistsResponse>
 )
+
+@Schema(description = "팀 존재 여부 확인 응답")
+data class TeamExistsResponse(
+    @Schema(description = "팀 ID")
+    val teamId: Long,
+    @Schema(description = "존재 여부")
+    val exists: Boolean
+)
+
+@Schema(description = "팀 멤버십 확인 요청")
+data class TeamMembershipRequest(
+    @Schema(description = "팀 ID")
+    val teamId: Long,
+    @Schema(description = "사용자 ID")
+    val userId: Long
+)
+
+@Schema(description = "팀 멤버십 확인 응답")
+data class TeamMembershipResponse(
+    @Schema(description = "팀 ID")
+    val teamId: Long,
+    @Schema(description = "사용자 ID")
+    val userId: Long,
+    @Schema(description = "팀 멤버 여부")
+    val isMember: Boolean
+)
