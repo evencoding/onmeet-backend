@@ -33,9 +33,10 @@ class InvitationServiceTest {
     lateinit var invitationProperties: InvitationProperties
 
     @InjectMockKs
-    lateinit var invitationService: InvitationService
+    lateinit var invitationService: InvitationServiceImpl
 
     @Test
+    // [Essential] 초대장 생성 및 관련 메일 발송 로직 검증
     fun `createInvitation should create invitation and send email`() {
         // Given
         val companyId = 1L

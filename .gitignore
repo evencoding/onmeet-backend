@@ -1,4 +1,6 @@
 HELP.md
+IMPROVEMENTS.md
+TODO.md
 .gradle
 build/
 !gradle/wrapper/gradle-wrapper.jar
@@ -35,9 +37,8 @@ Desktop.ini
 .env.*
 !.env.example
 auth-service/http/http-client.env.json
+auth_logs.txt
+*.log
 
-# Secrets
-**/serviceAccountKey.json
-
-# Logs
-docker_build.log
+# AI Agent Rules
+# .agent/

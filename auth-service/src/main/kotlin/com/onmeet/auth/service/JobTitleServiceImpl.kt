@@ -2,6 +2,8 @@ package com.onmeet.auth.service
 
 import com.onmeet.auth.dto.JobTitleRequest
 import com.onmeet.auth.entity.Company
+import com.onmeet.common.exception.CrossCompanyAccessException
+import com.onmeet.common.exception.InsufficientPermissionException
 import com.onmeet.auth.entity.JobTitle
 import com.onmeet.auth.entity.User
 import com.onmeet.auth.exception.*
@@ -95,6 +97,9 @@ class JobTitleServiceImpl(
 
     override fun getDefaultJobTitle(company: Company): JobTitle? =
         jobTitleRepository.findByCompanyAndIsDefaultTrue(company)
+
+    override fun getJobTitleByName(company: Company, name: String): JobTitle? =
+        jobTitleRepository.findByCompanyAndName(company, name)
 
     private fun validateManager(user: User) {
         if (!user.hasRole(User.Role.MANAGER)) {

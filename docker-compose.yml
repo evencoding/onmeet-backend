@@ -8,6 +8,8 @@ include:
   - file-service/docker-compose.yml
   - email-service/docker-compose.yml
   - kafka/docker-compose.yml
+  # Monitoring stack disabled to save memory on 8GB instance
+  # - observability/docker-compose.yml
 
 networks:
   msa-network:

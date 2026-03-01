@@ -15,7 +15,8 @@ fun User.toResponseDto() = UserResponseDto(
     status = this.status.name,
     company = this.company.toInfoDto(),
     jobTitle = this.jobTitle?.toResponseDto(),
-    teams = this.teams.map { it.toInfoDto() }
+    teams = this.getTeams().map { it.toInfoDto() },
+    profileImageId = this.profileImageId
 )
 
 fun Company.toInfoDto() = CompanyInfoDto(
@@ -39,4 +40,11 @@ fun Invitation.toResponseDto() = InvitationResponse(
     email = this.email,
     companyName = this.company.name,
     role = this.role
+)
+
+fun User.toUserInfoDto() = UserInfoDto(
+    userId = this.requireId(),
+    name = this.name,
+    email = this.email,
+    profileImageId = this.profileImageId
 )
