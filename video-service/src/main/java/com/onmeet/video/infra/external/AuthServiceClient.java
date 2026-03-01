@@ -40,6 +40,23 @@ public interface AuthServiceClient {
     java.util.Map<Long, Boolean> batchUserExists(List<Long> userIds);
 
     /**
+     * 팀 존재 여부 확인
+     *
+     * @param teamId 팀 ID
+     * @return 존재 여부
+     */
+    boolean teamExists(Long teamId);
+
+    /**
+     * 팀 멤버십 확인
+     *
+     * @param teamId 팀 ID
+     * @param userId 사용자 ID
+     * @return 팀 멤버 여부
+     */
+    boolean isTeamMember(Long teamId, Long userId);
+
+    /**
      * 사용자 기본 정보
      */
     record UserInfo(
@@ -88,6 +105,34 @@ public interface AuthServiceClient {
      */
     record BatchUserExistsResponse(
             List<UserExistsResponse> users
+    ) {
+    }
+
+    /**
+     * 팀 존재 여부 확인 응답
+     */
+    record TeamExistsResponse(
+            Long teamId,
+            Boolean exists
+    ) {
+    }
+
+    /**
+     * 팀 멤버십 확인 요청
+     */
+    record TeamMembershipRequest(
+            Long teamId,
+            Long userId
+    ) {
+    }
+
+    /**
+     * 팀 멤버십 확인 응답
+     */
+    record TeamMembershipResponse(
+            Long teamId,
+            Long userId,
+            Boolean isMember
     ) {
     }
 }
