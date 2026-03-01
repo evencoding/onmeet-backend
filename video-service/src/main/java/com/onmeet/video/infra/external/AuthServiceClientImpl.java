@@ -12,7 +12,10 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestTemplate;
 
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @Component
 public class AuthServiceClientImpl implements AuthServiceClient {
@@ -84,6 +87,69 @@ public class AuthServiceClientImpl implements AuthServiceClient {
             return userIds.stream()
                     .map(id -> new UserInfo(id, "Unknown User", "unknown@example.com", null))
                     .toList();
+        }
+    }
+
+    @Override
+    public boolean userExists(Long userId) {
+        String url = authServiceProperties.getInternalUrl() + "/auth/internal/users/" + userId + "/exists";
+
+        try {
+            HttpHeaders headers = createHeaders();
+            HttpEntity<Void> entity = new HttpEntity<>(headers);
+
+            ResponseEntity<UserExistsResponse> response = restTemplate.exchange(
+                    url,
+                    HttpMethod.GET,
+                    entity,
+                    UserExistsResponse.class
+            );
+
+            UserExistsResponse body = response.getBody();
+            return body != null && body.exists();
+        } catch (Exception e) {
+            logger.error("Failed to check if user exists for userId: {}", userId, e);
+            return false;
+        }
+    }
+
+    @Override
+    public Map<Long, Boolean> batchUserExists(List<Long> userIds) {
+        if (userIds == null || userIds.isEmpty()) {
+            return Collections.emptyMap();
+        }
+
+        String url = authServiceProperties.getInternalUrl() + "/auth/internal/users/exists/batch";
+
+        try {
+            HttpHeaders headers = createHeaders();
+            BatchUserExistsRequest request = new BatchUserExistsRequest(userIds);
+            HttpEntity<BatchUserExistsRequest> entity = new HttpEntity<>(request, headers);
+
+            ResponseEntity<BatchUserExistsResponse> response = restTemplate.exchange(
+                    url,
+                    HttpMethod.POST,
+                    entity,
+                    BatchUserExistsResponse.class
+            );
+
+            BatchUserExistsResponse body = response.getBody();
+            if (body != null && body.users() != null) {
+                return body.users().stream()
+                        .collect(Collectors.toMap(
+                                UserExistsResponse::userId,
+                                UserExistsResponse::exists
+                        ));
+            }
+            return Collections.emptyMap();
+        } catch (Exception e) {
+            logger.error("Failed to check batch user exists for userIds: {}", userIds, e);
+            // Return all false
+            Map<Long, Boolean> result = new HashMap<>();
+            for (Long userId : userIds) {
+                result.put(userId, false);
+            }
+            return result;
         }
     }
 
