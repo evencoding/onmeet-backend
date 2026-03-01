@@ -4,6 +4,7 @@ import com.onmeet.meeting.entity.MeetingRoom;
 import com.onmeet.meeting.entity.RoomAccessScope;
 import com.onmeet.meeting.entity.RoomStatus;
 import com.onmeet.meeting.entity.RoomType;
+import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 import org.springframework.data.domain.Page;
@@ -39,4 +40,16 @@ public interface MeetingRoomRepository extends JpaRepository<MeetingRoom, Long> 
     List<MeetingRoom> findByHostUserIdOrderByCreatedAtDesc(Long hostUserId);
 
     List<MeetingRoom> findByStatusIn(List<RoomStatus> statuses);
+
+    @Query("SELECT COUNT(r) > 0 FROM MeetingRoom r WHERE r.hostUserId = :hostUserId "
+        + "AND r.type = :type AND r.status = :status "
+        + "AND r.scheduledAt BETWEEN :rangeStart AND :rangeEnd "
+        + "AND (:excludeRoomId IS NULL OR r.id != :excludeRoomId)")
+    boolean existsConflictingSchedule(
+        @Param("hostUserId") Long hostUserId,
+        @Param("type") RoomType type,
+        @Param("status") RoomStatus status,
+        @Param("rangeStart") Instant rangeStart,
+        @Param("rangeEnd") Instant rangeEnd,
+        @Param("excludeRoomId") Long excludeRoomId);
 }
