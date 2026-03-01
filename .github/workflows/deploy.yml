@@ -299,6 +299,11 @@ jobs:
           script: |
             cd ${{ secrets.GCP_PROJECT_PATH }}
 
+            # Retrieve latest configs
+            git fetch --all
+            git checkout release/v0.1.0
+            git reset --hard origin/release/v0.1.0
+
             # Docker Hub 로그인
             export DOCKER_API_VERSION=1.41
             export DOCKER_REGISTRY=${{ secrets.DOCKER_USERNAME }}
