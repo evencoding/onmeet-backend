@@ -76,6 +76,8 @@ class SecurityConfig(
             "http://localhost:3000",
             "http://localhost:8080",
             "https://*.onmeet.com",
+            "https://*.onmeet.cloud",
+            "https://api.onmeet.cloud",
             "https://onmeeteven.netlify.app"
         ) + envOrigins
 
