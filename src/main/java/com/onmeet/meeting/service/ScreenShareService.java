@@ -160,6 +160,7 @@ public class ScreenShareService {
     }
 
     private void publishDataChannelMessage(MeetingRoom room, Long userId, String type) {
+        // TODO: [User Service] userId로 실제 사용자 이름 조회하여 senderName에 전달
         DataChannelMessage message = new DataChannelMessage(
             UUID.randomUUID().toString(),
             type,

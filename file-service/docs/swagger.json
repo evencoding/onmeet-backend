@@ -1,0 +1,363 @@
+{
+    "swagger": "2.0",
+    "info": {
+        "description": "File management service for OnMeet application.",
+        "title": "OnMeet File Service API",
+        "termsOfService": "http://swagger.io/terms/",
+        "contact": {
+            "name": "API Support",
+            "url": "http://www.swagger.io/support",
+            "email": "support@swagger.io"
+        },
+        "license": {
+            "name": "Apache 2.0",
+            "url": "http://www.apache.org/licenses/LICENSE-2.0.html"
+        },
+        "version": "1.0"
+    },
+    "host": "localhost:8086",
+    "basePath": "/file",
+    "paths": {
+        "/profile/default": {
+            "post": {
+                "description": "Generate a default profile image based on name and color.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "file"
+                ],
+                "summary": "Generate default profile image",
+                "parameters": [
+                    {
+                        "description": "Request Body",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/handler.GenerateProfileRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/model.FileMetadata"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/render/{fileId}": {
+            "get": {
+                "description": "Download or render file content.",
+                "tags": [
+                    "file"
+                ],
+                "summary": "Render file",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "File ID",
+                        "name": "fileId",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/upload": {
+            "post": {
+                "description": "Upload multiple files to S3.",
+                "consumes": [
+                    "multipart/form-data"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "file"
+                ],
+                "summary": "Upload files",
+                "parameters": [
+                    {
+                        "type": "file",
+                        "description": "Files to upload",
+                        "name": "files",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "File category (e.g., TEAM_PROFILE)",
+                        "name": "category",
+                        "in": "formData"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Owner Type (e.g., USER, TEAM)",
+                        "name": "ownerType",
+                        "in": "formData"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Owner ID",
+                        "name": "ownerId",
+                        "in": "formData"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/model.FileMetadata"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/upload-async": {
+            "post": {
+                "description": "Upload files asynchronously using Kafka.",
+                "consumes": [
+                    "multipart/form-data"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "file"
+                ],
+                "summary": "Upload files asynchronously",
+                "parameters": [
+                    {
+                        "type": "file",
+                        "description": "Files to upload",
+                        "name": "files",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "File category",
+                        "name": "category",
+                        "in": "formData"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Owner Type",
+                        "name": "ownerType",
+                        "in": "formData"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Owner ID",
+                        "name": "ownerId",
+                        "in": "formData"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Callback Kafka Topic",
+                        "name": "callbackTopic",
+                        "in": "formData"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Correlation ID",
+                        "name": "correlationId",
+                        "in": "formData"
+                    }
+                ],
+                "responses": {
+                    "202": {
+                        "description": "Accepted",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/{fileId}": {
+            "get": {
+                "description": "Get file metadata by ID.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "file"
+                ],
+                "summary": "Get file info",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "File ID",
+                        "name": "fileId",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/model.FileMetadata"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "description": "Delete file by ID (Soft delete in DB, Hard delete in S3).",
+                "tags": [
+                    "file"
+                ],
+                "summary": "Delete file",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "File ID",
+                        "name": "fileId",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content"
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "definitions": {
+        "handler.GenerateProfileRequest": {
+            "type": "object",
+            "properties": {
+                "color": {
+                    "type": "string",
+                    "example": "#FF5733"
+                },
+                "name": {
+                    "type": "string",
+                    "example": "John Doe"
+                },
+                "ownerId": {
+                    "type": "string",
+                    "example": "123"
+                },
+                "ownerType": {
+                    "type": "string",
+                    "example": "USER"
+                }
+            }
+        },
+        "model.FileMetadata": {
+            "type": "object",
+            "properties": {
+                "category": {
+                    "type": "string"
+                },
+                "contentType": {
+                    "type": "string"
+                },
+                "createdAt": {
+                    "type": "string"
+                },
+                "extraInfo": {
+                    "description": "datatypes.JSON은 PostgreSQL의 jsonb 타입을 지원하기 위한 특수 타입입니다.",
+                    "type": "object"
+                },
+                "fileName": {
+                    "type": "string"
+                },
+                "fileSize": {
+                    "type": "integer"
+                },
+                "id": {
+                    "description": "백틱(`) 안에 있는 것은 'Struct Tag'라고 하며, GORM(ORM) 설정이나 JSON 변환 설정을 담습니다.\ngorm:\"primaryKey\"는 JPA의 @Id와 같고, json:\"id\"는 Jackson의 @JsonProperty(\"id\")와 같습니다.",
+                    "type": "integer"
+                },
+                "originalFileName": {
+                    "type": "string"
+                },
+                "ownerId": {
+                    "type": "string"
+                },
+                "ownerType": {
+                    "type": "string"
+                },
+                "s3Url": {
+                    "type": "string"
+                },
+                "updatedAt": {
+                    "type": "string"
+                },
+                "uploaderId": {
+                    "description": "*int64처럼 포인터를 쓰는 이유는 DB의 NULL 값을 허용하기 위해서입니다. (Java의 클래스 타입 Integer와 유사)",
+                    "type": "integer"
+                }
+            }
+        }
+    }
+}

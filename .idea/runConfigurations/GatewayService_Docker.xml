@@ -1,0 +1,19 @@
+<component name="ProjectRunConfigurationManager">
+    <configuration default="false" name="GatewayService (Docker)" type="docker-deploy"
+        factoryName="docker-compose.yml" server-name="Docker">
+        <deployment type="docker-compose.yml">
+            <settings>
+                <option name="services">
+                    <list>
+                        <option value="gateway-service" />
+                    </list>
+                </option>
+                <option name="sourceFilePath" value="docker-compose.yml" />
+            </settings>
+        </deployment>
+        <method v="2">
+            <option name="Gradle.BeforeRunTask" enabled="true" tasks="jibDockerBuild"
+                externalProjectPath="$PROJECT_DIR$/gateway-service" vmOptions="" scriptParameters="" />
+        </method>
+    </configuration>
+</component>

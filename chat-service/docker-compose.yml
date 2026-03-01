@@ -6,36 +6,50 @@ services:
       MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD}
       MYSQL_DATABASE: chat_db
     ports:
-      - "3310:3306"
+      - "127.0.0.1:3310:3306"
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${DB_ROOT_PASSWORD}"]
+      test: [ "CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${DB_ROOT_PASSWORD}" ]
       interval: 10s
       timeout: 5s
       retries: 5
     networks:
-      - msa-network
+      - onmeet-network
+    deploy:
+      resources:
+        limits:
+          cpus: '0.25'
+          memory: 256M
+        reservations:
+          cpus: '0.05'
+          memory: 128M
 
   chat-service:
-    build:
-      context: ../
-      dockerfile: chat-service/Dockerfile
+    image: ${DOCKER_REGISTRY:-onmeet}/chat-service:latest
     container_name: chat-service
     ports:
-      - "${CHAT_SERVICE_PORT:-8084}:${CHAT_SERVICE_PORT:-8084}"
+      - "127.0.0.1:8084:8084"
     environment:
       - SPRING_DATASOURCE_URL=${CHAT_DB_URL:-jdbc:mysql://mysql-chat:3306/chat_db?useSSL=false&allowPublicKeyRetrieval=true&characterEncoding=UTF-8&serverTimezone=UTC}
       - SPRING_DATASOURCE_USERNAME=${DB_USERNAME}
       - SPRING_DATASOURCE_PASSWORD=${DB_ROOT_PASSWORD}
       - GATEWAY_SHARED_SECRET=${GATEWAY_SHARED_SECRET}
       - SERVER_PORT=${CHAT_SERVICE_PORT:-8084}
+      - MANAGEMENT_ENDPOINT_HEALTH_PROBES_ENABLED=true
       - MANAGEMENT_ENDPOINTS_WEB_BASE_PATH=/chat/actuator
     depends_on:
       mysql-chat:
         condition: service_healthy
     networks:
-      - msa-network
+      - onmeet-network
+    deploy:
+      resources:
+        limits:
+          cpus: '0.50'
+          memory: 512M
+        reservations:
+          cpus: '0.10'
+          memory: 256M
 
 networks:
-  msa-network:
-    name: onmeet-network
+  onmeet-network:
     external: true
