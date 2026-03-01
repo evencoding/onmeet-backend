@@ -301,8 +301,8 @@ jobs:
 
             # Retrieve latest configs
             git fetch --all
-            git checkout release/v0.1.0
-            git reset --hard origin/release/v0.1.0
+            git checkout ${{ github.ref_name }}
+            git reset --hard origin/${{ github.ref_name }}
 
             # Docker Hub 로그인
             export DOCKER_API_VERSION=1.41
