@@ -40,6 +40,7 @@ import com.onmeet.meeting.repository.RoomParticipantRepository;
 import com.onmeet.meeting.repository.RoomRecordingRepository;
 import com.onmeet.meeting.repository.RoomSettingsRepository;
 import com.onmeet.meeting.repository.RoomTagRepository;
+import java.time.Duration;
 import java.time.Instant;
 import java.time.YearMonth;
 import java.time.ZoneId;
@@ -402,6 +403,7 @@ public class MeetingRoomService {
         RoomAccessScope accessScope = request.accessScope() != null ? request.accessScope() : RoomAccessScope.ALL;
 
         validateAccessScope(accessScope, request.teamId());
+        validateNoScheduleConflict(userId, request.scheduledAt(), null);
 
         MeetingRoom room = new MeetingRoom(
             request.title(),
@@ -444,6 +446,11 @@ public class MeetingRoomService {
         if (!room.isWaiting()) {
             throw new BizException(ErrorCode.INVALID_REQUEST, "Cannot update schedule of a started or ended room");
         }
+        if (scheduledAt.isBefore(clockProvider.now())) {
+            throw new BizException(ErrorCode.INVALID_REQUEST, "Scheduled time must be in the future");
+        }
+
+        validateNoScheduleConflict(room.getHostUserId(), scheduledAt, roomId);
 
         room.updateSchedule(scheduledAt);
         return toResponse(room);
@@ -595,6 +602,16 @@ public class MeetingRoomService {
     private void validateAccessScope(RoomAccessScope accessScope, Long teamId) {
         if (accessScope == RoomAccessScope.TEAM && teamId == null) {
             throw new BizException(ErrorCode.INVALID_REQUEST, "teamId is required when accessScope is TEAM");
+        }
+    }
+
+    private void validateNoScheduleConflict(Long hostUserId, Instant scheduledAt, Long excludeRoomId) {
+        Instant rangeStart = scheduledAt.minus(Duration.ofMinutes(30));
+        Instant rangeEnd = scheduledAt.plus(Duration.ofMinutes(30));
+
+        if (roomRepository.existsConflictingSchedule(
+            hostUserId, RoomType.SCHEDULED, RoomStatus.WAITING, rangeStart, rangeEnd, excludeRoomId)) {
+            throw new BizException(ErrorCode.CONFLICT, "Another meeting is already scheduled within this time range");
         }
     }
 

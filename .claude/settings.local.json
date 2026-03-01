@@ -10,7 +10,9 @@
       "Bash(pkill:*)",
       "Bash(curl:*)",
       "Bash(git stash push:*)",
-      "Bash(git add:*)"
+      "Bash(git add:*)",
+      "Bash(find:*)",
+      "Bash(grep:*)"
     ]
   }
 }
