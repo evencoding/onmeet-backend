@@ -132,6 +132,29 @@ echo -e "\n${YELLOW}Step 3: Installing Docker...${NC}"
 if command -v docker &> /dev/null; then
     print_warning "Docker is already installed ($(docker --version))"
 else
+    # Detect OS (Ubuntu or Debian)
+    if [ -f /etc/os-release ]; then
+        . /etc/os-release
+        OS_ID=$ID
+    else
+        print_error "Cannot detect OS. /etc/os-release not found."
+        exit 1
+    fi
+
+    # Set Docker repository URL based on OS
+    if [ "$OS_ID" = "ubuntu" ]; then
+        DOCKER_REPO_URL="https://download.docker.com/linux/ubuntu"
+        GPG_FILE="docker.gpg"
+    elif [ "$OS_ID" = "debian" ]; then
+        DOCKER_REPO_URL="https://download.docker.com/linux/debian"
+        GPG_FILE="docker.asc"
+    else
+        print_error "Unsupported OS: $OS_ID. This script supports Ubuntu and Debian only."
+        exit 1
+    fi
+
+    print_status "Detected OS: $OS_ID"
+
     # Install prerequisites
     sudo apt-get install -y \
         ca-certificates \
@@ -141,12 +164,20 @@ else
 
     # Add Docker's official GPG key
     sudo install -m 0755 -d /etc/apt/keyrings
-    curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg
-    sudo chmod a+r /etc/apt/keyrings/docker.gpg
+
+    if [ "$OS_ID" = "debian" ]; then
+        # Debian uses .asc format
+        sudo curl -fsSL ${DOCKER_REPO_URL}/gpg -o /etc/apt/keyrings/${GPG_FILE}
+        sudo chmod a+r /etc/apt/keyrings/${GPG_FILE}
+    else
+        # Ubuntu uses .gpg format
+        curl -fsSL ${DOCKER_REPO_URL}/gpg | sudo gpg --dearmor -o /etc/apt/keyrings/${GPG_FILE}
+        sudo chmod a+r /etc/apt/keyrings/${GPG_FILE}
+    fi
 
     # Set up the Docker repository
     echo \
-      "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu \
+      "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/${GPG_FILE}] ${DOCKER_REPO_URL} \
       $(lsb_release -cs) stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
 
     # Install Docker Engine
