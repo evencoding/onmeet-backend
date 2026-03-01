@@ -119,6 +119,20 @@ jobs:
             echo "file=false" >> $GITHUB_OUTPUT
           fi
 
+          # 첫 릴리즈(v0.1.0)는 모든 서비스 강제 빌드
+          if [ "${{ github.ref_name }}" == "release/v0.1.0" ]; then
+            echo "First release detected - forcing all services build"
+            echo "auth=true" >> $GITHUB_OUTPUT
+            echo "gateway=true" >> $GITHUB_OUTPUT
+            echo "ai=true" >> $GITHUB_OUTPUT
+            echo "video=true" >> $GITHUB_OUTPUT
+            echo "chat=true" >> $GITHUB_OUTPUT
+            echo "notification=true" >> $GITHUB_OUTPUT
+            echo "email=true" >> $GITHUB_OUTPUT
+            echo "file=true" >> $GITHUB_OUTPUT
+            ANY_CHANGED=true
+          fi
+
           echo "any-service-changed=$ANY_CHANGED" >> $GITHUB_OUTPUT
 
       - name: Extract version from branch name
