@@ -337,13 +337,13 @@ LiveKit ──► POST /webhook/livekit (track_unpublished, source=SCREEN_SHARE)
 
 ```bash
 # 전체 TODO 목록
-grep -rn "// TODO:" src/main/java/com/onmeet/meeting/
+grep -rn "// TODO:" video-service/src/main/java/com/onmeet/video/meeting/
 
 # 서비스별 필터링
-grep -rn "// TODO: \[User Service\]" src/main/java/com/onmeet/meeting/
-grep -rn "// TODO: \[Team Service\]" src/main/java/com/onmeet/meeting/
-grep -rn "// TODO: \[Notification Service\]" src/main/java/com/onmeet/meeting/
-grep -rn "// TODO: \[Minutes Service\]" src/main/java/com/onmeet/meeting/
+grep -rn "// TODO: \[User Service\]" video-service/src/main/java/com/onmeet/video/meeting/
+grep -rn "// TODO: \[Team Service\]" video-service/src/main/java/com/onmeet/video/meeting/
+grep -rn "// TODO: \[Notification Service\]" video-service/src/main/java/com/onmeet/video/meeting/
+grep -rn "// TODO: \[Minutes Service\]" video-service/src/main/java/com/onmeet/video/meeting/
 ```
 
 ---
