@@ -92,6 +92,7 @@ public class ChatIntegrationService {
         String messageType = request.type() != null ? request.type() : DataChannelMessage.TYPE_CHAT;
         String messageId = UUID.randomUUID().toString();
 
+        // TODO: [User Service] senderId로 실제 사용자 이름 조회하여 senderName에 전달
         DataChannelMessage message = new DataChannelMessage(
             messageId,
             messageType,

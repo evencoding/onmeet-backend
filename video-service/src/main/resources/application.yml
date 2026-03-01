@@ -4,6 +4,8 @@ server:
     context-path: /video
   forward-headers-strategy: framework
 spring:
+  profiles:
+    active: ${SPRING_PROFILES_ACTIVE:chat}
   application:
     name: video-service
   datasource:
