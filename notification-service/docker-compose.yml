@@ -10,17 +10,23 @@ services:
     ports:
       - "3311:3306"
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${DB_ROOT_PASSWORD}"]
+      test: [ "CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${DB_ROOT_PASSWORD}" ]
       interval: 10s
       timeout: 5s
       retries: 5
     networks:
       - msa-network
+    deploy:
+      resources:
+        limits:
+          cpus: '0.25'
+          memory: 256M
+        reservations:
+          cpus: '0.05'
+          memory: 128M
 
   notification-service:
-    build:
-      context: ../
-      dockerfile: notification-service/Dockerfile
+    image: ${DOCKER_REGISTRY:-onmeet}/notification-service:latest
     container_name: notification-service
     ports:
       - "${NOTIFICATION_SERVICE_PORT:-8085}:${NOTIFICATION_SERVICE_PORT:-8085}"
@@ -38,6 +44,14 @@ services:
         condition: service_healthy
     networks:
       - msa-network
+    deploy:
+      resources:
+        limits:
+          cpus: '0.50'
+          memory: 512M
+        reservations:
+          cpus: '0.10'
+          memory: 256M
 
 networks:
   msa-network:

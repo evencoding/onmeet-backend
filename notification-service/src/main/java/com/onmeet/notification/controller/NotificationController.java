@@ -1,40 +1,56 @@
 package com.onmeet.notification.controller;
 
-import com.onmeet.notification.dto.NotificationRequestDto;
-import com.onmeet.notification.service.NotificationService;
-import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.tags.Tag;
-import lombok.RequiredArgsConstructor;
-import org.springframework.http.MediaType;
-import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.web.bind.annotation.*;
-import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+import com.onmeet.common.dto.ErrorResponse;
+
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.ExampleObject;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.tags.Tag;
 
 @RestController
-@RequiredArgsConstructor
-@RequestMapping("/notification/v1")
-@Tag(name = "Notification", description = "알림 API")
+@RequestMapping("/notification")
+@Tag(name = "Notification", description = "알림 관련 서비스 API")
 public class NotificationController {
 
-    private final NotificationService notificationService;
-
     @Operation(summary = "알림 서비스 상태/정보 조회", description = "알림 서비스의 상태 및 내 정보를 조회합니다.")
+    @ApiResponses(value = {
+        @ApiResponse(
+            responseCode = "200",
+            description = "알림 서비스 상태 조회 성공 - 사용자 ID와 서비스 상태 반환"
+        ),
+        @ApiResponse(
+            responseCode = "401",
+            description = "인증 실패 - 로그인이 필요합니다",
+            content = @Content(
+                mediaType = "application/json",
+                schema = @Schema(implementation = ErrorResponse.class),
+                examples = @ExampleObject(
+                    value = "{\"status\": 401, \"message\": \"Authentication failed\", \"timestamp\": 1234567890}"
+                )
+            )
+        ),
+        @ApiResponse(
+            responseCode = "500",
+            description = "서버 내부 오류",
+            content = @Content(
+                mediaType = "application/json",
+                schema = @Schema(implementation = ErrorResponse.class),
+                examples = @ExampleObject(
+                    value = "{\"status\": 500, \"message\": \"Internal server error occurred\", \"timestamp\": 1234567890}"
+                )
+            )
+        )
+    })
     @GetMapping("/me")
     public String me(@AuthenticationPrincipal String userId) {
         return "Hello from Notification Service! User ID: " + (userId != null ? userId : "Unknown");
-    }
-
-    @Operation(summary = "SSE 구독", description = "클라이언트가 알림을 수신하기 위해 SSE 연결을 구독합니다.")
-    @GetMapping(value = "/subscribe/{userId}", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
-    public SseEmitter subscribe(@PathVariable Long userId) {
-        return notificationService.subscribe(userId);
-    }
-
-    @Operation(summary = "알림 전송 (테스트용)", description = "특정 사용자에게 알림을 전송합니다.")
-    @PostMapping("/send")
-    public ResponseEntity<Void> sendNotification(@RequestBody NotificationRequestDto request) {
-        notificationService.send(request);
-        return ResponseEntity.ok().build();
     }
 }
