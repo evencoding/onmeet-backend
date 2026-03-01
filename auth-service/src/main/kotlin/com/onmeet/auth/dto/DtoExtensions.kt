@@ -41,3 +41,10 @@ fun Invitation.toResponseDto() = InvitationResponse(
     companyName = this.company.name,
     role = this.role
 )
+
+fun User.toUserInfoDto() = UserInfoDto(
+    userId = this.requireId(),
+    name = this.name,
+    email = this.email,
+    profileImageId = this.profileImageId
+)
