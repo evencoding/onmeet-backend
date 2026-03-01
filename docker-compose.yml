@@ -13,5 +13,5 @@ include:
   # - observability/docker-compose.yml
 
 networks:
-  msa-network:
+  onmeet-network:
     name: onmeet-network
