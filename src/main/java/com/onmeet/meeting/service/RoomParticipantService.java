@@ -94,6 +94,7 @@ public class RoomParticipantService {
 
         liveKitClient.removeParticipant(room.getLivekitRoomName(), String.valueOf(targetUserId));
 
+        // TODO: [Notification Service] 강퇴된 참가자에게 강퇴 알림
         eventPublisher.publishParticipantLeft(
             new ParticipantEvent("PARTICIPANT_LEFT", roomId, targetUserId, now));
     }
@@ -197,6 +198,7 @@ public class RoomParticipantService {
         Instant now = clockProvider.now();
         participant.admit(now);
 
+        // TODO: [User Service] userId로 실제 사용자 이름 조회하여 participantName에 전달
         String token = liveKitClient.generateToken(
             room.getLivekitRoomName(),
             String.valueOf(targetUserId),
@@ -204,6 +206,7 @@ public class RoomParticipantService {
             TokenGrants.forParticipant()
         );
 
+        // TODO: [Notification Service] 대기실에서 승인된 참가자에게 입장 허용 알림
         eventPublisher.publishParticipantJoined(
             new ParticipantEvent("PARTICIPANT_JOINED", roomId, targetUserId, now));
     }
@@ -219,6 +222,7 @@ public class RoomParticipantService {
 
         Instant now = clockProvider.now();
         participant.kick(now);
+        // TODO: [Notification Service] 대기실에서 거절된 참가자에게 거절 알림
     }
 
     @Transactional
@@ -240,6 +244,7 @@ public class RoomParticipantService {
                 break;
             }
             p.admit(now);
+            // TODO: [User Service] userId로 실제 사용자 이름 조회하여 participantName에 전달
             liveKitClient.generateToken(
                 room.getLivekitRoomName(),
                 String.valueOf(p.getUserId()),

@@ -13,4 +13,8 @@ public interface MeetingEventPublisher {
     void publishAudioSegmentReady(AudioSegmentEvent event);
 
     void publishChatMessage(ChatMessageEvent event);
+
+    void publishScreenShareStarted(ScreenShareEvent event);
+
+    void publishScreenShareStopped(ScreenShareEvent event);
 }

@@ -43,7 +43,9 @@ public class RoomInvitationService {
             throw new BizException(ErrorCode.CONFLICT, "Invitation already pending for this user");
         }
 
+        // TODO: [User Service] inviteeUserId로 사용자 존재 여부 검증
         RoomInvitation invitation = new RoomInvitation(room, inviterUserId, inviteeUserId);
+        // TODO: [Notification Service] 초대받은 사용자에게 초대 알림
         return toResponse(invitationRepository.save(invitation));
     }
 
@@ -55,6 +57,7 @@ public class RoomInvitationService {
             throw new BizException(ErrorCode.INVALID_REQUEST, "Cannot invite to an ended room");
         }
 
+        // TODO: [User Service] inviteeUserIds로 사용자 존재 여부 일괄 검증
         List<InvitationResponse> results = new ArrayList<>();
         for (Long inviteeUserId : inviteeUserIds) {
             if (inviteeUserId.equals(inviterUserId)) {
@@ -67,6 +70,7 @@ public class RoomInvitationService {
             RoomInvitation invitation = new RoomInvitation(room, inviterUserId, inviteeUserId);
             results.add(toResponse(invitationRepository.save(invitation)));
         }
+        // TODO: [Notification Service] 초대받은 사용자들에게 초대 알림 일괄 발송
         return results;
     }
 
@@ -88,6 +92,7 @@ public class RoomInvitationService {
         }
 
         invitation.accept();
+        // TODO: [Notification Service] 호스트에게 초대 수락 알림
         return toResponse(invitation);
     }
 
@@ -101,6 +106,7 @@ public class RoomInvitationService {
         }
 
         invitation.decline();
+        // TODO: [Notification Service] 호스트에게 초대 거절 알림
         return toResponse(invitation);
     }
 
@@ -120,6 +126,7 @@ public class RoomInvitationService {
         }
 
         invitation.cancel();
+        // TODO: [Notification Service] 초대 취소된 사용자에게 취소 알림
     }
 
     private MeetingRoom findRoom(Long roomId) {
