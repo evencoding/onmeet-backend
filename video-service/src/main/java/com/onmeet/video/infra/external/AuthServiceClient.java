@@ -24,6 +24,22 @@ public interface AuthServiceClient {
     List<UserInfo> getBatchUserInfo(List<Long> userIds);
 
     /**
+     * 사용자 존재 여부 확인
+     *
+     * @param userId 사용자 ID
+     * @return 존재 여부
+     */
+    boolean userExists(Long userId);
+
+    /**
+     * 다중 사용자 존재 여부 일괄 확인
+     *
+     * @param userIds 사용자 ID 목록
+     * @return 사용자 ID와 존재 여부 맵
+     */
+    java.util.Map<Long, Boolean> batchUserExists(List<Long> userIds);
+
+    /**
      * 사용자 기본 정보
      */
     record UserInfo(
@@ -47,6 +63,31 @@ public interface AuthServiceClient {
      */
     record BatchUserInfoResponse(
             List<UserInfo> users
+    ) {
+    }
+
+    /**
+     * 사용자 존재 여부 확인 응답
+     */
+    record UserExistsResponse(
+            Long userId,
+            Boolean exists
+    ) {
+    }
+
+    /**
+     * 다중 사용자 존재 여부 확인 요청
+     */
+    record BatchUserExistsRequest(
+            List<Long> userIds
+    ) {
+    }
+
+    /**
+     * 다중 사용자 존재 여부 확인 응답
+     */
+    record BatchUserExistsResponse(
+            List<UserExistsResponse> users
     ) {
     }
 }

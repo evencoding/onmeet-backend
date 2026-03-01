@@ -25,3 +25,23 @@ data class BatchUserInfoResponse(
     @Schema(description = "사용자 정보 목록")
     val users: List<UserInfoDto>
 )
+
+@Schema(description = "사용자 존재 여부 확인 응답")
+data class UserExistsResponse(
+    @Schema(description = "사용자 ID")
+    val userId: Long,
+    @Schema(description = "존재 여부")
+    val exists: Boolean
+)
+
+@Schema(description = "다중 사용자 존재 여부 확인 요청")
+data class BatchUserExistsRequest(
+    @Schema(description = "확인할 사용자 ID 목록")
+    val userIds: List<Long>
+)
+
+@Schema(description = "다중 사용자 존재 여부 확인 응답")
+data class BatchUserExistsResponse(
+    @Schema(description = "사용자 존재 여부 목록")
+    val users: List<UserExistsResponse>
+)

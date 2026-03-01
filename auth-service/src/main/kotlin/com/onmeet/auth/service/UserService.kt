@@ -23,4 +23,6 @@ interface UserService {
     // Internal API - No permission check
     fun getUserInfoById(userId: Long): UserInfoDto
     fun getBatchUserInfo(userIds: List<Long>): List<UserInfoDto>
+    fun existsById(userId: Long): Boolean
+    fun existsByIds(userIds: List<Long>): Map<Long, Boolean>
 }
