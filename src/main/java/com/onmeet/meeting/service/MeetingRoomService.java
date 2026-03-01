@@ -96,6 +96,7 @@ public class MeetingRoomService {
         RoomAccessScope accessScope = request.accessScope() != null ? request.accessScope() : RoomAccessScope.ALL;
 
         validateAccessScope(accessScope, request.teamId());
+        // TODO: [Team Service] accessScope가 TEAM인 경우 팀 존재 여부 및 생성자의 팀 멤버십 검증
 
         MeetingRoom room = new MeetingRoom(
             request.title(),
@@ -192,6 +193,7 @@ public class MeetingRoomService {
             throw new BizException(ErrorCode.CONFLICT, "Already joined this room");
         }
 
+        // TODO: [Team Service] accessScope가 TEAM인 경우 참가자의 팀 멤버십 검증
         if (room.isLocked() && !room.isHost(userId)) {
             if (request == null || request.password() == null || !request.password().equals(room.getPassword())) {
                 throw new BizException(ErrorCode.FORBIDDEN, "Incorrect room password");
@@ -219,6 +221,7 @@ public class MeetingRoomService {
             return new RoomJoinResponse(null, liveKitProperties.getUrl(), room.getLivekitRoomName(), true);
         }
 
+        // TODO: [User Service] userId로 실제 사용자 이름 조회하여 participantName에 전달
         TokenGrants grants = room.isHost(userId) ? TokenGrants.forHost() : TokenGrants.forParticipant();
         String token = liveKitClient.generateToken(
             room.getLivekitRoomName(),
@@ -227,6 +230,7 @@ public class MeetingRoomService {
             grants
         );
 
+        // TODO: [Notification Service] 호스트/코호스트에게 새 참가자 입장 알림
         eventPublisher.publishParticipantJoined(
             new ParticipantEvent("PARTICIPANT_JOINED", roomId, userId, now));
 
@@ -262,6 +266,7 @@ public class MeetingRoomService {
         room.start(now);
 
         int participantCount = participantRepository.countActiveParticipants(roomId);
+        // TODO: [Notification Service] 참가자들에게 회의 시작 알림
         eventPublisher.publishMeetingStarted(
             new MeetingEvent("MEETING_STARTED", roomId, userId, participantCount, now, null));
 
@@ -293,6 +298,8 @@ public class MeetingRoomService {
             p.leave(now);
         }
 
+        // TODO: [Notification Service] 참가자들에게 회의 종료 알림
+        // TODO: [Minutes Service] 회의 메타데이터(참가자, 시간, 녹음 등)를 회의록 서비스로 전달
         eventPublisher.publishMeetingEnded(
             new MeetingEvent("MEETING_ENDED", roomId, userId, activeParticipants.size(),
                 room.getStartedAt(), now));
@@ -424,6 +431,8 @@ public class MeetingRoomService {
         MeetingRoom saved = roomRepository.save(room);
         settingsRepository.save(RoomSettings.createDefault(saved));
 
+        // TODO: [Notification Service] 예약 회의 생성 시 초대 대상자에게 알림
+
         return toResponse(saved);
     }
 
@@ -453,6 +462,7 @@ public class MeetingRoomService {
         validateNoScheduleConflict(room.getHostUserId(), scheduledAt, roomId);
 
         room.updateSchedule(scheduledAt);
+        // TODO: [Notification Service] 초대된 참가자들에게 일정 변경 알림
         return toResponse(room);
     }
 
@@ -466,6 +476,7 @@ public class MeetingRoomService {
         }
 
         room.cancel();
+        // TODO: [Notification Service] 초대된 참가자들에게 일정 취소 알림
     }
 
     @Transactional(readOnly = true)
@@ -541,6 +552,7 @@ public class MeetingRoomService {
 
         List<TimelineEntry> timeline = new ArrayList<>();
 
+        // TODO: [User Service] userId로 실제 사용자 이름 조회하여 타임라인 설명에 표시
         List<RoomParticipant> participants = participantRepository.findByRoomId(roomId);
         for (RoomParticipant p : participants) {
             timeline.add(new TimelineEntry(
@@ -575,6 +587,7 @@ public class MeetingRoomService {
             throw new BizException(ErrorCode.INVALID_REQUEST, "Cannot send reminder for an ended room");
         }
 
+        // TODO: [Notification Service] 초대된 참가자들에게 예약 회의 리마인더 알림
         eventPublisher.publishMeetingStarted(
             new MeetingEvent("MEETING_REMINDER", roomId, userId, 0, null, null));
     }
@@ -603,6 +616,7 @@ public class MeetingRoomService {
         if (accessScope == RoomAccessScope.TEAM && teamId == null) {
             throw new BizException(ErrorCode.INVALID_REQUEST, "teamId is required when accessScope is TEAM");
         }
+        // TODO: [Team Service] 팀 존재 여부 검증 및 요청자의 팀 멤버십 확인
     }
 
     private void validateNoScheduleConflict(Long hostUserId, Instant scheduledAt, Long excludeRoomId) {
