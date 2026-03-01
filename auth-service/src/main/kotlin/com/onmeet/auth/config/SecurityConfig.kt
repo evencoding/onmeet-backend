@@ -49,7 +49,7 @@ class SecurityConfig(
                 auth.requestMatchers(
                     "/v1/auth/**",
                     "/v1/internal/**",
-                    "/actuator/**", "/.well-known/jwks.json"
+                    "/actuator/**", "/v1/.well-known/jwks.json"
                 ).permitAll()
                 auth.requestMatchers("/v1/manager/**").hasAnyRole("MANAGER", "ADMIN")
                 auth.anyRequest().authenticated()
