@@ -100,7 +100,16 @@ public class MeetingRoomService {
         RoomAccessScope accessScope = request.accessScope() != null ? request.accessScope() : RoomAccessScope.ALL;
 
         validateAccessScope(accessScope, request.teamId());
-        // TODO: [Team Service] accessScope가 TEAM인 경우 팀 존재 여부 및 생성자의 팀 멤버십 검증
+
+        // Validate team existence and creator's membership when access scope is TEAM
+        if (accessScope == RoomAccessScope.TEAM && request.teamId() != null) {
+            if (!authServiceClient.teamExists(request.teamId())) {
+                throw new BizException(ErrorCode.NOT_FOUND, "Team not found: " + request.teamId());
+            }
+            if (!authServiceClient.isTeamMember(request.teamId(), hostUserId)) {
+                throw new BizException(ErrorCode.FORBIDDEN, "Host must be a member of the team");
+            }
+        }
 
         MeetingRoom room = new MeetingRoom(
             request.title(),
@@ -197,7 +206,13 @@ public class MeetingRoomService {
             throw new BizException(ErrorCode.CONFLICT, "Already joined this room");
         }
 
-        // TODO: [Team Service] accessScope가 TEAM인 경우 참가자의 팀 멤버십 검증
+        // Validate participant's team membership when access scope is TEAM
+        if (room.getAccessScope() == RoomAccessScope.TEAM && room.getTeamId() != null && !room.isHost(userId)) {
+            if (!authServiceClient.isTeamMember(room.getTeamId(), userId)) {
+                throw new BizException(ErrorCode.FORBIDDEN, "Only team members can join this room");
+            }
+        }
+
         if (room.isLocked() && !room.isHost(userId)) {
             if (request == null || request.password() == null || !request.password().equals(room.getPassword())) {
                 throw new BizException(ErrorCode.FORBIDDEN, "Incorrect room password");
@@ -417,6 +432,17 @@ public class MeetingRoomService {
         RoomAccessScope accessScope = request.accessScope() != null ? request.accessScope() : RoomAccessScope.ALL;
 
         validateAccessScope(accessScope, request.teamId());
+
+        // Validate team existence and creator's membership when access scope is TEAM
+        if (accessScope == RoomAccessScope.TEAM && request.teamId() != null) {
+            if (!authServiceClient.teamExists(request.teamId())) {
+                throw new BizException(ErrorCode.NOT_FOUND, "Team not found: " + request.teamId());
+            }
+            if (!authServiceClient.isTeamMember(request.teamId(), userId)) {
+                throw new BizException(ErrorCode.FORBIDDEN, "Host must be a member of the team");
+            }
+        }
+
         validateNoScheduleConflict(userId, request.scheduledAt(), null);
 
         MeetingRoom room = new MeetingRoom(
@@ -623,7 +649,6 @@ public class MeetingRoomService {
         if (accessScope == RoomAccessScope.TEAM && teamId == null) {
             throw new BizException(ErrorCode.INVALID_REQUEST, "teamId is required when accessScope is TEAM");
         }
-        // TODO: [Team Service] 팀 존재 여부 검증 및 요청자의 팀 멤버십 확인
     }
 
     private void validateNoScheduleConflict(Long hostUserId, Instant scheduledAt, Long excludeRoomId) {

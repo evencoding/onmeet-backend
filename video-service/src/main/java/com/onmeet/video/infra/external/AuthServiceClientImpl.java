@@ -153,6 +153,53 @@ public class AuthServiceClientImpl implements AuthServiceClient {
         }
     }
 
+    @Override
+    public boolean teamExists(Long teamId) {
+        String url = authServiceProperties.getInternalUrl() + "/auth/internal/teams/" + teamId + "/exists";
+
+        try {
+            HttpHeaders headers = createHeaders();
+            HttpEntity<Void> entity = new HttpEntity<>(headers);
+
+            ResponseEntity<TeamExistsResponse> response = restTemplate.exchange(
+                    url,
+                    HttpMethod.GET,
+                    entity,
+                    TeamExistsResponse.class
+            );
+
+            TeamExistsResponse body = response.getBody();
+            return body != null && body.exists();
+        } catch (Exception e) {
+            logger.error("Failed to check if team exists for teamId: {}", teamId, e);
+            return false;
+        }
+    }
+
+    @Override
+    public boolean isTeamMember(Long teamId, Long userId) {
+        String url = authServiceProperties.getInternalUrl() + "/auth/internal/teams/membership/check";
+
+        try {
+            HttpHeaders headers = createHeaders();
+            TeamMembershipRequest request = new TeamMembershipRequest(teamId, userId);
+            HttpEntity<TeamMembershipRequest> entity = new HttpEntity<>(request, headers);
+
+            ResponseEntity<TeamMembershipResponse> response = restTemplate.exchange(
+                    url,
+                    HttpMethod.POST,
+                    entity,
+                    TeamMembershipResponse.class
+            );
+
+            TeamMembershipResponse body = response.getBody();
+            return body != null && body.isMember();
+        } catch (Exception e) {
+            logger.error("Failed to check team membership for teamId: {}, userId: {}", teamId, userId, e);
+            return false;
+        }
+    }
+
     private HttpHeaders createHeaders() {
         HttpHeaders headers = new HttpHeaders();
         headers.set("X-Gateway-Secret", gatewaySharedSecret);
