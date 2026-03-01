@@ -247,6 +247,7 @@ jobs:
               -Djib.to.tags=$TAG_LIST \
               --parallel \
               --no-daemon \
+              --no-configuration-cache \
               -x test
           else
             echo "No Kotlin/Java services to build"
