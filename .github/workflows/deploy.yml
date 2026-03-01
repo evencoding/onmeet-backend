@@ -119,6 +119,14 @@ jobs:
             echo "file=false" >> $GITHUB_OUTPUT
           fi
 
+          # kafka / zookeeper
+          if echo "$CHANGED_FILES" | grep -q "^kafka/"; then
+            echo "kafka=true" >> $GITHUB_OUTPUT
+            ANY_CHANGED=true
+          else
+            echo "kafka=false" >> $GITHUB_OUTPUT
+          fi
+
 
 
           echo "any-service-changed=$ANY_CHANGED" >> $GITHUB_OUTPUT
@@ -306,6 +314,7 @@ jobs:
             if [ "${{ needs.detect-changes.outputs.notification }}" == "true" ]; then TARGETS="$TARGETS notification-service"; fi
             if [ "${{ needs.detect-changes.outputs.email }}" == "true" ]; then TARGETS="$TARGETS email-service"; fi
             if [ "${{ needs.detect-changes.outputs.file }}" == "true" ]; then TARGETS="$TARGETS file-service"; fi
+            if [ "${{ needs.detect-changes.outputs.kafka }}" == "true" ]; then TARGETS="$TARGETS kafka zookeeper"; fi
 
             echo "Deploying changed services: $TARGETS"
 

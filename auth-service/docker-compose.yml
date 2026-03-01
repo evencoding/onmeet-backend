@@ -58,6 +58,8 @@ services:
           cpus: '0.10'
           memory: 256M
 
+  # Trigger deployment
+
   redis-auth:
     image: redis:alpine
     container_name: redis-auth
