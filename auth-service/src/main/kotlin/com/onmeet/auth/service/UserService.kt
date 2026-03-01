@@ -1,6 +1,7 @@
 package com.onmeet.auth.service
 
 import com.onmeet.auth.dto.PageResponse
+import com.onmeet.auth.dto.UserInfoDto
 import com.onmeet.auth.dto.UserProfileUpdateRequest
 import com.onmeet.auth.dto.UserResponseDto
 import com.onmeet.auth.entity.User
@@ -18,4 +19,8 @@ interface UserService {
     fun activateUser(userId: Long, manager: User): UserResponseDto
     fun deleteMyProfileImage(requester: User): UserResponseDto
     fun getMyInfo(user: User): UserResponseDto
+
+    // Internal API - No permission check
+    fun getUserInfoById(userId: Long): UserInfoDto
+    fun getBatchUserInfo(userIds: List<Long>): List<UserInfoDto>
 }
