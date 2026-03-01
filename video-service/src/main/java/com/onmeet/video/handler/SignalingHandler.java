@@ -1,5 +1,6 @@
 package com.onmeet.video.handler;
 
+import org.springframework.lang.NonNull;
 import org.springframework.stereotype.Component;
 import org.springframework.web.socket.CloseStatus;
 import org.springframework.web.socket.TextMessage;
@@ -22,22 +23,21 @@ public class SignalingHandler extends TextWebSocketHandler {
     private final Map<String, WebSocketSession> sessions = new ConcurrentHashMap<>();
 
     @Override
-    public void afterConnectionEstablished(WebSocketSession session) throws Exception {
+    public void afterConnectionEstablished(@NonNull WebSocketSession session) throws Exception {
         sessions.put(session.getId(), session);
         logger.info("New WebSocket Connection: {}", session.getId());
     }
 
     @Override
-    public void afterConnectionClosed(WebSocketSession session, CloseStatus status) throws Exception {
+    public void afterConnectionClosed(@NonNull WebSocketSession session, @NonNull CloseStatus status) throws Exception {
         sessions.remove(session.getId());
         logger.info("WebSocket Disconnected: {}", session.getId());
     }
 
     @Override
-    protected void handleTextMessage(WebSocketSession session, TextMessage message) throws Exception {
+    protected void handleTextMessage(@NonNull WebSocketSession session, @NonNull TextMessage message) throws Exception {
         // Broadcast signal to all other sessions (simple signaling)
         // In a real app, you'd target specific peers based on room ID
-        String payload = message.getPayload();
         for (WebSocketSession s : sessions.values()) {
             if (s.isOpen() && !s.getId().equals(session.getId())) {
                 try {
