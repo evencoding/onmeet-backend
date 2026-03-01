@@ -52,7 +52,8 @@ services:
       test: [ "CMD-SHELL", "kafka-broker-api-versions --bootstrap-server localhost:9092 || exit 1" ]
       interval: 10s
       timeout: 10s
-      retries: 5
+      retries: 10
+      start_period: 60s
     networks:
       - msa-network
 
