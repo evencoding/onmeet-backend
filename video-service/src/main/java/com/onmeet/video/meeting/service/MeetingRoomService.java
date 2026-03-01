@@ -3,6 +3,7 @@ package com.onmeet.video.meeting.service;
 import com.onmeet.video.common.exception.BizException;
 import com.onmeet.video.common.exception.ErrorCode;
 import com.onmeet.video.common.util.ClockProvider;
+import com.onmeet.video.infra.external.AuthServiceClient;
 import com.onmeet.video.infra.external.LiveKitClient;
 import com.onmeet.video.infra.external.LiveKitClient.TokenGrants;
 import com.onmeet.video.meeting.config.LiveKitProperties;
@@ -66,6 +67,7 @@ public class MeetingRoomService {
     private final LiveKitProperties liveKitProperties;
     private final MeetingEventPublisher eventPublisher;
     private final ClockProvider clockProvider;
+    private final AuthServiceClient authServiceClient;
 
     public MeetingRoomService(MeetingRoomRepository roomRepository,
                               RoomSettingsRepository settingsRepository,
@@ -76,7 +78,8 @@ public class MeetingRoomService {
                               LiveKitClient liveKitClient,
                               LiveKitProperties liveKitProperties,
                               MeetingEventPublisher eventPublisher,
-                              ClockProvider clockProvider) {
+                              ClockProvider clockProvider,
+                              AuthServiceClient authServiceClient) {
         this.roomRepository = roomRepository;
         this.settingsRepository = settingsRepository;
         this.participantRepository = participantRepository;
@@ -87,6 +90,7 @@ public class MeetingRoomService {
         this.liveKitProperties = liveKitProperties;
         this.eventPublisher = eventPublisher;
         this.clockProvider = clockProvider;
+        this.authServiceClient = authServiceClient;
     }
 
     @Transactional
@@ -221,12 +225,15 @@ public class MeetingRoomService {
             return new RoomJoinResponse(null, liveKitProperties.getUrl(), room.getLivekitRoomName(), true);
         }
 
-        // TODO: [User Service] userId로 실제 사용자 이름 조회하여 participantName에 전달
+        // Get user name from auth service
+        AuthServiceClient.UserInfo userInfo = authServiceClient.getUserInfo(userId);
+        String participantName = userInfo != null ? userInfo.name() : "user-" + userId;
+
         TokenGrants grants = room.isHost(userId) ? TokenGrants.forHost() : TokenGrants.forParticipant();
         String token = liveKitClient.generateToken(
             room.getLivekitRoomName(),
             String.valueOf(userId),
-            "user-" + userId,
+            participantName,
             grants
         );
 

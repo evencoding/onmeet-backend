@@ -140,6 +140,19 @@ class UserServiceImpl(
         return user.toResponseDto()
     }
 
+    // Internal API - No permission check
+    override fun getUserInfoById(userId: Long): UserInfoDto {
+        val user = userRepository.findById(userId)
+            .orElseThrow { UserNotFoundException("User not found: $userId") }
+        return user.toUserInfoDto()
+    }
+
+    // Internal API - No permission check
+    override fun getBatchUserInfo(userIds: List<Long>): List<UserInfoDto> {
+        val users = userRepository.findAllById(userIds)
+        return users.map { it.toUserInfoDto() }
+    }
+
     private fun validateManagerPermission(manager: User, targetUser: User) {
         if (!manager.isManager()) {
             throw InsufficientPermissionException("Only managers can change user status")
