@@ -56,7 +56,8 @@ class SecurityConfig(
                     "/webjars/**",
                     "/v3/api-docs/**",
                     "/swagger-resources/**",
-                    "/**/v3/api-docs/**",
+                    "/*/v3/api-docs",
+                    "/*/v1/v3/api-docs",
                     "/file/doc.json",
                     "/file/swagger/**",
                     "/error"
