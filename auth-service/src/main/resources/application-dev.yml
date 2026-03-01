@@ -1,3 +1,7 @@
+privacy:
+  encryption:
+    key: ${PRIVACY_ENCRYPTION_KEY:DevPrivacyKey123}  # 16자리 AES-128, 로컬 개발용 기본값
+
 management:
   tracing:
     sampling:
