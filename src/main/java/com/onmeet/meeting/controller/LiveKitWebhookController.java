@@ -2,6 +2,7 @@ package com.onmeet.meeting.controller;
 
 import com.onmeet.meeting.service.ChatIntegrationService;
 import com.onmeet.meeting.service.RoomRecordingService;
+import com.onmeet.meeting.service.ScreenShareService;
 import java.nio.charset.StandardCharsets;
 import java.util.Base64;
 import java.util.Map;
@@ -21,11 +22,14 @@ public class LiveKitWebhookController {
 
     private final RoomRecordingService recordingService;
     private final ChatIntegrationService chatIntegrationService;
+    private final ScreenShareService screenShareService;
 
     public LiveKitWebhookController(RoomRecordingService recordingService,
-                                    ChatIntegrationService chatIntegrationService) {
+                                    ChatIntegrationService chatIntegrationService,
+                                    ScreenShareService screenShareService) {
         this.recordingService = recordingService;
         this.chatIntegrationService = chatIntegrationService;
+        this.screenShareService = screenShareService;
     }
 
     @PostMapping("/livekit")
@@ -45,6 +49,7 @@ public class LiveKitWebhookController {
             case "participant_joined" -> handleParticipantJoined(payload);
             case "participant_left" -> handleParticipantLeft(payload);
             case "track_published" -> handleTrackPublished(payload);
+            case "track_unpublished" -> handleTrackUnpublished(payload);
             case "egress_started" -> handleEgressStarted(payload);
             case "egress_ended" -> handleEgressEnded(payload);
             case "data_received" -> handleDataReceived(payload);
@@ -86,8 +91,80 @@ public class LiveKitWebhookController {
         }
     }
 
+    @SuppressWarnings("unchecked")
     private void handleTrackPublished(Map<String, Object> payload) {
-        log.debug("Track published event received");
+        Map<String, Object> track = (Map<String, Object>) payload.get("track");
+        Map<String, Object> participant = (Map<String, Object>) payload.get("participant");
+
+        if (track == null || participant == null) {
+            log.debug("Track published event received without track or participant info");
+            return;
+        }
+
+        String source = (String) track.get("source");
+        String identity = (String) participant.get("identity");
+
+        if ("SCREEN_SHARE".equals(source) || "SCREEN_SHARE_AUDIO".equals(source)) {
+            log.info("Screen share track published: identity={}, source={}", identity, source);
+            Long userId = parseUserId(identity);
+            Long roomId = resolveRoomId(payload);
+            if (userId != null && roomId != null) {
+                try {
+                    screenShareService.startScreenShare(roomId, userId);
+                } catch (Exception e) {
+                    log.warn("Failed to update screen share state on track publish: {}", e.getMessage());
+                }
+            }
+        } else {
+            log.debug("Track published event received: source={}", source);
+        }
+    }
+
+    @SuppressWarnings("unchecked")
+    private void handleTrackUnpublished(Map<String, Object> payload) {
+        Map<String, Object> track = (Map<String, Object>) payload.get("track");
+        Map<String, Object> participant = (Map<String, Object>) payload.get("participant");
+
+        if (track == null || participant == null) {
+            return;
+        }
+
+        String source = (String) track.get("source");
+        String identity = (String) participant.get("identity");
+
+        if ("SCREEN_SHARE".equals(source)) {
+            log.info("Screen share track unpublished: identity={}", identity);
+            Long userId = parseUserId(identity);
+            Long roomId = resolveRoomId(payload);
+            if (userId != null && roomId != null) {
+                try {
+                    screenShareService.stopScreenShare(roomId, userId);
+                } catch (Exception e) {
+                    log.warn("Failed to update screen share state on track unpublish: {}", e.getMessage());
+                }
+            }
+        }
+    }
+
+    @SuppressWarnings("unchecked")
+    private Long resolveRoomId(Map<String, Object> payload) {
+        Map<String, Object> room = (Map<String, Object>) payload.get("room");
+        if (room == null) {
+            return null;
+        }
+        String roomName = (String) room.get("name");
+        if (roomName == null) {
+            return null;
+        }
+        return screenShareService.findRoomIdByLivekitName(roomName);
+    }
+
+    private Long parseUserId(String identity) {
+        try {
+            return Long.parseLong(identity);
+        } catch (NumberFormatException e) {
+            return null;
+        }
     }
 
     @SuppressWarnings("unchecked")

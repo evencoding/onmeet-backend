@@ -38,4 +38,14 @@ public class NoOpMeetingEventPublisher implements MeetingEventPublisher {
     public void publishChatMessage(ChatMessageEvent event) {
         log.debug("Chat message event: roomId={}, senderId={}, type={}", event.roomId(), event.senderId(), event.messageType());
     }
+
+    @Override
+    public void publishScreenShareStarted(ScreenShareEvent event) {
+        log.debug("Screen share started event: roomId={}, userId={}", event.roomId(), event.userId());
+    }
+
+    @Override
+    public void publishScreenShareStopped(ScreenShareEvent event) {
+        log.debug("Screen share stopped event: roomId={}, userId={}", event.roomId(), event.userId());
+    }
 }
