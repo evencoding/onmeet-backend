@@ -341,11 +341,11 @@ jobs:
 
             # 대상 서비스 재시작 및 누락된 컨테이너가 있다면 전부 실행 보장
             if [ -n "$TARGETS" ]; then
-              docker compose up -d --remove-orphans $TARGETS
+               docker compose up -d --remove-orphans --force-recreate $TARGETS
             fi
 
             # 전체 스택 상태 확인 및 꺼져있는 컨테이너 실행 (이미 실행중이고 변경없는 컨테이너는 무시됨)
-            docker compose up -d --remove-orphans
+            docker compose up -d --remove-orphans --force-recreate
 
             # 사용하지 않는 이미지 정리
             docker image prune -f
