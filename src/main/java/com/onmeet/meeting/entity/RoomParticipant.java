@@ -56,6 +56,11 @@ public class RoomParticipant {
     @Column(length = 20)
     private DeviceType deviceType;
 
+    @Column(nullable = false)
+    private boolean screenSharing;
+
+    private Instant screenShareStartedAt;
+
     @CreatedDate
     @Column(nullable = false, updatable = false)
     private Instant createdAt;
@@ -107,5 +112,15 @@ public class RoomParticipant {
 
     public boolean isWaiting() {
         return this.status == ParticipantStatus.WAITING;
+    }
+
+    public void startScreenShare(Instant now) {
+        this.screenSharing = true;
+        this.screenShareStartedAt = now;
+    }
+
+    public void stopScreenShare() {
+        this.screenSharing = false;
+        this.screenShareStartedAt = null;
     }
 }
