@@ -59,16 +59,18 @@ spring:
       default-filters:
         - name: RequestRateLimiter
           args:
-            'redis-rate-limiter.replenishRate': 10
-            'redis-rate-limiter.burstCapacity': 20
-            'redis-rate-limiter.requestedTokens': 1
+            "redis-rate-limiter.replenishRate": 10
+            "redis-rate-limiter.burstCapacity": 20
+            "redis-rate-limiter.requestedTokens": 1
             key-resolver: "#{@ipKeyResolver}"
       globalcors:
         cors-configurations:
-          '[/**]':
+          "[/**]":
             allowedOriginPatterns:
               - "http://localhost:[*]"
               - "http://127.0.0.1:[*]"
+              - "https://api.onmeet.cloud"
+              - "https://*.onmeet.cloud"
             allowedMethods:
               - GET
               - POST
@@ -111,7 +113,6 @@ springdoc:
 
       - name: file-service
         url: /file/doc.json
-
 
 management:
   endpoints:
