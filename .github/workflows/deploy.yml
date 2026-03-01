@@ -369,7 +369,7 @@ jobs:
             docker compose ps
 
             # 헬스체크 (gateway-service 기준)
-            max_attempts=30
+            max_attempts=60
             attempt=0
             until curl -f http://localhost:8080/actuator/health || [ $attempt -eq $max_attempts ]; do
               attempt=$((attempt+1))
