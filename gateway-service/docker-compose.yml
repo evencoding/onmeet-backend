@@ -19,7 +19,7 @@ services:
     depends_on:
       - redis-auth
     networks:
-      - msa-network
+      - onmeet-network
     deploy:
       resources:
         limits:
@@ -30,6 +30,6 @@ services:
           memory: 256M
 
 networks:
-  msa-network:
+  onmeet-network:
     name: onmeet-network
     external: true
