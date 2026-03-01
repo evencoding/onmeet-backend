@@ -43,6 +43,8 @@ echo
 
 
 echo "### Starting nginx ..."
+# 기존 컨테이너가 남아있을 경우 이름 충돌을 방지하기 위해 먼저 제거
+docker rm -f onmeet-nginx 2>/dev/null || true
 DOCKER_API_VERSION=1.41 docker compose -f nginx/docker-compose.yml up --force-recreate -d nginx
 echo
 
