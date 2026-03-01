@@ -5,6 +5,7 @@ import com.onmeet.video.common.exception.ErrorCode;
 import com.onmeet.video.common.util.ClockProvider;
 import com.onmeet.video.infra.external.LiveKitClient;
 import com.onmeet.video.infra.external.LiveKitClient.TokenGrants;
+import com.onmeet.video.infra.external.NotificationServiceClient;
 import com.onmeet.video.meeting.dto.ParticipantRoleUpdateRequest;
 import com.onmeet.video.meeting.dto.RoomParticipantResponse;
 import com.onmeet.video.meeting.entity.MeetingRoom;
@@ -29,44 +30,47 @@ public class RoomParticipantService {
     private final LiveKitClient liveKitClient;
     private final MeetingEventPublisher eventPublisher;
     private final ClockProvider clockProvider;
+    private final NotificationServiceClient notificationClient;
 
     public RoomParticipantService(RoomParticipantRepository participantRepository,
-                                  MeetingRoomRepository roomRepository,
-                                  LiveKitClient liveKitClient,
-                                  MeetingEventPublisher eventPublisher,
-                                  ClockProvider clockProvider) {
+            MeetingRoomRepository roomRepository,
+            LiveKitClient liveKitClient,
+            MeetingEventPublisher eventPublisher,
+            ClockProvider clockProvider,
+            NotificationServiceClient notificationClient) {
         this.participantRepository = participantRepository;
         this.roomRepository = roomRepository;
         this.liveKitClient = liveKitClient;
         this.eventPublisher = eventPublisher;
         this.clockProvider = clockProvider;
+        this.notificationClient = notificationClient;
     }
 
     @Transactional(readOnly = true)
     public List<RoomParticipantResponse> listCurrent(Long roomId) {
         findRoom(roomId);
         return participantRepository.findByRoomIdAndStatus(roomId, ParticipantStatus.JOINED).stream()
-            .map(this::toResponse)
-            .collect(Collectors.toList());
+                .map(this::toResponse)
+                .collect(Collectors.toList());
     }
 
     @Transactional(readOnly = true)
     public List<RoomParticipantResponse> listHistory(Long roomId) {
         findRoom(roomId);
         return participantRepository.findByRoomId(roomId).stream()
-            .map(this::toResponse)
-            .collect(Collectors.toList());
+                .map(this::toResponse)
+                .collect(Collectors.toList());
     }
 
     @Transactional
     public RoomParticipantResponse updateRole(Long roomId, Long targetUserId,
-                                              ParticipantRoleUpdateRequest request, Long requesterId) {
+            ParticipantRoleUpdateRequest request, Long requesterId) {
         MeetingRoom room = findRoom(roomId);
         validateHostOrCoHost(roomId, room, requesterId);
 
         RoomParticipant participant = participantRepository
-            .findByRoomIdAndUserIdAndStatus(roomId, targetUserId, ParticipantStatus.JOINED)
-            .orElseThrow(() -> new BizException(ErrorCode.NOT_FOUND, "Participant not found"));
+                .findByRoomIdAndUserIdAndStatus(roomId, targetUserId, ParticipantStatus.JOINED)
+                .orElseThrow(() -> new BizException(ErrorCode.NOT_FOUND, "Participant not found"));
 
         if (participant.getRole() == ParticipantRole.HOST) {
             throw new BizException(ErrorCode.FORBIDDEN, "Cannot change the host's role");
@@ -86,17 +90,24 @@ public class RoomParticipantService {
         }
 
         RoomParticipant participant = participantRepository
-            .findByRoomIdAndUserIdAndStatus(roomId, targetUserId, ParticipantStatus.JOINED)
-            .orElseThrow(() -> new BizException(ErrorCode.NOT_FOUND, "Participant not found"));
+                .findByRoomIdAndUserIdAndStatus(roomId, targetUserId, ParticipantStatus.JOINED)
+                .orElseThrow(() -> new BizException(ErrorCode.NOT_FOUND, "Participant not found"));
 
         Instant now = clockProvider.now();
         participant.kick(now);
 
         liveKitClient.removeParticipant(room.getLivekitRoomName(), String.valueOf(targetUserId));
 
-        // TODO: [Notification Service] 강퇴된 참가자에게 강퇴 알림
+        // 강퇴된 참가자에게 강퇴 알림
+        notificationClient.sendNotification(
+                targetUserId, "PARTICIPANT_KICKED",
+                "회의에서 퇴장",
+                room.getTitle() + " 회의에서 퇴장되었습니다.",
+                "/meeting/" + roomId,
+                requesterId, "MEETING", String.valueOf(roomId));
+
         eventPublisher.publishParticipantLeft(
-            new ParticipantEvent("PARTICIPANT_LEFT", roomId, targetUserId, now));
+                new ParticipantEvent("PARTICIPANT_LEFT", roomId, targetUserId, now));
     }
 
     @Transactional
@@ -105,12 +116,12 @@ public class RoomParticipantService {
         validateHostOrCoHost(roomId, room, requesterId);
 
         if (!participantRepository.existsByRoomIdAndUserIdAndStatusIn(
-            roomId, targetUserId, List.of(ParticipantStatus.JOINED))) {
+                roomId, targetUserId, List.of(ParticipantStatus.JOINED))) {
             throw new BizException(ErrorCode.NOT_FOUND, "Participant not found");
         }
 
         liveKitClient.muteParticipantTrack(
-            room.getLivekitRoomName(), String.valueOf(targetUserId), "audio", true);
+                room.getLivekitRoomName(), String.valueOf(targetUserId), "audio", true);
     }
 
     @Transactional
@@ -119,12 +130,12 @@ public class RoomParticipantService {
         validateHostOrCoHost(roomId, room, requesterId);
 
         if (!participantRepository.existsByRoomIdAndUserIdAndStatusIn(
-            roomId, targetUserId, List.of(ParticipantStatus.JOINED))) {
+                roomId, targetUserId, List.of(ParticipantStatus.JOINED))) {
             throw new BizException(ErrorCode.NOT_FOUND, "Participant not found");
         }
 
         liveKitClient.muteParticipantTrack(
-            room.getLivekitRoomName(), String.valueOf(targetUserId), "audio", false);
+                room.getLivekitRoomName(), String.valueOf(targetUserId), "audio", false);
     }
 
     @Transactional
@@ -133,12 +144,12 @@ public class RoomParticipantService {
         validateHostOrCoHost(roomId, room, requesterId);
 
         List<RoomParticipant> participants = participantRepository
-            .findByRoomIdAndStatus(roomId, ParticipantStatus.JOINED);
+                .findByRoomIdAndStatus(roomId, ParticipantStatus.JOINED);
 
         for (RoomParticipant p : participants) {
             if (!room.isHost(p.getUserId())) {
                 liveKitClient.muteParticipantTrack(
-                    room.getLivekitRoomName(), String.valueOf(p.getUserId()), "audio", true);
+                        room.getLivekitRoomName(), String.valueOf(p.getUserId()), "audio", true);
             }
         }
     }
@@ -149,11 +160,11 @@ public class RoomParticipantService {
         validateHostOrCoHost(roomId, room, requesterId);
 
         List<RoomParticipant> participants = participantRepository
-            .findByRoomIdAndStatus(roomId, ParticipantStatus.JOINED);
+                .findByRoomIdAndStatus(roomId, ParticipantStatus.JOINED);
 
         for (RoomParticipant p : participants) {
             liveKitClient.muteParticipantTrack(
-                room.getLivekitRoomName(), String.valueOf(p.getUserId()), "audio", false);
+                    room.getLivekitRoomName(), String.valueOf(p.getUserId()), "audio", false);
         }
     }
 
@@ -163,12 +174,12 @@ public class RoomParticipantService {
         validateHostOrCoHost(roomId, room, requesterId);
 
         List<RoomParticipant> participants = participantRepository
-            .findByRoomIdAndStatus(roomId, ParticipantStatus.JOINED);
+                .findByRoomIdAndStatus(roomId, ParticipantStatus.JOINED);
 
         for (RoomParticipant p : participants) {
             if (!room.isHost(p.getUserId())) {
                 liveKitClient.muteParticipantTrack(
-                    room.getLivekitRoomName(), String.valueOf(p.getUserId()), "video", true);
+                        room.getLivekitRoomName(), String.valueOf(p.getUserId()), "video", true);
             }
         }
     }
@@ -177,8 +188,8 @@ public class RoomParticipantService {
     public List<RoomParticipantResponse> listWaiting(Long roomId) {
         findRoom(roomId);
         return participantRepository.findByRoomIdAndStatus(roomId, ParticipantStatus.WAITING).stream()
-            .map(this::toResponse)
-            .collect(Collectors.toList());
+                .map(this::toResponse)
+                .collect(Collectors.toList());
     }
 
     @Transactional
@@ -187,8 +198,8 @@ public class RoomParticipantService {
         validateHostOrCoHost(roomId, room, requesterId);
 
         RoomParticipant participant = participantRepository
-            .findByRoomIdAndUserIdAndStatus(roomId, targetUserId, ParticipantStatus.WAITING)
-            .orElseThrow(() -> new BizException(ErrorCode.NOT_FOUND, "No waiting participant found"));
+                .findByRoomIdAndUserIdAndStatus(roomId, targetUserId, ParticipantStatus.WAITING)
+                .orElseThrow(() -> new BizException(ErrorCode.NOT_FOUND, "No waiting participant found"));
 
         int currentCount = participantRepository.countActiveParticipants(roomId);
         if (currentCount >= room.getMaxParticipants()) {
@@ -200,15 +211,21 @@ public class RoomParticipantService {
 
         // TODO: [User Service] userId로 실제 사용자 이름 조회하여 participantName에 전달
         String token = liveKitClient.generateToken(
-            room.getLivekitRoomName(),
-            String.valueOf(targetUserId),
-            "user-" + targetUserId,
-            TokenGrants.forParticipant()
-        );
+                room.getLivekitRoomName(),
+                String.valueOf(targetUserId),
+                "user-" + targetUserId,
+                TokenGrants.forParticipant());
 
-        // TODO: [Notification Service] 대기실에서 승인된 참가자에게 입장 허용 알림
+        // 대기실에서 승인된 참가자에게 입장 허용 알림
+        notificationClient.sendNotification(
+                targetUserId, "WAITING_ROOM_ADMITTED",
+                "입장 허용",
+                room.getTitle() + " 회의 입장이 허용되었습니다.",
+                "/meeting/" + roomId,
+                requesterId, "MEETING", String.valueOf(roomId));
+
         eventPublisher.publishParticipantJoined(
-            new ParticipantEvent("PARTICIPANT_JOINED", roomId, targetUserId, now));
+                new ParticipantEvent("PARTICIPANT_JOINED", roomId, targetUserId, now));
     }
 
     @Transactional
@@ -217,12 +234,19 @@ public class RoomParticipantService {
         validateHostOrCoHost(roomId, room, requesterId);
 
         RoomParticipant participant = participantRepository
-            .findByRoomIdAndUserIdAndStatus(roomId, targetUserId, ParticipantStatus.WAITING)
-            .orElseThrow(() -> new BizException(ErrorCode.NOT_FOUND, "No waiting participant found"));
+                .findByRoomIdAndUserIdAndStatus(roomId, targetUserId, ParticipantStatus.WAITING)
+                .orElseThrow(() -> new BizException(ErrorCode.NOT_FOUND, "No waiting participant found"));
 
         Instant now = clockProvider.now();
         participant.kick(now);
-        // TODO: [Notification Service] 대기실에서 거절된 참가자에게 거절 알림
+
+        // 대기실에서 거절된 참가자에게 거절 알림
+        notificationClient.sendNotification(
+                targetUserId, "WAITING_ROOM_REJECTED",
+                "입장 거절",
+                room.getTitle() + " 회의 입장이 거절되었습니다.",
+                "/meeting/" + roomId,
+                requesterId, "MEETING", String.valueOf(roomId));
     }
 
     @Transactional
@@ -231,7 +255,7 @@ public class RoomParticipantService {
         validateHostOrCoHost(roomId, room, requesterId);
 
         List<RoomParticipant> waitingList = participantRepository
-            .findByRoomIdAndStatus(roomId, ParticipantStatus.WAITING);
+                .findByRoomIdAndStatus(roomId, ParticipantStatus.WAITING);
 
         int currentCount = participantRepository.countActiveParticipants(roomId);
         int available = room.getMaxParticipants() - currentCount;
@@ -246,20 +270,19 @@ public class RoomParticipantService {
             p.admit(now);
             // TODO: [User Service] userId로 실제 사용자 이름 조회하여 participantName에 전달
             liveKitClient.generateToken(
-                room.getLivekitRoomName(),
-                String.valueOf(p.getUserId()),
-                "user-" + p.getUserId(),
-                TokenGrants.forParticipant()
-            );
+                    room.getLivekitRoomName(),
+                    String.valueOf(p.getUserId()),
+                    "user-" + p.getUserId(),
+                    TokenGrants.forParticipant());
             eventPublisher.publishParticipantJoined(
-                new ParticipantEvent("PARTICIPANT_JOINED", roomId, p.getUserId(), now));
+                    new ParticipantEvent("PARTICIPANT_JOINED", roomId, p.getUserId(), now));
             admitted++;
         }
     }
 
     private MeetingRoom findRoom(Long roomId) {
         return roomRepository.findById(roomId)
-            .orElseThrow(() -> new BizException(ErrorCode.NOT_FOUND, "Room not found"));
+                .orElseThrow(() -> new BizException(ErrorCode.NOT_FOUND, "Room not found"));
     }
 
     private void validateHostOrCoHost(Long roomId, MeetingRoom room, Long userId) {
@@ -267,21 +290,21 @@ public class RoomParticipantService {
             return;
         }
         participantRepository.findByRoomIdAndUserIdAndStatus(roomId, userId, ParticipantStatus.JOINED)
-            .filter(p -> p.getRole() == ParticipantRole.CO_HOST)
-            .orElseThrow(() -> new BizException(ErrorCode.FORBIDDEN, "Only host or co-host can perform this action"));
+                .filter(p -> p.getRole() == ParticipantRole.CO_HOST)
+                .orElseThrow(
+                        () -> new BizException(ErrorCode.FORBIDDEN, "Only host or co-host can perform this action"));
     }
 
     private RoomParticipantResponse toResponse(RoomParticipant p) {
         return new RoomParticipantResponse(
-            p.getId(),
-            p.getRoom().getId(),
-            p.getUserId(),
-            p.getRole(),
-            p.getStatus(),
-            p.getJoinedAt(),
-            p.getLeftAt(),
-            p.getDurationSeconds(),
-            p.getDeviceType()
-        );
+                p.getId(),
+                p.getRoom().getId(),
+                p.getUserId(),
+                p.getRole(),
+                p.getStatus(),
+                p.getJoinedAt(),
+                p.getLeftAt(),
+                p.getDurationSeconds(),
+                p.getDeviceType());
     }
 }
