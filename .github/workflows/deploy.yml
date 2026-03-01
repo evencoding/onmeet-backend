@@ -24,6 +24,7 @@ jobs:
       notification: ${{ steps.changes.outputs.notification }}
       email: ${{ steps.changes.outputs.email }}
       file: ${{ steps.changes.outputs.file }}
+      nginx: ${{ steps.changes.outputs.nginx }}
       any-service-changed: ${{ steps.changes.outputs.any-service-changed }}
       version: ${{ steps.extract-version.outputs.version }}
     steps:
@@ -127,7 +128,13 @@ jobs:
             echo "kafka=false" >> $GITHUB_OUTPUT
           fi
 
-
+          # nginx
+          if echo "$CHANGED_FILES" | grep -q "^nginx/"; then
+            echo "nginx=true" >> $GITHUB_OUTPUT
+            ANY_CHANGED=true
+          else
+            echo "nginx=false" >> $GITHUB_OUTPUT
+          fi
 
           echo "any-service-changed=$ANY_CHANGED" >> $GITHUB_OUTPUT
 
@@ -320,6 +327,7 @@ jobs:
             if [ "${{ needs.detect-changes.outputs.email }}" == "true" ]; then TARGETS="$TARGETS email-service"; fi
             if [ "${{ needs.detect-changes.outputs.file }}" == "true" ]; then TARGETS="$TARGETS file-service"; fi
             if [ "${{ needs.detect-changes.outputs.kafka }}" == "true" ]; then TARGETS="$TARGETS kafka zookeeper"; fi
+            if [ "${{ needs.detect-changes.outputs.nginx }}" == "true" ]; then TARGETS="$TARGETS nginx certbot"; fi
 
             echo "Deploying changed services: $TARGETS"
 
