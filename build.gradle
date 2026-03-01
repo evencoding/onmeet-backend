@@ -50,10 +50,18 @@ subprojects {
                 }
             }
             to {
-                // GitHub Actions에서 DOCKER_USERNAME 환경변수로 전달, 기본값은 'onmeet'
+                // GitHub Actions에서 DOCKER_REGISTRY_PREFIX 환경변수로 전달, 기본값은 'onmeet'
                 def dockerRegistry = System.getenv('DOCKER_REGISTRY_PREFIX') ?: 'onmeet'
                 image = "${dockerRegistry}/${project.name}"
-                tags = ['latest', project.version]
+
+                // GitHub Actions에서 jib.to.tags 시스템 속성으로 태그 전달 가능
+                // 예: -Djib.to.tags=latest,v0.1.0
+                def tagsProperty = System.getProperty('jib.to.tags')
+                if (tagsProperty) {
+                    tags = tagsProperty.split(',').collect { it.trim() }
+                } else {
+                    tags = ['latest', project.version]
+                }
             }
             container {
                 creationTime = 'USE_CURRENT_TIMESTAMP'

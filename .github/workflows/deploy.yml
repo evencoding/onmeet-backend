@@ -3,7 +3,7 @@ name: CI/CD Pipeline for Onmeet Backend
 on:
   push:
     branches:
-      - main
+      - 'release/**'  # release/v0.1.0, release/v0.2.0 등 버전별 릴리즈 브랜치
 
 env:
   DOCKER_REGISTRY: docker.io
@@ -11,9 +11,9 @@ env:
   DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
 
 jobs:
-  # Job 1: 변경된 서비스 감지
+  # Job 1: 변경된 서비스 감지 및 버전 추출
   detect-changes:
-    name: Detect Changed Services
+    name: Detect Changed Services & Extract Version
     runs-on: ubuntu-latest
     outputs:
       auth: ${{ steps.changes.outputs.auth }}
@@ -25,6 +25,7 @@ jobs:
       email: ${{ steps.changes.outputs.email }}
       file: ${{ steps.changes.outputs.file }}
       any-service-changed: ${{ steps.changes.outputs.any-service-changed }}
+      version: ${{ steps.extract-version.outputs.version }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -120,6 +121,27 @@ jobs:
 
           echo "any-service-changed=$ANY_CHANGED" >> $GITHUB_OUTPUT
 
+      - name: Extract version from branch name
+        id: extract-version
+        run: |
+          # release/v0.1.0 → v0.1.0 추출
+          BRANCH_NAME="${{ github.ref_name }}"
+          echo "Branch name: $BRANCH_NAME"
+
+          if [[ $BRANCH_NAME =~ release/v([0-9]+\.[0-9]+\.[0-9]+) ]]; then
+            VERSION="v${BASH_REMATCH[1]}"
+            echo "version=$VERSION" >> $GITHUB_OUTPUT
+            echo "Extracted version: $VERSION"
+          elif [[ $BRANCH_NAME =~ release/(v[0-9]+\.[0-9]+\.[0-9]+) ]]; then
+            VERSION="${BASH_REMATCH[1]}"
+            echo "version=$VERSION" >> $GITHUB_OUTPUT
+            echo "Extracted version: $VERSION"
+          else
+            # 버전 정보가 없으면 latest만 사용
+            echo "version=latest" >> $GITHUB_OUTPUT
+            echo "No version found, using 'latest'"
+          fi
+
   # Job 2: 변경된 서비스 빌드 및 푸시
   build-and-push:
     name: Build and Push Docker Images
@@ -180,6 +202,7 @@ jobs:
           needs.detect-changes.outputs.email == 'true'
         env:
           DOCKER_REGISTRY_PREFIX: ${{ secrets.DOCKER_USERNAME }}
+          VERSION: ${{ needs.detect-changes.outputs.version }}
         run: |
           # 변경된 서비스만 빌드하도록 동적으로 타겟 생성
           TARGETS=""
@@ -209,9 +232,19 @@ jobs:
           if [ -n "$TARGETS" ]; then
             echo "Building services:$TARGETS"
             echo "Docker registry: $DOCKER_REGISTRY_PREFIX"
+            echo "Version tag: $VERSION"
+
+            # 버전 태그와 latest 태그 모두 생성
+            if [ "$VERSION" != "latest" ]; then
+              TAG_LIST="latest,$VERSION"
+            else
+              TAG_LIST="latest"
+            fi
+
             ./gradlew $TARGETS \
               -Djib.to.auth.username=${{ secrets.DOCKER_USERNAME }} \
               -Djib.to.auth.password=${{ secrets.DOCKER_PASSWORD }} \
+              -Djib.to.tags=$TAG_LIST \
               --parallel \
               --no-daemon \
               -x test
@@ -230,7 +263,9 @@ jobs:
           context: ./file-service
           file: ./file-service/Dockerfile
           push: true
-          tags: ${{ secrets.DOCKER_USERNAME }}/file-service:latest
+          tags: |
+            ${{ secrets.DOCKER_USERNAME }}/file-service:latest
+            ${{ secrets.DOCKER_USERNAME }}/file-service:${{ needs.detect-changes.outputs.version }}
           platforms: linux/amd64,linux/arm64
           cache-from: type=gha
           cache-to: type=gha,mode=max
