@@ -346,6 +346,12 @@ jobs:
 
             if [ $attempt -eq $max_attempts ]; then
               echo "Health check failed after $max_attempts attempts"
+              echo "--- Gateway Service Logs ---"
+              docker compose logs --tail=100 gateway-service || true
+              echo "--- Zookeeper Logs ---"
+              docker compose logs --tail=100 zookeeper || true
+              echo "--- MySQL Auth Logs ---"
+              docker compose logs --tail=100 mysql-auth || true
               exit 1
             fi
 
