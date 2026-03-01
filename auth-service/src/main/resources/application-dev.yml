@@ -1,0 +1,10 @@
+management:
+  tracing:
+    sampling:
+      probability: 1.0
+logging:
+  level:
+    root: DEBUG
+    com.onmeet: DEBUG
+    org.springframework.security: DEBUG
+    org.springframework.web: DEBUG

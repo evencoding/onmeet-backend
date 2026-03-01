@@ -9,7 +9,7 @@ import org.springframework.data.jpa.repository.JpaRepository
 import java.util.Optional
 
 interface UserRepository : JpaRepository<User, Long> {
-    @EntityGraph(attributePaths = ["company", "teams", "jobTitle"])
+    @EntityGraph(attributePaths = ["company", "teams", "jobTitle", "roles"])
     fun findByEmail(email: String): Optional<User>
     fun existsByEmail(email: String): Boolean
 

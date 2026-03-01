@@ -1,0 +1,9 @@
+management:
+  tracing:
+    sampling:
+      probability: 1.0
+spring:
+  jpa:
+    properties:
+      hibernate:
+        format_sql: true

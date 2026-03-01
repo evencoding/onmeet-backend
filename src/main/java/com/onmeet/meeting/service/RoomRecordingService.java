@@ -169,6 +169,8 @@ public class RoomRecordingService {
         recordingRepository.findByEgressId(egressId).ifPresent(recording -> {
             Instant now = clockProvider.now();
             recording.markCompleted(s3Path, fileSizeBytes, now);
+            // TODO: [Minutes Service] FULL_AUDIO 녹음 완료 시 회의록 서비스로 전체 오디오 전달 (STT 변환용)
+            // TODO: [Minutes Service] SEGMENT 녹음 완료 시 회의록 서비스로 세그먼트 전달 (실시간 전사용)
         });
     }
 

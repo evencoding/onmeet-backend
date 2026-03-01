@@ -17,6 +17,10 @@ import org.springframework.security.web.server.csrf.CookieServerCsrfTokenReposit
 import org.springframework.security.web.server.csrf.ServerCsrfTokenRequestAttributeHandler
 import org.springframework.security.web.server.header.XFrameOptionsServerHttpHeadersWriter
 
+import org.springframework.web.cors.CorsConfiguration
+import org.springframework.web.cors.reactive.CorsConfigurationSource
+import org.springframework.web.cors.reactive.UrlBasedCorsConfigurationSource
+
 @Configuration
 @EnableWebFluxSecurity
 class SecurityConfig(
@@ -27,16 +31,37 @@ class SecurityConfig(
     @Bean
     fun springSecurityFilterChain(http: ServerHttpSecurity, csrfCookieFilter: CsrfCookieFilter): SecurityWebFilterChain {
         http
-            .csrf { csrf ->
-                csrf.csrfTokenRepository(CookieServerCsrfTokenRepository.withHttpOnlyFalse())
-                    .csrfTokenRequestHandler(ServerCsrfTokenRequestAttributeHandler())
-            }
-            .addFilterAfter(csrfCookieFilter, org.springframework.security.config.web.server.SecurityWebFiltersOrder.CSRF)
+            .csrf { it.disable() }
+            .cors { it.configurationSource(corsConfigurationSource()) }
             .authorizeExchange { exchanges ->
-                // Public endpoints
-                exchanges.pathMatchers("/auth/**", "/.well-known/**", "/actuator/**", "/*/actuator/**").permitAll()
-                exchanges.pathMatchers("/error").permitAll()
-                
+                // Public endpoints - Authentication
+                exchanges.pathMatchers(
+                    "/auth/v1/register/**",
+                    "/auth/v1/login/**",
+                    "/auth/v1/invitations/validate",
+                    "/auth/v1/check",
+                    "/.well-known/**"
+                ).permitAll()
+
+                // Public endpoints - Infrastructure (Actuator: only health and info)
+                exchanges.pathMatchers(
+                    "/actuator/health",
+                    "/actuator/info",
+                    "/*/actuator/health",
+                    "/*/actuator/info",
+                    "/file/actuator/health",
+                    "/file/actuator/info",
+                    "/swagger-ui.html",
+                    "/swagger-ui/**",
+                    "/webjars/**",
+                    "/v3/api-docs/**",
+                    "/swagger-resources/**",
+                    "/*/v3/api-docs/**",
+                    "/file/doc.json",
+                    "/file/swagger/**",
+                    "/error"
+                ).permitAll()
+
                 // All other requests require authentication
                 exchanges.anyExchange().authenticated()
             }
@@ -56,6 +81,19 @@ class SecurityConfig(
             .logout { it.disable() }
 
         return http.build()
+    }
+
+    @Bean
+    fun corsConfigurationSource(): CorsConfigurationSource {
+        val configuration = CorsConfiguration()
+        configuration.allowedOriginPatterns = listOf("http://localhost:*", "http://127.0.0.1:*")
+        configuration.allowedMethods = listOf("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH")
+        configuration.allowedHeaders = listOf("*")
+        configuration.allowCredentials = true
+        
+        val source = UrlBasedCorsConfigurationSource()
+        source.registerCorsConfiguration("/**", configuration)
+        return source
     }
 
     @Bean
