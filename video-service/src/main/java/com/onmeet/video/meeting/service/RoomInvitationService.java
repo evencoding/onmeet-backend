@@ -2,6 +2,7 @@ package com.onmeet.video.meeting.service;
 
 import com.onmeet.video.common.exception.BizException;
 import com.onmeet.video.common.exception.ErrorCode;
+import com.onmeet.video.infra.external.AuthServiceClient;
 import com.onmeet.video.meeting.dto.InvitationResponse;
 import com.onmeet.video.meeting.entity.InvitationStatus;
 import com.onmeet.video.meeting.entity.MeetingRoom;
@@ -10,6 +11,7 @@ import com.onmeet.video.meeting.repository.MeetingRoomRepository;
 import com.onmeet.video.meeting.repository.RoomInvitationRepository;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -19,11 +21,14 @@ public class RoomInvitationService {
 
     private final RoomInvitationRepository invitationRepository;
     private final MeetingRoomRepository roomRepository;
+    private final AuthServiceClient authServiceClient;
 
     public RoomInvitationService(RoomInvitationRepository invitationRepository,
-                                 MeetingRoomRepository roomRepository) {
+                                 MeetingRoomRepository roomRepository,
+                                 AuthServiceClient authServiceClient) {
         this.invitationRepository = invitationRepository;
         this.roomRepository = roomRepository;
+        this.authServiceClient = authServiceClient;
     }
 
     @Transactional
@@ -43,7 +48,11 @@ public class RoomInvitationService {
             throw new BizException(ErrorCode.CONFLICT, "Invitation already pending for this user");
         }
 
-        // TODO: [User Service] inviteeUserId로 사용자 존재 여부 검증
+        // Validate invitee user exists
+        if (!authServiceClient.userExists(inviteeUserId)) {
+            throw new BizException(ErrorCode.NOT_FOUND, "Invitee user not found: " + inviteeUserId);
+        }
+
         RoomInvitation invitation = new RoomInvitation(room, inviterUserId, inviteeUserId);
         // TODO: [Notification Service] 초대받은 사용자에게 초대 알림
         return toResponse(invitationRepository.save(invitation));
@@ -57,7 +66,17 @@ public class RoomInvitationService {
             throw new BizException(ErrorCode.INVALID_REQUEST, "Cannot invite to an ended room");
         }
 
-        // TODO: [User Service] inviteeUserIds로 사용자 존재 여부 일괄 검증
+        // Validate all invitee users exist
+        Map<Long, Boolean> userExistsMap = authServiceClient.batchUserExists(inviteeUserIds);
+        List<Long> nonExistentUsers = inviteeUserIds.stream()
+                .filter(userId -> !userExistsMap.getOrDefault(userId, false))
+                .collect(Collectors.toList());
+
+        if (!nonExistentUsers.isEmpty()) {
+            throw new BizException(ErrorCode.NOT_FOUND,
+                "Some users not found: " + nonExistentUsers);
+        }
+
         List<InvitationResponse> results = new ArrayList<>();
         for (Long inviteeUserId : inviteeUserIds) {
             if (inviteeUserId.equals(inviterUserId)) {
