@@ -1,0 +1,47 @@
+global:
+  scrape_interval: 15s
+
+scrape_configs:
+  - job_name: "prometheus"
+    static_configs:
+      - targets: ["localhost:9090"]
+
+  - job_name: "auth-service"
+    metrics_path: "/auth/actuator/prometheus"
+    static_configs:
+      - targets: ["auth-service:8081"]
+
+  - job_name: "gateway-service"
+    metrics_path: "/actuator/prometheus"
+    static_configs:
+      - targets: ["gateway-service:8080"]
+
+  - job_name: "ai-service"
+    metrics_path: "/ai/actuator/prometheus"
+    static_configs:
+      - targets: ["ai-service:8082"]
+
+  - job_name: "video-service"
+    metrics_path: "/video/actuator/prometheus"
+    static_configs:
+      - targets: ["video-service:8083"]
+
+  - job_name: "chat-service"
+    metrics_path: "/chat/actuator/prometheus"
+    static_configs:
+      - targets: ["chat-service:8084"]
+
+  - job_name: "notification-service"
+    metrics_path: "/notification/actuator/prometheus"
+    static_configs:
+      - targets: ["notification-service:8085"]
+
+  - job_name: "file-service"
+    metrics_path: "/file/actuator/prometheus"
+    static_configs:
+      - targets: ["file-service:8086"]
+
+  - job_name: "email-service"
+    metrics_path: "/email/actuator/prometheus"
+    static_configs:
+      - targets: ["email-service:8087"]
