@@ -15,6 +15,8 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 
+// TODO: [Auth Service] UserInfoDto에 직급(position) 필드 추가 요청 
+
 @RestController
 @RequestMapping("/notification")
 @Tag(name = "Notification", description = "알림 관련 서비스 API")

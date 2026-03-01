@@ -5,9 +5,11 @@ import com.onmeet.notification.dto.NotificationResponseDto;
 import com.onmeet.notification.entity.Notification;
 import com.onmeet.notification.entity.NotificationRecipient;
 import com.onmeet.notification.entity.NotificationStream;
+import com.onmeet.notification.infra.AuthServiceClient;
 import com.onmeet.notification.repository.NotificationRepository;
 import com.onmeet.notification.repository.NotificationStreamRepository;
 import com.onmeet.notification.type.NotificationStatus;
+import com.onmeet.notification.type.NotificationTemplate;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -17,6 +19,7 @@ import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import java.io.IOException;
 import java.time.LocalDateTime;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -29,6 +32,7 @@ public class NotificationService {
     private final NotificationStreamRepository streamRepository;
     private final NotificationSettingService settingService;
     private final FcmService fcmService;
+    private final AuthServiceClient authServiceClient;
 
     // In-memory storage for active emitters (for real-time push)
     // Structure: Map<UserId, Map<EmitterId, SseEmitter>>
@@ -88,10 +92,21 @@ public class NotificationService {
     public void send(NotificationRequestDto dto) {
         boolean isScheduled = dto.getScheduledAt() != null;
 
+        // 템플릿 기반 메시지 렌더링
+        NotificationTemplate template = NotificationTemplate.fromType(dto.getType());
+        Map<String, String> params = buildTemplateParams(dto);
+
+        String renderedTitle = template.getDefaultTitle();
+        String renderedBody = template.renderBody(params);
+
+        // 외부에서 직접 지정한 title/body가 있으면 우선 사용 (하위 호환)
+        String finalTitle = (dto.getTitle() != null && !dto.getTitle().isBlank()) ? dto.getTitle() : renderedTitle;
+        String finalBody = (dto.getBody() != null && !dto.getBody().isBlank()) ? dto.getBody() : renderedBody;
+
         Notification notification = Notification.builder()
                 .type(dto.getType())
-                .title(dto.getTitle())
-                .body(dto.getBody())
+                .title(finalTitle)
+                .body(finalBody)
                 .deeplink(dto.getDeeplink())
                 .scheduledAt(dto.getScheduledAt())
                 .resourceType(dto.getResourceType())
@@ -223,5 +238,35 @@ public class NotificationService {
         } catch (Exception e) {
             log.error("Failed to remove notification stream: {}", streamId, e);
         }
+    }
+
+    /**
+     * 템플릿 렌더링에 필요한 파라미터를 구성합니다.
+     * actorUserId → senderName, userId → receiverName, title → title
+     */
+    private Map<String, String> buildTemplateParams(NotificationRequestDto dto) {
+        Map<String, String> params = new HashMap<>();
+
+        // 발신자 이름 조회
+        if (dto.getActorUserId() != null) {
+            params.put("senderName", authServiceClient.getUserName(dto.getActorUserId()));
+        } else {
+            params.put("senderName", "알 수 없는 사용자");
+        }
+
+        // 수신자 이름 조회
+        if (dto.getUserId() != null) {
+            params.put("receiverName", authServiceClient.getUserName(dto.getUserId()));
+        } else {
+            params.put("receiverName", "알 수 없는 사용자");
+        }
+
+        // 제목 (방/회의 이름으로 활용)
+        params.put("title", dto.getTitle() != null ? dto.getTitle() : "");
+
+        // 원본 body (SYSTEM, EVENT 템플릿에서 사용)
+        params.put("body", dto.getBody() != null ? dto.getBody() : "");
+
+        return params;
     }
 }

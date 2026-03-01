@@ -12,6 +12,7 @@ import java.time.LocalTime;
 
 @Service
 @RequiredArgsConstructor
+
 public class NotificationSettingService {
 
     private final NotificationSettingRepository settingRepository;
@@ -95,9 +96,16 @@ public class NotificationSettingService {
 
         // 3. 개별 알림 타입별 체크
         return switch (type) {
-            case MEETING_CREATED -> setting.isMeetingInviteNotification();
-            case MEETING_STARTED -> setting.isMeetingStartNotification();
-            case MEETING_TODAY -> setting.isMeetingRemindNotification();
+            case MEETING_CREATED, MEETING_INVITATION, INVITATION_ACCEPTED,
+                    INVITATION_DECLINED, INVITATION_CANCELLED ->
+                setting.isMeetingInviteNotification();
+            case MEETING_STARTED, PARTICIPANT_JOINED_NOTIFY,
+                    PARTICIPANT_KICKED, WAITING_ROOM_ADMITTED,
+                    WAITING_ROOM_REJECTED ->
+                setting.isMeetingStartNotification();
+            case MEETING_TODAY, MEETING_REMINDER, SCHEDULE_CREATED,
+                    SCHEDULE_CHANGED, SCHEDULE_CANCELLED ->
+                setting.isMeetingRemindNotification();
             case TEAM_MEMBER_ADDED -> setting.isSystemNoticeNotification();
             case SYSTEM -> setting.isSystemNoticeNotification();
             case EVENT -> setting.isMinutesCompletedNotification();
