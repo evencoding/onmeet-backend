@@ -1,5 +1,9 @@
 # Video Service API Reference
 
+**Version**: v0.1.0
+**Last Updated**: 2026-03-02
+**Status**: Production
+
 화상 회의 방 생성, 관리 및 시그널링을 담당하는 서비스입니다.
 
 ## 기본 정보 (Base Info)
