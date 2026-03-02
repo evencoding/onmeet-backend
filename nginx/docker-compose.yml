@@ -26,4 +26,3 @@ services:
 networks:
   onmeet-network:
     name: onmeet-network
-    external: true

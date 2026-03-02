@@ -84,4 +84,4 @@ services:
 
 networks:
   onmeet-network:
-    external: true
+    name: onmeet-network

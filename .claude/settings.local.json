@@ -13,7 +13,15 @@
       "Bash(git add:*)",
       "Bash(find:*)",
       "Bash(grep:*)",
-      "Bash(cat:*)"
+      "Bash(cat:*)",
+      "Bash(gh run list:*)",
+      "Bash(gh run view:*)",
+      "Bash(docker info:*)",
+      "Bash(gh secret:*)",
+      "Bash(docker images:*)",
+      "Bash(git push:*)",
+      "Bash(gh run watch:*)",
+      "Bash(git restore:*)"
     ]
   }
 }
