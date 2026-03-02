@@ -1,5 +1,9 @@
 # File Service API Reference
 
+**Version**: v0.1.0
+**Last Updated**: 2026-03-02
+**Status**: Production
+
 File Service는 파일의 업로드, 조회, 삭제 및 CDN(CloudFront) 연동을 관리하는 마이크로서비스입니다.
 
 ## 기본 정보
