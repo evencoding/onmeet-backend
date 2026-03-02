@@ -312,11 +312,10 @@ jobs:
             git checkout ${{ github.ref_name }}
             git reset --hard origin/${{ github.ref_name }}
 
-            # Ensure PRIVACY_ENCRYPTION_KEY is in .env file
-            if ! grep -q "^PRIVACY_ENCRYPTION_KEY=" .env 2>/dev/null; then
-              echo "PRIVACY_ENCRYPTION_KEY=${{ secrets.PRIVACY_ENCRYPTION_KEY }}" >> .env
-              echo "Added PRIVACY_ENCRYPTION_KEY to .env"
-            fi
+            # Ensure PRIVACY_ENCRYPTION_KEY is in .env file (무조건 덮어쓰기)
+            sed -i '/^PRIVACY_ENCRYPTION_KEY=/d' .env 2>/dev/null || true
+            echo "PRIVACY_ENCRYPTION_KEY=${{ secrets.PRIVACY_ENCRYPTION_KEY }}" >> .env
+            echo "Injected PRIVACY_ENCRYPTION_KEY from GitHub Secret"
 
             # Docker Hub 로그인
             export DOCKER_API_VERSION=1.41
