@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - "release/**" # release/v0.1.0, release/v0.2.0 등 버전별 릴리즈 브랜치
+  workflow_dispatch: # 수동 트리거 가능
 
 env:
   DOCKER_REGISTRY: docker.io
@@ -339,13 +340,18 @@ jobs:
               echo "No service targets to pull."
             fi
 
-            # 대상 서비스 재시작 및 누락된 컨테이너가 있다면 전부 실행 보장
+            # 변경된 서비스가 있으면 해당 컨테이너 중지 및 제거 후 재생성
             if [ -n "$TARGETS" ]; then
-               docker compose up -d --remove-orphans --force-recreate $TARGETS
+              echo "Stopping and removing changed services: $TARGETS"
+              docker compose stop $TARGETS
+              docker compose rm -f $TARGETS
+              echo "Recreating changed services: $TARGETS"
+              docker compose up -d $TARGETS
             fi
 
-            # 전체 스택 상태 확인 및 꺼져있는 컨테이너 실행 (이미 실행중이고 변경없는 컨테이너는 무시됨)
-            docker compose up -d --remove-orphans --force-recreate
+            # 전체 스택 상태 확인 및 꺼져있는 컨테이너 실행 (재생성 없이)
+            echo "Ensuring all services are running..."
+            docker compose up -d --remove-orphans
 
             # 사용하지 않는 이미지 정리
             docker image prune -f
