@@ -10,7 +10,6 @@ import org.springframework.core.annotation.Order
 import org.springframework.security.config.annotation.web.builders.HttpSecurity
 import org.springframework.security.config.http.SessionCreationPolicy
 import org.springframework.security.web.SecurityFilterChain
-import org.springframework.security.web.util.matcher.AntPathRequestMatcher
 
 @AutoConfiguration
 @ConditionalOnClass(HttpSecurity::class)
@@ -23,23 +22,23 @@ class CommonSwaggerSecurityConfig {
     @Order(Ordered.HIGHEST_PRECEDENCE)
     fun swaggerFilterChain(http: HttpSecurity): SecurityFilterChain {
         log.info("[Onmeet] Applying Global Swagger Security Filter (permitAll for documentation paths)")
-        
+
         http
             .securityMatcher(
-                AntPathRequestMatcher("/v3/api-docs/**"),
-                AntPathRequestMatcher("/v1/v3/api-docs/**"),
-                AntPathRequestMatcher("/v1/v3/api-docs"),
-                AntPathRequestMatcher("/swagger-ui/**"),
-                AntPathRequestMatcher("/swagger-ui.html"),
-                AntPathRequestMatcher("/swagger-resources/**"),
-                AntPathRequestMatcher("/webjars/**")
+                "/v3/api-docs/**",
+                "/v1/v3/api-docs/**",
+                "/v1/v3/api-docs",
+                "/swagger-ui/**",
+                "/swagger-ui.html",
+                "/swagger-resources/**",
+                "/webjars/**"
             )
             .authorizeHttpRequests { auth ->
                 auth.anyRequest().permitAll()
             }
             .csrf { it.disable() }
             .sessionManagement { it.sessionCreationPolicy(SessionCreationPolicy.STATELESS) }
-        
+
         return http.build()
     }
 }
