@@ -42,3 +42,11 @@ auth_logs.txt
 
 # AI Agent Rules
 # .agent/
+
+# Go build artifacts
+file-service/file-service
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
