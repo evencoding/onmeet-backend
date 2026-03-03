@@ -28,17 +28,21 @@ FROM alpine:latest
 # 보안 및 TLS 인증서
 RUN apk --no-cache add ca-certificates tzdata
 
-WORKDIR /root/
+# 비root 사용자 생성
+RUN addgroup -g 1000 appuser && \
+    adduser -D -u 1000 -G appuser appuser
+
+# 애플리케이션 디렉토리
+WORKDIR /app
 
 # 빌드된 바이너리와 문서 복사
 COPY --from=build /app/file-service .
 COPY --from=build /app/docs ./docs
 
-# 비root 사용자로 실행
-RUN addgroup -g 1000 appuser && \
-    adduser -D -u 1000 -G appuser appuser && \
-    chown -R appuser:appuser /root
+# 파일 소유권 변경
+RUN chown -R appuser:appuser /app
 
+# 비root 사용자로 실행
 USER appuser
 
 EXPOSE 8086
