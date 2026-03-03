@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.onmeet.video.common.exception.BizException;
 import com.onmeet.video.common.exception.ErrorCode;
 import com.onmeet.video.common.util.ClockProvider;
+import com.onmeet.video.infra.external.AuthServiceClient;
 import com.onmeet.video.infra.external.LiveKitClient;
 import com.onmeet.video.infra.external.LiveKitClient.DataPacketKind;
 import com.onmeet.video.infra.external.LiveKitClient.TokenGrants;
@@ -34,6 +35,7 @@ public class ChatIntegrationService {
     private final MeetingEventPublisher eventPublisher;
     private final ClockProvider clockProvider;
     private final ObjectMapper objectMapper;
+    private final AuthServiceClient authServiceClient;
 
     public ChatIntegrationService(MeetingRoomRepository roomRepository,
                                   RoomParticipantRepository participantRepository,
@@ -41,7 +43,8 @@ public class ChatIntegrationService {
                                   LiveKitProperties liveKitProperties,
                                   MeetingEventPublisher eventPublisher,
                                   ClockProvider clockProvider,
-                                  ObjectMapper objectMapper) {
+                                  ObjectMapper objectMapper,
+                                  AuthServiceClient authServiceClient) {
         this.roomRepository = roomRepository;
         this.participantRepository = participantRepository;
         this.liveKitClient = liveKitClient;
@@ -49,6 +52,7 @@ public class ChatIntegrationService {
         this.eventPublisher = eventPublisher;
         this.clockProvider = clockProvider;
         this.objectMapper = objectMapper;
+        this.authServiceClient = authServiceClient;
     }
 
     @Transactional(readOnly = true)
@@ -92,12 +96,19 @@ public class ChatIntegrationService {
         String messageType = request.type() != null ? request.type() : DataChannelMessage.TYPE_CHAT;
         String messageId = UUID.randomUUID().toString();
 
-        // TODO: [User Service] senderId로 실제 사용자 이름 조회하여 senderName에 전달
+        String senderName;
+        try {
+            AuthServiceClient.UserInfo userInfo = authServiceClient.getUserInfo(senderId);
+            senderName = userInfo != null ? userInfo.name() : "user-" + senderId;
+        } catch (Exception e) {
+            senderName = "user-" + senderId;
+        }
+
         DataChannelMessage message = new DataChannelMessage(
             messageId,
             messageType,
             senderId,
-            "user-" + senderId,
+            senderName,
             request.content(),
             request.replyToMessageId(),
             clockProvider.now()
