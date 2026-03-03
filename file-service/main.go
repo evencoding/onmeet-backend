@@ -31,7 +31,7 @@ import (
 // @license.name    Apache 2.0
 // @license.url     http://www.apache.org/licenses/LICENSE-2.0.html
 
-// @host            localhost:8086
+// @host            api.onmeet.cloud
 // @BasePath        /file/v1
 
 // main 함수는 프로그램의 시작점입니다. Java의 public static void main과 같습니다.
