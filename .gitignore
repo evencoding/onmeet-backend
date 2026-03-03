@@ -42,6 +42,7 @@ auth_logs.txt
 
 # AI Agent Rules
 # .agent/
+.claude/settings.local.json
 
 # Go build artifacts
 file-service/file-service
