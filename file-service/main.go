@@ -75,10 +75,8 @@ func main() {
 	// Public Group (Swagger, Health Check)
 	publicGroup := r.Group("/file")
 	{
-		// Swagger UI 설정을 명시적으로 지정 (Gateway 뒤에서 동작할 때 경로 문제 방지)
-		publicGroup.StaticFile("/doc.json", "./docs/swagger.json")
-		url := ginSwagger.URL("/file/doc.json")
-		publicGroup.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler, url))
+		// Swagger UI (ginSwagger가 자동으로 doc.json 제공)
+		publicGroup.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 	}
 
 	// Health Check (Public, without /v1)
