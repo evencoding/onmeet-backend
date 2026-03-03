@@ -585,20 +585,40 @@ public class MeetingRoomService {
 
         List<TimelineEntry> timeline = new ArrayList<>();
 
-        // TODO: [User Service] userId로 실제 사용자 이름 조회하여 타임라인 설명에 표시
         List<RoomParticipant> participants = participantRepository.findByRoomId(roomId);
+
+        // Batch fetch user names for all participants
+        List<Long> userIds = participants.stream()
+            .map(RoomParticipant::getUserId)
+            .distinct()
+            .collect(Collectors.toList());
+
+        Map<Long, String> userNameMap;
+        try {
+            List<AuthServiceClient.UserInfo> userInfos = authServiceClient.getBatchUserInfo(userIds);
+            userNameMap = userInfos.stream()
+                .collect(Collectors.toMap(
+                    AuthServiceClient.UserInfo::userId,
+                    AuthServiceClient.UserInfo::name,
+                    (a, b) -> a
+                ));
+        } catch (Exception e) {
+            userNameMap = Map.of();
+        }
+
         for (RoomParticipant p : participants) {
+            String userName = userNameMap.getOrDefault(p.getUserId(), "User " + p.getUserId());
             timeline.add(new TimelineEntry(
                 "PARTICIPANT_JOINED",
                 p.getUserId(),
-                "User " + p.getUserId() + " joined as " + p.getRole(),
+                userName + " joined as " + p.getRole(),
                 p.getJoinedAt()
             ));
             if (p.getLeftAt() != null) {
                 timeline.add(new TimelineEntry(
                     p.getStatus().name(),
                     p.getUserId(),
-                    "User " + p.getUserId() + " " + p.getStatus().name().toLowerCase(),
+                    userName + " " + p.getStatus().name().toLowerCase(),
                     p.getLeftAt()
                 ));
             }
