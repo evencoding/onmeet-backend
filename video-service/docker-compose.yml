@@ -23,6 +23,32 @@ services:
           cpus: '0.05'
           memory: 128M
 
+  livekit:
+    image: livekit/livekit-server:latest
+    container_name: livekit
+    ports:
+      - "127.0.0.1:7880:7880"
+      - "127.0.0.1:7881:7881"
+      - "50000-50100:50000-50100/udp"
+    volumes:
+      - ./livekit.yaml:/etc/livekit.yaml
+    command: --config /etc/livekit.yaml --dev
+    healthcheck:
+      test: [ "CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:7880" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - onmeet-network
+    deploy:
+      resources:
+        limits:
+          cpus: '0.50'
+          memory: 512M
+        reservations:
+          cpus: '0.10'
+          memory: 256M
+
   video-service:
     image: ${DOCKER_REGISTRY:-onmeet}/video-service:latest
     container_name: video-service
@@ -34,10 +60,15 @@ services:
       - SPRING_DATASOURCE_PASSWORD=${DB_ROOT_PASSWORD}
       - GATEWAY_SHARED_SECRET=${GATEWAY_SHARED_SECRET}
       - SERVER_PORT=${VIDEO_SERVICE_PORT:-8083}
+      - LIVEKIT_URL=ws://livekit:7880
+      - LIVEKIT_API_KEY=${LIVEKIT_API_KEY:-devkey}
+      - LIVEKIT_API_SECRET=${LIVEKIT_API_SECRET:-devsecret}
       - MANAGEMENT_ENDPOINT_HEALTH_PROBES_ENABLED=true
       - MANAGEMENT_ENDPOINTS_WEB_BASE_PATH=/video/actuator
     depends_on:
       mysql-video:
+        condition: service_healthy
+      livekit:
         condition: service_healthy
     networks:
       - onmeet-network
