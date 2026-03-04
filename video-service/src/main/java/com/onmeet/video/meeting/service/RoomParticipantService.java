@@ -3,6 +3,7 @@ package com.onmeet.video.meeting.service;
 import com.onmeet.video.common.exception.BizException;
 import com.onmeet.video.common.exception.ErrorCode;
 import com.onmeet.video.common.util.ClockProvider;
+import com.onmeet.video.infra.external.AuthServiceClient;
 import com.onmeet.video.infra.external.LiveKitClient;
 import com.onmeet.video.infra.external.LiveKitClient.TokenGrants;
 import com.onmeet.video.meeting.dto.ParticipantRoleUpdateRequest;
@@ -17,6 +18,7 @@ import com.onmeet.video.meeting.repository.MeetingRoomRepository;
 import com.onmeet.video.meeting.repository.RoomParticipantRepository;
 import java.time.Instant;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -29,17 +31,20 @@ public class RoomParticipantService {
     private final LiveKitClient liveKitClient;
     private final MeetingEventPublisher eventPublisher;
     private final ClockProvider clockProvider;
+    private final AuthServiceClient authServiceClient;
 
     public RoomParticipantService(RoomParticipantRepository participantRepository,
                                   MeetingRoomRepository roomRepository,
                                   LiveKitClient liveKitClient,
                                   MeetingEventPublisher eventPublisher,
-                                  ClockProvider clockProvider) {
+                                  ClockProvider clockProvider,
+                                  AuthServiceClient authServiceClient) {
         this.participantRepository = participantRepository;
         this.roomRepository = roomRepository;
         this.liveKitClient = liveKitClient;
         this.eventPublisher = eventPublisher;
         this.clockProvider = clockProvider;
+        this.authServiceClient = authServiceClient;
     }
 
     @Transactional(readOnly = true)
@@ -198,11 +203,18 @@ public class RoomParticipantService {
         Instant now = clockProvider.now();
         participant.admit(now);
 
-        // TODO: [User Service] userId로 실제 사용자 이름 조회하여 participantName에 전달
+        String participantName;
+        try {
+            AuthServiceClient.UserInfo userInfo = authServiceClient.getUserInfo(targetUserId);
+            participantName = userInfo != null ? userInfo.name() : "user-" + targetUserId;
+        } catch (Exception e) {
+            participantName = "user-" + targetUserId;
+        }
+
         String token = liveKitClient.generateToken(
             room.getLivekitRoomName(),
             String.valueOf(targetUserId),
-            "user-" + targetUserId,
+            participantName,
             TokenGrants.forParticipant()
         );
 
@@ -239,16 +251,37 @@ public class RoomParticipantService {
         Instant now = clockProvider.now();
         int admitted = 0;
 
+        // Batch fetch user names for all waiting participants
+        List<Long> userIds = waitingList.stream()
+            .limit(available)
+            .map(RoomParticipant::getUserId)
+            .collect(Collectors.toList());
+
+        Map<Long, String> userNameMap;
+        try {
+            List<AuthServiceClient.UserInfo> userInfos = authServiceClient.getBatchUserInfo(userIds);
+            userNameMap = userInfos.stream()
+                .collect(Collectors.toMap(
+                    AuthServiceClient.UserInfo::userId,
+                    AuthServiceClient.UserInfo::name,
+                    (a, b) -> a
+                ));
+        } catch (Exception e) {
+            userNameMap = Map.of();
+        }
+
         for (RoomParticipant p : waitingList) {
             if (admitted >= available) {
                 break;
             }
             p.admit(now);
-            // TODO: [User Service] userId로 실제 사용자 이름 조회하여 participantName에 전달
+
+            String participantName = userNameMap.getOrDefault(p.getUserId(), "user-" + p.getUserId());
+
             liveKitClient.generateToken(
                 room.getLivekitRoomName(),
                 String.valueOf(p.getUserId()),
-                "user-" + p.getUserId(),
+                participantName,
                 TokenGrants.forParticipant()
             );
             eventPublisher.publishParticipantJoined(
