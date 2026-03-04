@@ -67,8 +67,10 @@ spring:
         cors-configurations:
           "[/**]":
             allowedOriginPatterns:
+              - "http://localhost:8080"
               - "http://localhost:[*]"
               - "http://127.0.0.1:[*]"
+              - "https://onmeet.cloud"
               - "https://api.onmeet.cloud"
               - "https://*.onmeet.cloud"
             allowedMethods:
