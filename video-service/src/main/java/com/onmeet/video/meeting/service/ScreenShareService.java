@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.onmeet.video.common.exception.BizException;
 import com.onmeet.video.common.exception.ErrorCode;
 import com.onmeet.video.common.util.ClockProvider;
+import com.onmeet.video.infra.external.AuthServiceClient;
 import com.onmeet.video.infra.external.LiveKitClient;
 import com.onmeet.video.infra.external.LiveKitClient.DataPacketKind;
 import com.onmeet.video.meeting.dto.DataChannelMessage;
@@ -36,6 +37,7 @@ public class ScreenShareService {
     private final MeetingEventPublisher eventPublisher;
     private final ClockProvider clockProvider;
     private final ObjectMapper objectMapper;
+    private final AuthServiceClient authServiceClient;
 
     public ScreenShareService(MeetingRoomRepository roomRepository,
                               RoomParticipantRepository participantRepository,
@@ -43,7 +45,8 @@ public class ScreenShareService {
                               LiveKitClient liveKitClient,
                               MeetingEventPublisher eventPublisher,
                               ClockProvider clockProvider,
-                              ObjectMapper objectMapper) {
+                              ObjectMapper objectMapper,
+                              AuthServiceClient authServiceClient) {
         this.roomRepository = roomRepository;
         this.participantRepository = participantRepository;
         this.settingsRepository = settingsRepository;
@@ -51,6 +54,7 @@ public class ScreenShareService {
         this.eventPublisher = eventPublisher;
         this.clockProvider = clockProvider;
         this.objectMapper = objectMapper;
+        this.authServiceClient = authServiceClient;
     }
 
     @Transactional
@@ -160,12 +164,19 @@ public class ScreenShareService {
     }
 
     private void publishDataChannelMessage(MeetingRoom room, Long userId, String type) {
-        // TODO: [User Service] userId로 실제 사용자 이름 조회하여 senderName에 전달
+        String senderName;
+        try {
+            AuthServiceClient.UserInfo userInfo = authServiceClient.getUserInfo(userId);
+            senderName = userInfo != null ? userInfo.name() : "user-" + userId;
+        } catch (Exception e) {
+            senderName = "user-" + userId;
+        }
+
         DataChannelMessage message = new DataChannelMessage(
             UUID.randomUUID().toString(),
             type,
             userId,
-            "user-" + userId,
+            senderName,
             null,
             null,
             clockProvider.now()
