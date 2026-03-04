@@ -47,9 +47,15 @@ class SecurityConfig(
             .sessionManagement { it.sessionCreationPolicy(SessionCreationPolicy.STATELESS) }
             .authorizeHttpRequests { auth ->
                 auth.requestMatchers(
-                    "/v1/auth/**",
+                    "/v1/register/**",
+                    "/v1/login/**",
+                    "/v1/invitations/**",
+                    "/v1/check",
+                    "/v1/refresh",
+                    "/v1/logout",
                     "/v1/internal/**",
-                    "/actuator/**", "/v1/.well-known/jwks.json"
+                    "/actuator/**",
+                    "/v1/.well-known/jwks.json"
                 ).permitAll()
                 auth.requestMatchers("/v1/manager/**").hasAnyRole("MANAGER", "ADMIN")
                 auth.anyRequest().authenticated()

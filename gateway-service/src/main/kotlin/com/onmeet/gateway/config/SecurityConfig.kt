@@ -40,6 +40,8 @@ class SecurityConfig(
                     "/auth/v1/login/**",
                     "/auth/v1/invitations/validate",
                     "/auth/v1/check",
+                    "/auth/v1/refresh",
+                    "/auth/v1/logout",
                     "/.well-known/**"
                 ).permitAll()
 
