@@ -32,6 +32,8 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-actuator'
     // Mail (Gmail SMTP)
     implementation 'org.springframework.boot:spring-boot-starter-mail'
+    implementation 'org.springframework.boot:spring-boot-starter-thymeleaf'
+    
     // Kafka
     implementation 'org.springframework.kafka:spring-kafka'
 
