@@ -29,6 +29,7 @@ spring:
     baseline-on-migrate: true
 
 app:
+  api-base-url: ${APP_API_BASE_URL:http://localhost:8080}
   team:
     initial-color: ${INITIAL_TEAM_COLOR:#FFFFFF}
     initial-description: ${INITIAL_TEAM_DESCRIPTION:Initial team}
