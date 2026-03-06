@@ -15,7 +15,17 @@ class AuthGatewayPreAuthFilter(
         setOf(
             "/.well-known/jwks.json",
             "$contextPath/.well-known/jwks.json",
+            "$contextPath/v1/.well-known/jwks.json",
             "$contextPath/actuator/health",
+            "$contextPath/v1/register/company",
+            "$contextPath/v1/register/join",
+            "$contextPath/v1/invitations/validate",
+            "$contextPath/v1/login",
+            "$contextPath/v1/login/guest",
+            "$contextPath/v1/refresh",
+            "$contextPath/v1/logout",
+            "$contextPath/v1/check",
+            // legacy paths (without /v1) for backward compatibility if any
             "$contextPath/register/company",
             "$contextPath/register/join",
             "$contextPath/invitations/validate",
