@@ -1,5 +1,7 @@
 package com.onmeet.email.service;
 
+import java.util.Map;
+
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -27,11 +29,9 @@ class EmailKafkaConsumerTest {
     @Test
     void consume_ShouldParseMessageAndCallSendEmail() throws JsonProcessingException {
         // Given
-        String message = "{\"to\":\"test@example.com\",\"subject\":\"Subject\",\"body\":\"Body\"}";
-        EmailRequestDto dto = new EmailRequestDto();
-        dto.setTo("test@example.com");
-        dto.setSubject("Subject");
-        dto.setBody("Body");
+        String message = "{\"to\":\"test@example.com\",\"subject\":\"Subject\",\"templateName\":\"guest-invitation\",\"variables\":{}}";
+        Map<String, Object> variables = Map.of();
+        EmailRequestDto dto = new EmailRequestDto("test@example.com", "Subject", "guest-invitation", variables);
 
         when(objectMapper.readValue(message, EmailRequestDto.class)).thenReturn(dto);
 
@@ -39,6 +39,6 @@ class EmailKafkaConsumerTest {
         emailKafkaConsumer.consume(message);
 
         // Then
-        verify(emailService).sendEmail("test@example.com", "Subject", "Body");
+        verify(emailService).sendEmail("test@example.com", "Subject", "guest-invitation", variables);
     }
 }
