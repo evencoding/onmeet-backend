@@ -3,6 +3,7 @@ package com.onmeet.email.service;
 import com.onmeet.email.config.GmailOAuth2Config;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.boot.web.client.RestTemplateBuilder;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -23,9 +24,10 @@ public class GmailOAuth2TokenService {
     private final GmailOAuth2Config config;
     private final RestTemplate restTemplate;
 
-    public GmailOAuth2TokenService(GmailOAuth2Config config) {
+    // RestTemplateBuilder를 주입받아 Bean으로 생성된 RestTemplate 사용 (중앙 설정 관리, 재사용성 향상)
+    public GmailOAuth2TokenService(GmailOAuth2Config config, RestTemplateBuilder restTemplateBuilder) {
         this.config = config;
-        this.restTemplate = new RestTemplate();
+        this.restTemplate = restTemplateBuilder.build();
     }
 
     public String getAccessToken() {
@@ -46,7 +48,9 @@ public class GmailOAuth2TokenService {
         HttpEntity<MultiValueMap<String, String>> request = new HttpEntity<>(params, headers);
 
         try {
-            ResponseEntity<Map> response = restTemplate.postForEntity(TOKEN_URL, request, Map.class);
+            // 타입 안전성을 위해 Map<String, Object>로 명시적 타입 파라미터 지정
+            @SuppressWarnings("unchecked")
+            ResponseEntity<Map<String, Object>> response = restTemplate.postForEntity(TOKEN_URL, request, (Class<Map<String, Object>>) (Class<?>) Map.class);
             if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
                 return (String) response.getBody().get("access_token");
             } else {

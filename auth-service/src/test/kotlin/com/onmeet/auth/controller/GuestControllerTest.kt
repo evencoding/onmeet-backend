@@ -12,7 +12,6 @@ import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest
 import org.springframework.http.MediaType
-import org.springframework.security.test.context.support.WithMockUser
 import org.springframework.test.web.servlet.MockMvc
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post
@@ -67,9 +66,10 @@ class GuestControllerTest {
     @Test
     fun `joinMeeting should set cookies and redirect`() {
         val uuid = "test-uuid"
-        val resultDto = GuestJoinResultDto("room123", "Guest_test", "access", "refresh")
+        val resultDto = GuestJoinResultDto("room123", "Guest_guest_test-u", "access", "refresh")
 
         every { jwtProperties.cookie } returns JwtProperties.CookieProperties(secure = false, maxAge = 3600)
+        every { jwtProperties.refreshCookie } returns JwtProperties.RefreshCookieProperties(maxAge = 86400)
         every { guestService.joinMeeting(uuid) } returns resultDto
 
         mockMvc.perform(get("/v1/guests/join/$uuid"))

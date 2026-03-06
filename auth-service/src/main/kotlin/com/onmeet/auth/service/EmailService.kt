@@ -1,6 +1,7 @@
 package com.onmeet.auth.service
 
 import org.slf4j.LoggerFactory
+import org.springframework.beans.factory.annotation.Value
 import org.springframework.stereotype.Service
 import org.springframework.kafka.core.KafkaTemplate
 import com.onmeet.auth.dto.EmailMessage
@@ -12,7 +13,9 @@ interface EmailService {
 
 @Service
 class EmailServiceImpl(
-    private val kafkaTemplate: KafkaTemplate<String, Any>
+    private val kafkaTemplate: KafkaTemplate<String, Any>,
+    @Value("\${app.api-base-url}")
+    private val apiBaseUrl: String
 ) : EmailService {
     companion object {
         private val log = LoggerFactory.getLogger(EmailServiceImpl::class.java)
@@ -45,8 +48,7 @@ class EmailServiceImpl(
     }
 
     override fun sendGuestInvitationEmail(to: String, uuid: String, hostName: String, roomName: String) {
-        // TODO: Move base URL to properties configuration
-        val joinLink = "http://localhost:8000/api/v1/guests/join/$uuid"
+        val joinLink = "$apiBaseUrl/api/v1/guests/join/$uuid"
         
         EmailMessage(
             to = to,

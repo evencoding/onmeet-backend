@@ -19,5 +19,5 @@ data class GuestJoinResultDto(
     val roomId: String,
     val guestName: String,
     val accessToken: String,
-    val refreshToken: String
+    val refreshToken: String?
 )

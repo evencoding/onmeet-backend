@@ -1,6 +1,7 @@
 package com.onmeet.email.service;
 
 import java.util.Map;
+import java.util.Set;
 import jakarta.mail.internet.MimeMessage;
 
 import org.slf4j.Logger;
@@ -16,6 +17,13 @@ import org.thymeleaf.context.Context;
 public class EmailService {
 
     private static final Logger log = LoggerFactory.getLogger(EmailService.class);
+
+    // [Security] Path Traversal 방지: Kafka 메시지에서 수신한 templateName을 화이트리스트로 검증
+    private static final Set<String> ALLOWED_TEMPLATES = Set.of(
+            "company-invitation",
+            "guest-invitation"
+    );
+
     private final JavaMailSender javaMailSender;
     private final GmailOAuth2TokenService tokenService;
     private final TemplateEngine templateEngine;
@@ -33,10 +41,17 @@ public class EmailService {
         log.info("============== [EMAIL SENDING] ==============");
         log.info("To: {}", to);
         log.info("Subject: {}", subject);
+        log.info("Template: {}", templateName);
         log.info("=============================================");
 
+        // [Security] templateName 화이트리스트 검증 (Path Traversal 방지)
+        if (!ALLOWED_TEMPLATES.contains(templateName)) {
+            log.error("Rejected illegal templateName '{}'. Allowed templates: {}", templateName, ALLOWED_TEMPLATES);
+            throw new IllegalArgumentException("Invalid template name: " + templateName);
+        }
+
         try {
-            // Get fresh Access Token from Google
+            // 1. OAuth2 Access Token 갱신
             String accessToken = tokenService.getAccessToken();
 
             // Set the token as password dynamically for XOAUTH2
@@ -59,11 +74,13 @@ public class EmailService {
             helper.setTo(to);
             helper.setSubject(subject);
             helper.setText(htmlBody, true); // true indicates HTML content
-            helper.setFrom(fromEmail); // Set the 'from' address
+            helper.setFrom(fromEmail);
 
             // 4. 메일 발송
             javaMailSender.send(message);
             log.info("Email sent successfully to: {}", to);
+        } catch (IllegalArgumentException e) {
+            throw e; // 화이트리스트 검증 실패는 재throw
         } catch (Exception e) {
             log.error("Failed to send email to: {}", to, e);
         }
