@@ -15,7 +15,7 @@ services:
       retries: 10
       start_period: 60s
     networks:
-      - msa-network
+      - onmeet-network
     deploy:
       resources:
         limits:
@@ -55,9 +55,8 @@ services:
       retries: 10
       start_period: 60s
     networks:
-      - msa-network
+      - onmeet-network
 
 networks:
-  msa-network:
+  onmeet-network:
     name: onmeet-network
-    external: true

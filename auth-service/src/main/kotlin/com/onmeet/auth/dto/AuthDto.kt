@@ -161,7 +161,8 @@ data class RefreshRequest(
 data class EmailMessage(
     val to: String,
     val subject: String,
-    val body: String
+    val templateName: String,
+    val variables: Map<String, Any>
 )
 @Schema(description = "페이징 응답")
 data class PageResponse<T>(

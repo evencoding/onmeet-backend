@@ -43,7 +43,8 @@ data class JwtProperties(
 
 @ConfigurationProperties(prefix = "invitation")
 data class InvitationProperties(
-    val expiryDays: Long = 7
+    val expiryDays: Long = 7,
+    val guestExpiryDays: Long = 1
 )
 
 @ConfigurationProperties(prefix = "app.team")

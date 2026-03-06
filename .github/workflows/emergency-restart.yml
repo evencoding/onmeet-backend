@@ -1,0 +1,112 @@
+name: Emergency Service Restart
+
+on:
+  workflow_dispatch:
+    inputs:
+      service:
+        description: 'Service to restart (leave empty for all services)'
+        required: false
+        type: choice
+        options:
+          - 'all'
+          - 'nginx'
+          - 'gateway-service'
+          - 'auth-service'
+          - 'ai-service'
+          - 'video-service'
+          - 'chat-service'
+          - 'notification-service'
+          - 'email-service'
+          - 'file-service'
+        default: 'all'
+      action:
+        description: 'Restart action type'
+        required: true
+        type: choice
+        options:
+          - 'restart' # 정상적인 재시작
+          - 'force-recreate' # 강제 재생성
+          - 'down-up' # 완전히 내렸다가 다시 시작
+        default: 'restart'
+
+jobs:
+  emergency-restart:
+    name: Emergency Restart - ${{ github.event.inputs.service }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Execute restart on GCP Server
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.GCP_HOST }}
+          username: ${{ secrets.GCP_USERNAME }}
+          key: ${{ secrets.GCP_SSH_KEY }}
+          port: ${{ secrets.GCP_SSH_PORT }}
+          script: |
+            cd ${{ secrets.GCP_PROJECT_PATH }}
+
+            export DOCKER_API_VERSION=1.41
+            export DOCKER_REGISTRY=${{ secrets.DOCKER_USERNAME }}
+
+            SERVICE="${{ github.event.inputs.service }}"
+            ACTION="${{ github.event.inputs.action }}"
+
+            echo "=== Emergency Restart ==="
+            echo "Service: $SERVICE"
+            echo "Action: $ACTION"
+            echo "========================="
+
+            # Git 최신 상태로 업데이트
+            git fetch --all
+            git checkout ${{ github.ref_name }}
+            git reset --hard origin/${{ github.ref_name }}
+
+            # Docker Hub 로그인
+            echo "${{ secrets.DOCKER_PASSWORD }}" | docker login -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
+
+            if [ "$SERVICE" = "all" ]; then
+              TARGET=""
+            else
+              TARGET="$SERVICE"
+            fi
+
+            case "$ACTION" in
+              "restart")
+                echo "Restarting service(s)..."
+                docker compose restart $TARGET
+                ;;
+              "force-recreate")
+                echo "Force recreating service(s)..."
+                if [ -n "$TARGET" ]; then
+                  docker compose stop $TARGET
+                  docker compose rm -f $TARGET
+                  docker compose pull $TARGET
+                  docker compose up -d $TARGET
+                else
+                  docker compose down
+                  docker compose pull
+                  docker compose up -d
+                fi
+                ;;
+              "down-up")
+                echo "Stopping and restarting service(s)..."
+                if [ -n "$TARGET" ]; then
+                  docker compose down $TARGET
+                  docker compose up -d $TARGET
+                else
+                  docker compose down
+                  docker compose up -d
+                fi
+                ;;
+            esac
+
+            echo ""
+            echo "=== Current Status ==="
+            docker compose ps
+
+            echo ""
+            echo "=== Service Health Check ==="
+            sleep 10
+            curl -f http://localhost:8080/actuator/health || echo "Gateway health check failed"
+
+            echo ""
+            echo "Emergency restart completed!"
