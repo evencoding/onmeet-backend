@@ -16,11 +16,11 @@ import org.springframework.context.annotation.FilterType
 @EnableFeignClients(basePackages = ["com.onmeet.auth", "com.onmeet.common.client"])
 @EnableJpaRepositories(
     basePackages = ["com.onmeet.auth.repository.jpa"],
-    excludeFilters = [ComponentScan.Filter(type = FilterType.ASPECTJ, pattern = "com.onmeet.auth.repository.redis.*")]
+    excludeFilters = [ComponentScan.Filter(type = FilterType.ASPECTJ, pattern = ["com.onmeet.auth.repository.redis.*"])]
 )
 @EnableRedisRepositories(
     basePackages = ["com.onmeet.auth.repository.redis"],
-    excludeFilters = [ComponentScan.Filter(type = FilterType.ASPECTJ, pattern = "com.onmeet.auth.repository.jpa.*")]
+    excludeFilters = [ComponentScan.Filter(type = FilterType.ASPECTJ, pattern = ["com.onmeet.auth.repository.jpa.*"])]
 )
 @SpringBootApplication
 class AuthApplication

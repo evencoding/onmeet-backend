@@ -2,8 +2,8 @@ package com.onmeet.auth.repository.jpa
 
 import com.onmeet.auth.entity.TeamMember
 import org.springframework.data.jpa.repository.JpaRepository
-import org.springframework.data.jpa.repository.Query
 import org.springframework.stereotype.Repository
+import org.springframework.data.jpa.repository.Query
 
 @Repository
 interface TeamMemberRepository : JpaRepository<TeamMember, Long> {
