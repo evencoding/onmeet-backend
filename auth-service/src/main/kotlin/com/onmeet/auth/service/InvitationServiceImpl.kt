@@ -44,7 +44,7 @@ class InvitationServiceImpl(
             expiresAt = LocalDateTime.now().plusDays(invitationProperties.expiryDays)
         )
         
-        emailService.sendInvitationEmail(email, code)
+        emailService.sendInvitationEmail(email, code, company.name)
         
         return invitationRepository.save(invitation)
     }

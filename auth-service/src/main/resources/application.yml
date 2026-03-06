@@ -46,6 +46,7 @@ jwt:
     max-age: 604800 # 7 days
 invitation:
   expiry-days: ${INVITATION_EXPIRY_DAYS:7}
+  guest-expiry-days: ${GUEST_INVITATION_EXPIRY_DAYS:1}
 
 management:
   endpoints:
@@ -76,6 +77,8 @@ onmeet:
     internal-url: ${AUTH_INTERNAL_URL:http://auth-service:8081}
   file:
     internal-url: ${FILE_SERVICE_URL:http://file-service:8086}
+  video:
+    internal-url: ${VIDEO_SERVICE_URL:http://video-service:8083}
 
 resilience4j:
   circuitbreaker:
