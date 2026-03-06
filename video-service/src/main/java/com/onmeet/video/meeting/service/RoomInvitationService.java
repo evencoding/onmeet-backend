@@ -3,6 +3,7 @@ package com.onmeet.video.meeting.service;
 import com.onmeet.video.common.exception.BizException;
 import com.onmeet.video.common.exception.ErrorCode;
 import com.onmeet.video.infra.external.AuthServiceClient;
+import com.onmeet.video.infra.external.NotificationServiceClient;
 import com.onmeet.video.meeting.dto.InvitationResponse;
 import com.onmeet.video.meeting.entity.InvitationStatus;
 import com.onmeet.video.meeting.entity.MeetingRoom;
@@ -22,13 +23,16 @@ public class RoomInvitationService {
     private final RoomInvitationRepository invitationRepository;
     private final MeetingRoomRepository roomRepository;
     private final AuthServiceClient authServiceClient;
+    private final NotificationServiceClient notificationClient;
 
     public RoomInvitationService(RoomInvitationRepository invitationRepository,
-                                 MeetingRoomRepository roomRepository,
-                                 AuthServiceClient authServiceClient) {
+            MeetingRoomRepository roomRepository,
+            AuthServiceClient authServiceClient,
+            NotificationServiceClient notificationClient) {
         this.invitationRepository = invitationRepository;
         this.roomRepository = roomRepository;
         this.authServiceClient = authServiceClient;
+        this.notificationClient = notificationClient;
     }
 
     @Transactional
@@ -44,7 +48,7 @@ public class RoomInvitationService {
         }
 
         if (invitationRepository.existsByRoomIdAndInviteeUserIdAndStatus(
-            roomId, inviteeUserId, InvitationStatus.PENDING)) {
+                roomId, inviteeUserId, InvitationStatus.PENDING)) {
             throw new BizException(ErrorCode.CONFLICT, "Invitation already pending for this user");
         }
 
@@ -54,8 +58,17 @@ public class RoomInvitationService {
         }
 
         RoomInvitation invitation = new RoomInvitation(room, inviterUserId, inviteeUserId);
-        // TODO: [Notification Service] 초대받은 사용자에게 초대 알림
-        return toResponse(invitationRepository.save(invitation));
+        InvitationResponse response = toResponse(invitationRepository.save(invitation));
+
+        // 초대받은 사용자에게 초대 알림
+        notificationClient.sendNotification(
+                inviteeUserId, "MEETING_INVITATION",
+                "회의 초대",
+                room.getTitle() + " 회의에 초대되었습니다.",
+                "/meeting/" + roomId,
+                inviterUserId, "MEETING", String.valueOf(roomId));
+
+        return response;
     }
 
     @Transactional
@@ -74,7 +87,7 @@ public class RoomInvitationService {
 
         if (!nonExistentUsers.isEmpty()) {
             throw new BizException(ErrorCode.NOT_FOUND,
-                "Some users not found: " + nonExistentUsers);
+                    "Some users not found: " + nonExistentUsers);
         }
 
         List<InvitationResponse> results = new ArrayList<>();
@@ -83,13 +96,23 @@ public class RoomInvitationService {
                 continue;
             }
             if (invitationRepository.existsByRoomIdAndInviteeUserIdAndStatus(
-                roomId, inviteeUserId, InvitationStatus.PENDING)) {
+                    roomId, inviteeUserId, InvitationStatus.PENDING)) {
                 continue;
             }
             RoomInvitation invitation = new RoomInvitation(room, inviterUserId, inviteeUserId);
             results.add(toResponse(invitationRepository.save(invitation)));
         }
-        // TODO: [Notification Service] 초대받은 사용자들에게 초대 알림 일괄 발송
+
+        // 초대받은 사용자들에게 초대 알림 일괄 발송
+        for (InvitationResponse result : results) {
+            notificationClient.sendNotification(
+                    result.inviteeUserId(), "MEETING_INVITATION",
+                    "회의 초대",
+                    room.getTitle() + " 회의에 초대되었습니다.",
+                    "/meeting/" + roomId,
+                    inviterUserId, "MEETING", String.valueOf(roomId));
+        }
+
         return results;
     }
 
@@ -97,8 +120,8 @@ public class RoomInvitationService {
     public List<InvitationResponse> listInvitations(Long roomId) {
         findRoom(roomId);
         return invitationRepository.findByRoomId(roomId).stream()
-            .map(this::toResponse)
-            .collect(Collectors.toList());
+                .map(this::toResponse)
+                .collect(Collectors.toList());
     }
 
     @Transactional
@@ -111,7 +134,15 @@ public class RoomInvitationService {
         }
 
         invitation.accept();
-        // TODO: [Notification Service] 호스트에게 초대 수락 알림
+
+        // 호스트에게 초대 수락 알림
+        notificationClient.sendNotification(
+                invitation.getInviterUserId(), "INVITATION_ACCEPTED",
+                "초대 수락",
+                "사용자가 회의 초대를 수락했습니다.",
+                "/meeting/" + invitation.getRoom().getId(),
+                userId, "MEETING", String.valueOf(invitation.getRoom().getId()));
+
         return toResponse(invitation);
     }
 
@@ -125,7 +156,15 @@ public class RoomInvitationService {
         }
 
         invitation.decline();
-        // TODO: [Notification Service] 호스트에게 초대 거절 알림
+
+        // 호스트에게 초대 거절 알림
+        notificationClient.sendNotification(
+                invitation.getInviterUserId(), "INVITATION_DECLINED",
+                "초대 거절",
+                "사용자가 회의 초대를 거절했습니다.",
+                "/meeting/" + invitation.getRoom().getId(),
+                userId, "MEETING", String.valueOf(invitation.getRoom().getId()));
+
         return toResponse(invitation);
     }
 
@@ -138,24 +177,31 @@ public class RoomInvitationService {
         }
 
         RoomInvitation invitation = invitationRepository.findByRoomIdAndInviteeUserId(roomId, inviteeUserId)
-            .orElseThrow(() -> new BizException(ErrorCode.NOT_FOUND, "Invitation not found"));
+                .orElseThrow(() -> new BizException(ErrorCode.NOT_FOUND, "Invitation not found"));
 
         if (!invitation.isPending()) {
             throw new BizException(ErrorCode.INVALID_REQUEST, "Invitation is no longer pending");
         }
 
         invitation.cancel();
-        // TODO: [Notification Service] 초대 취소된 사용자에게 취소 알림
+
+        // 초대 취소된 사용자에게 취소 알림
+        notificationClient.sendNotification(
+                inviteeUserId, "INVITATION_CANCELLED",
+                "초대 취소",
+                "회의 초대가 취소되었습니다.",
+                "/meeting/" + roomId,
+                requesterId, "MEETING", String.valueOf(roomId));
     }
 
     private MeetingRoom findRoom(Long roomId) {
         return roomRepository.findById(roomId)
-            .orElseThrow(() -> new BizException(ErrorCode.NOT_FOUND, "Room not found"));
+                .orElseThrow(() -> new BizException(ErrorCode.NOT_FOUND, "Room not found"));
     }
 
     private RoomInvitation findInvitation(Long invitationId) {
         return invitationRepository.findById(invitationId)
-            .orElseThrow(() -> new BizException(ErrorCode.NOT_FOUND, "Invitation not found"));
+                .orElseThrow(() -> new BizException(ErrorCode.NOT_FOUND, "Invitation not found"));
     }
 
     private void validateInvitee(RoomInvitation invitation, Long userId) {
@@ -166,12 +212,11 @@ public class RoomInvitationService {
 
     private InvitationResponse toResponse(RoomInvitation invitation) {
         return new InvitationResponse(
-            invitation.getId(),
-            invitation.getRoom().getId(),
-            invitation.getInviterUserId(),
-            invitation.getInviteeUserId(),
-            invitation.getStatus(),
-            invitation.getCreatedAt()
-        );
+                invitation.getId(),
+                invitation.getRoom().getId(),
+                invitation.getInviterUserId(),
+                invitation.getInviteeUserId(),
+                invitation.getStatus(),
+                invitation.getCreatedAt());
     }
 }

@@ -1,56 +1,74 @@
 package com.onmeet.notification.controller;
 
-import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
-
-import com.onmeet.common.dto.ErrorResponse;
-
+import com.onmeet.notification.dto.NotificationResponseDto;
+import com.onmeet.notification.service.NotificationQueryService;
 import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.media.Content;
-import io.swagger.v3.oas.annotations.media.ExampleObject;
-import io.swagger.v3.oas.annotations.media.Schema;
-import io.swagger.v3.oas.annotations.responses.ApiResponse;
-import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.web.PageableDefault;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.Map;
 
 @RestController
-@RequestMapping("/notification")
-@Tag(name = "Notification", description = "알림 관련 서비스 API")
+@RequiredArgsConstructor
+@RequestMapping("/notification/v1/notifications")
+@Tag(name = "Notification", description = "알림 조회/읽음/삭제 API")
 public class NotificationController {
 
-    @Operation(summary = "알림 서비스 상태/정보 조회", description = "알림 서비스의 상태 및 내 정보를 조회합니다.")
-    @ApiResponses(value = {
-        @ApiResponse(
-            responseCode = "200",
-            description = "알림 서비스 상태 조회 성공 - 사용자 ID와 서비스 상태 반환"
-        ),
-        @ApiResponse(
-            responseCode = "401",
-            description = "인증 실패 - 로그인이 필요합니다",
-            content = @Content(
-                mediaType = "application/json",
-                schema = @Schema(implementation = ErrorResponse.class),
-                examples = @ExampleObject(
-                    value = "{\"status\": 401, \"message\": \"Authentication failed\", \"timestamp\": 1234567890}"
-                )
-            )
-        ),
-        @ApiResponse(
-            responseCode = "500",
-            description = "서버 내부 오류",
-            content = @Content(
-                mediaType = "application/json",
-                schema = @Schema(implementation = ErrorResponse.class),
-                examples = @ExampleObject(
-                    value = "{\"status\": 500, \"message\": \"Internal server error occurred\", \"timestamp\": 1234567890}"
-                )
-            )
-        )
-    })
-    @GetMapping("/me")
-    public String me(@AuthenticationPrincipal String userId) {
-        return "Hello from Notification Service! User ID: " + (userId != null ? userId : "Unknown");
+    private final NotificationQueryService queryService;
+
+    @Operation(summary = "내 알림 목록 조회", description = "현재 로그인한 사용자의 알림 목록을 페이징으로 조회합니다. "
+            + "기본값: page=0, size=20, 최신순 정렬")
+    @GetMapping
+    public ResponseEntity<Page<NotificationResponseDto>> getMyNotifications(
+            @RequestHeader("X-User-Id") Long userId,
+            @PageableDefault(size = 20) Pageable pageable) {
+        return ResponseEntity.ok(queryService.getMyNotifications(userId, pageable));
+    }
+
+    @Operation(summary = "미읽음 알림 수 조회", description = "읽지 않은 알림의 개수를 반환합니다.")
+    @GetMapping("/unread-count")
+    public ResponseEntity<Map<String, Long>> getUnreadCount(
+            @RequestHeader("X-User-Id") Long userId) {
+        long count = queryService.getUnreadCount(userId);
+        return ResponseEntity.ok(Map.of("unreadCount", count));
+    }
+
+    @Operation(summary = "단건 읽음 처리", description = "특정 알림을 읽음 상태로 변경합니다.")
+    @PatchMapping("/{id}/read")
+    public ResponseEntity<Void> markAsRead(
+            @RequestHeader("X-User-Id") Long userId,
+            @PathVariable Long id) {
+        queryService.markAsRead(id, userId);
+        return ResponseEntity.ok().build();
+    }
+
+    @Operation(summary = "전체 읽음 처리", description = "내 모든 알림을 읽음 상태로 변경합니다.")
+    @PatchMapping("/read-all")
+    public ResponseEntity<Map<String, Integer>> markAllAsRead(
+            @RequestHeader("X-User-Id") Long userId) {
+        int updatedCount = queryService.markAllAsRead(userId);
+        return ResponseEntity.ok(Map.of("updatedCount", updatedCount));
+    }
+
+    @Operation(summary = "단건 알림 삭제", description = "특정 알림을 삭제합니다.")
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> deleteNotification(
+            @RequestHeader("X-User-Id") Long userId,
+            @PathVariable Long id) {
+        queryService.deleteNotification(id, userId);
+        return ResponseEntity.noContent().build();
+    }
+
+    @Operation(summary = "전체 알림 삭제", description = "내 모든 알림을 삭제합니다.")
+    @DeleteMapping
+    public ResponseEntity<Void> deleteAllNotifications(
+            @RequestHeader("X-User-Id") Long userId) {
+        queryService.deleteAllNotifications(userId);
+        return ResponseEntity.noContent().build();
     }
 }
