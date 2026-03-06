@@ -1,0 +1,590 @@
+<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>onMeet Notification Test</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', -apple-system, sans-serif;
+            background: #0f0f23;
+            color: #e2e2e2;
+            min-height: 100vh;
+            padding: 24px;
+        }
+
+        .container {
+            max-width: 640px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            font-size: 24px;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 24px;
+        }
+
+        /* Panel */
+        .panel {
+            background: #1a1a2e;
+            border: 1px solid #2a2a4a;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 16px;
+        }
+
+        .panel h2 {
+            font-size: 14px;
+            color: #888;
+            margin-bottom: 12px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .input-row {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 12px;
+        }
+
+        input,
+        select {
+            flex: 1;
+            padding: 10px 14px;
+            border-radius: 8px;
+            border: 1px solid #2a2a4a;
+            background: #0f0f23;
+            color: #e2e2e2;
+            font-size: 14px;
+            outline: none;
+        }
+
+        input:focus,
+        select:focus {
+            border-color: #667eea;
+        }
+
+        button {
+            padding: 10px 20px;
+            border-radius: 8px;
+            border: none;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            white-space: nowrap;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            opacity: 0.9;
+            transform: translateY(-1px);
+        }
+
+        .btn-danger {
+            background: #e74c3c;
+            color: white;
+        }
+
+        .btn-danger:hover {
+            opacity: 0.9;
+        }
+
+        .btn-success {
+            background: #2ecc71;
+            color: white;
+        }
+
+        .btn-success:hover {
+            opacity: 0.9;
+        }
+
+        .btn-sm {
+            padding: 6px 14px;
+            font-size: 12px;
+        }
+
+        /* Status */
+        .status {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 13px;
+            color: #888;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #555;
+        }
+
+        .status-dot.connected {
+            background: #2ecc71;
+            box-shadow: 0 0 8px #2ecc71;
+        }
+
+        .status-dot.error {
+            background: #e74c3c;
+            box-shadow: 0 0 8px #e74c3c;
+        }
+
+        /* Notifications List */
+        .notifications {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .notification-item {
+            background: #16213e;
+            border-left: 3px solid #667eea;
+            border-radius: 0 8px 8px 0;
+            padding: 14px 16px;
+            animation: slideIn 0.3s ease;
+        }
+
+        .notification-item .noti-title {
+            font-weight: 600;
+            font-size: 15px;
+            margin-bottom: 4px;
+        }
+
+        .notification-item .noti-body {
+            font-size: 13px;
+            color: #aaa;
+        }
+
+        .notification-item .noti-meta {
+            font-size: 11px;
+            color: #555;
+            margin-top: 8px;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateX(-10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        .empty {
+            text-align: center;
+            color: #555;
+            padding: 40px;
+            font-size: 14px;
+        }
+
+        /* Log */
+        .log {
+            background: #0a0a1a;
+            border: 1px solid #1a1a3a;
+            border-radius: 8px;
+            padding: 12px;
+            max-height: 200px;
+            overflow-y: auto;
+            font-family: 'Consolas', monospace;
+            font-size: 12px;
+            color: #6a6;
+        }
+
+        .log-entry {
+            margin-bottom: 2px;
+        }
+
+        .log-entry.error {
+            color: #e74c3c;
+        }
+
+        .log-entry.info {
+            color: #3498db;
+        }
+
+        .log-entry.success {
+            color: #2ecc71;
+        }
+
+        /* Toast */
+        .toast-container {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 9999;
+        }
+
+        .toast {
+            background: #16213e;
+            border: 1px solid #667eea;
+            border-radius: 10px;
+            padding: 14px 20px;
+            margin-bottom: 8px;
+            min-width: 280px;
+            animation: toastIn 0.3s ease, toastOut 0.3s ease 4.7s forwards;
+            box-shadow: 0 4px 20px rgba(102, 126, 234, 0.2);
+        }
+
+        .toast .toast-title {
+            font-weight: 600;
+            font-size: 14px;
+        }
+
+        .toast .toast-body {
+            font-size: 12px;
+            color: #aaa;
+            margin-top: 2px;
+        }
+
+        @keyframes toastIn {
+            from {
+                opacity: 0;
+                transform: translateX(20px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        @keyframes toastOut {
+            from {
+                opacity: 1;
+            }
+
+            to {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 600;
+        }
+
+        .badge-dev {
+            background: #2ecc71;
+            color: #000;
+        }
+
+        .badge-prod {
+            background: #e74c3c;
+            color: #fff;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h1>🔔 onMeet Notification Test</h1>
+
+        <!-- ① SSE Connection -->
+        <div class="panel">
+            <h2>① SSE 연결 <span class="badge badge-dev">DEV</span></h2>
+            <div class="input-row">
+                <input type="text" id="userId" placeholder="User ID (e.g. 1)" value="1" />
+                <button class="btn-primary" id="btnConnect" onclick="toggleConnection()">Connect</button>
+            </div>
+            <div class="status">
+                <div class="status-dot" id="statusDot"></div>
+                <span id="statusText">Disconnected</span>
+            </div>
+        </div>
+
+        <!-- ② Send Test Notification -->
+        <div class="panel">
+            <h2>② 알림 전송 테스트</h2>
+            <div class="input-row">
+                <select id="notiType">
+                    <option value="MEETING_CREATED">MEETING_CREATED</option>
+                    <option value="MEETING_TODAY">MEETING_TODAY</option>
+                    <option value="MEETING_STARTED">MEETING_STARTED</option>
+                    <option value="TEAM_MEMBER_ADDED">TEAM_MEMBER_ADDED</option>
+                    <option value="SYSTEM">SYSTEM</option>
+                    <option value="EVENT">EVENT</option>
+                </select>
+            </div>
+            <div class="input-row">
+                <input type="text" id="notiTitle" placeholder="Title" value="회의가 생성되었습니다" />
+            </div>
+            <div class="input-row">
+                <input type="text" id="notiBody" placeholder="Body" value="10시 팀미팅이 예약되었습니다." />
+            </div>
+            <button class="btn-primary" onclick="sendTestNotification()">📤 알림 전송</button>
+        </div>
+
+        <!-- ③ FCM Token Registration -->
+        <div class="panel">
+            <h2>③ FCM 토큰 등록 테스트</h2>
+            <div class="input-row">
+                <input type="text" id="fcmDeviceId" placeholder="Device ID" />
+            </div>
+            <div class="input-row">
+                <input type="text" id="fcmToken" placeholder="FCM Token (임의 값)" value="test-fcm-token-12345" />
+            </div>
+            <div class="input-row">
+                <select id="fcmDeviceType" style="flex: 0.5;">
+                    <option value="WEB">WEB</option>
+                    <option value="ANDROID">ANDROID</option>
+                    <option value="IOS">IOS</option>
+                </select>
+                <button class="btn-success" onclick="registerFcmToken()">📱 토큰 등록</button>
+            </div>
+        </div>
+
+        <!-- ④ Notification Settings -->
+        <div class="panel">
+            <h2>④ 알림 설정 조회</h2>
+            <div class="input-row">
+                <button class="btn-primary btn-sm" onclick="getSettings()">⚙️ 설정 조회</button>
+            </div>
+            <div id="settingsResult" style="font-size: 13px; color: #aaa; margin-top: 8px;"></div>
+        </div>
+
+        <!-- Received Notifications -->
+        <div class="panel">
+            <h2>📬 수신된 알림</h2>
+            <div class="notifications" id="notifications">
+                <div class="empty" id="emptyMsg">아직 수신된 알림이 없습니다. 위에서 SSE 연결 후 알림을 보내보세요!</div>
+            </div>
+        </div>
+
+        <!-- Log -->
+        <div class="panel">
+            <h2>📋 로그</h2>
+            <div class="log" id="logArea"></div>
+        </div>
+    </div>
+
+    <div class="toast-container" id="toastContainer"></div>
+
+    <script>
+        let eventSource = null;
+        const BASE_URL = 'http://localhost:8085';
+
+        // deviceId 자동 생성 (localStorage에 저장)
+        function getOrCreateDeviceId() {
+            let deviceId = localStorage.getItem('onmeet_device_id');
+            if (!deviceId) {
+                deviceId = 'dev-' + crypto.randomUUID();
+                localStorage.setItem('onmeet_device_id', deviceId);
+            }
+            return deviceId;
+        }
+
+        // 페이지 로드 시 deviceId 세팅
+        document.addEventListener('DOMContentLoaded', () => {
+            document.getElementById('fcmDeviceId').value = getOrCreateDeviceId();
+        });
+
+        function log(msg, type = '') {
+            const area = document.getElementById('logArea');
+            const entry = document.createElement('div');
+            entry.className = 'log-entry ' + type;
+            entry.textContent = `[${new Date().toLocaleTimeString()}] ${msg}`;
+            area.appendChild(entry);
+            area.scrollTop = area.scrollHeight;
+        }
+
+        // ──────────────────────────────────
+        // ① SSE Connection
+        // ──────────────────────────────────
+        function toggleConnection() {
+            if (eventSource) { disconnect(); } else { connect(); }
+        }
+
+        function connect() {
+            const userId = document.getElementById('userId').value;
+            if (!userId) return alert('User ID를 입력해주세요.');
+
+            const url = `${BASE_URL}/notification/v1/subscribe/${userId}`;
+            log(`SSE 연결 시도: ${url}`, 'info');
+
+            eventSource = new EventSource(url);
+
+            eventSource.addEventListener('connect', (e) => {
+                setStatus('connected', e.data);
+                log('SSE 연결 성공: ' + e.data, 'success');
+            });
+
+            eventSource.addEventListener('notification', (e) => {
+                const data = JSON.parse(e.data);
+                addNotification(data);
+                showToast(data.title, data.body);
+                log(`알림 수신: [${data.type}] ${data.title}`, 'success');
+            });
+
+            eventSource.addEventListener('heartbeat', () => {
+                log('💓 Heartbeat received', '');
+            });
+
+            eventSource.onerror = (e) => {
+                log('SSE 연결 오류 발생', 'error');
+                setStatus('error', 'Connection error');
+                disconnect();
+            };
+
+            document.getElementById('btnConnect').textContent = 'Disconnect';
+            document.getElementById('btnConnect').className = 'btn-danger';
+        }
+
+        function disconnect() {
+            if (eventSource) {
+                eventSource.close();
+                eventSource = null;
+            }
+            setStatus('disconnected', 'Disconnected');
+            document.getElementById('btnConnect').textContent = 'Connect';
+            document.getElementById('btnConnect').className = 'btn-primary';
+            log('SSE 연결 해제');
+        }
+
+        function setStatus(state, text) {
+            const dot = document.getElementById('statusDot');
+            dot.className = 'status-dot ' + (state === 'connected' ? 'connected' : state === 'error' ? 'error' : '');
+            document.getElementById('statusText').textContent = text;
+        }
+
+        // ──────────────────────────────────
+        // ② Send Notification
+        // ──────────────────────────────────
+        async function sendTestNotification() {
+            const userId = document.getElementById('userId').value;
+            const title = document.getElementById('notiTitle').value;
+            const body = document.getElementById('notiBody').value;
+            const type = document.getElementById('notiType').value;
+
+            log(`알림 전송 시도: userId=${userId}, type=${type}`, 'info');
+
+            try {
+                const res = await fetch(`${BASE_URL}/notification/v1/send`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        userId: parseInt(userId),
+                        type: type,
+                        title: title,
+                        body: body,
+                        deeplink: 'onmeet://meeting/123',
+                        resourceType: 'MEETING',
+                        resourceId: '123',
+                        dedupeKey: 'test_' + Date.now(),
+                        actorUserId: 2
+                    })
+                });
+
+                if (res.ok) {
+                    log('알림 전송 성공! ✅', 'success');
+                } else {
+                    log(`알림 전송 실패: HTTP ${res.status}`, 'error');
+                }
+            } catch (err) {
+                log('알림 전송 오류: ' + err.message, 'error');
+            }
+        }
+
+        // ──────────────────────────────────
+        // ③ FCM Token
+        // ──────────────────────────────────
+        async function registerFcmToken() {
+            const userId = document.getElementById('userId').value;
+            const deviceId = document.getElementById('fcmDeviceId').value;
+            const token = document.getElementById('fcmToken').value;
+            const deviceType = document.getElementById('fcmDeviceType').value;
+
+            log(`FCM 토큰 등록: userId=${userId}, deviceId=${deviceId}`, 'info');
+
+            try {
+                const res = await fetch(`${BASE_URL}/notification/v1/fcm/token/${userId}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ token, deviceId, deviceType })
+                });
+
+                if (res.ok) {
+                    log('FCM 토큰 등록 성공! ✅', 'success');
+                } else {
+                    log(`FCM 토큰 등록 실패: HTTP ${res.status}`, 'error');
+                }
+            } catch (err) {
+                log('FCM 토큰 등록 오류: ' + err.message, 'error');
+            }
+        }
+
+        // ──────────────────────────────────
+        // ④ Settings
+        // ──────────────────────────────────
+        async function getSettings() {
+            const userId = document.getElementById('userId').value;
+            log(`알림 설정 조회: userId=${userId}`, 'info');
+
+            try {
+                const res = await fetch(`${BASE_URL}/notification/v1/settings/${userId}`);
+                if (res.ok) {
+                    const data = await res.json();
+                    document.getElementById('settingsResult').textContent = JSON.stringify(data, null, 2);
+                    log('알림 설정 조회 성공! ✅', 'success');
+                } else {
+                    log(`알림 설정 조회 실패: HTTP ${res.status}`, 'error');
+                }
+            } catch (err) {
+                log('알림 설정 조회 오류: ' + err.message, 'error');
+            }
+        }
+
+        // ──────────────────────────────────
+        // UI Helpers
+        // ──────────────────────────────────
+        function addNotification(data) {
+            document.getElementById('emptyMsg')?.remove();
+            const container = document.getElementById('notifications');
+            const el = document.createElement('div');
+            el.className = 'notification-item';
+            el.innerHTML = `
+                <div class="noti-title">${data.title || 'No title'}</div>
+                <div class="noti-body">${data.body || ''}</div>
+                <div class="noti-meta">
+                    Type: ${data.type || '-'} | Resource: ${data.resourceType || '-'}
+                    | ${new Date().toLocaleTimeString()}
+                </div>
+            `;
+            container.prepend(el);
+        }
+
+        function showToast(title, body) {
+            const container = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+            toast.className = 'toast';
+            toast.innerHTML = `
+                <div class="toast-title">🔔 ${title}</div>
+                <div class="toast-body">${body || ''}</div>
+            `;
+            container.appendChild(toast);
+            setTimeout(() => toast.remove(), 5000);
+        }
+    </script>
+</body>
+
+</html>
