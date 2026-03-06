@@ -10,7 +10,7 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.crypto.password.PasswordEncoder
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
-import com.onmeet.auth.repository.WithdrawnUserRepository
+import com.onmeet.auth.repository.jpa.WithdrawnUserRepository
 import com.onmeet.auth.entity.WithdrawnUser
 import java.time.LocalDateTime
 import org.slf4j.LoggerFactory
@@ -26,7 +26,7 @@ class AuthService(
     private val jobTitleService: JobTitleService,
     private val tokenService: TokenService,
     private val fileClient: com.onmeet.auth.client.FileClient,
-    private val withdrawnUserRepository: com.onmeet.auth.repository.WithdrawnUserRepository
+    private val withdrawnUserRepository: WithdrawnUserRepository
 ) {
     companion object {
         private val log = LoggerFactory.getLogger(AuthService::class.java)
@@ -197,7 +197,7 @@ class AuthService(
         }
 
         // Archive user data
-        val withdrawnUser = com.onmeet.auth.entity.WithdrawnUser(
+        val withdrawnUser = WithdrawnUser(
             originalUserId = user.requireId(),
             email = user.email,
             name = user.name,
