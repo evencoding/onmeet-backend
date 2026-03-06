@@ -24,7 +24,6 @@ public class GmailOAuth2TokenService {
     private final GmailOAuth2Config config;
     private final RestTemplate restTemplate;
 
-    // RestTemplateBuilder를 주입받아 Bean으로 생성된 RestTemplate 사용 (중앙 설정 관리, 재사용성 향상)
     public GmailOAuth2TokenService(GmailOAuth2Config config, RestTemplateBuilder restTemplateBuilder) {
         this.config = config;
         this.restTemplate = restTemplateBuilder.build();
@@ -33,7 +32,7 @@ public class GmailOAuth2TokenService {
     public String getAccessToken() {
         if (config.getClientId() == null || config.getClientId().isBlank()) {
             log.warn("GMAIL_CLIENT_ID is missing or blank. Token cannot be refreshed.");
-            throw new RuntimeException("Missing Gmail OAuth credentials");
+            throw new IllegalStateException("Missing Gmail OAuth credentials");
         }
 
         HttpHeaders headers = new HttpHeaders();
@@ -48,18 +47,19 @@ public class GmailOAuth2TokenService {
         HttpEntity<MultiValueMap<String, String>> request = new HttpEntity<>(params, headers);
 
         try {
-            // 타입 안전성을 위해 Map<String, Object>로 명시적 타입 파라미터 지정
             @SuppressWarnings("unchecked")
             ResponseEntity<Map<String, Object>> response = restTemplate.postForEntity(TOKEN_URL, request, (Class<Map<String, Object>>) (Class<?>) Map.class);
             if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
-                return (String) response.getBody().get("access_token");
+                String accessToken = (String) response.getBody().get("access_token");
+                if (accessToken == null) {
+                    throw new IllegalStateException("Gmail access token response does not contain 'access_token' field");
+                }
+                return accessToken;
             } else {
-                log.error("Failed to refresh Gmail Access Token. Status: {}", response.getStatusCode());
-                throw new RuntimeException("Failed to refresh Gmail Access Token");
+                throw new IllegalStateException("Failed to refresh Gmail access token. Status: " + response.getStatusCode());
             }
         } catch (Exception e) {
-            log.error("Error occurred while refreshing Gmail Access Token", e);
-            throw new RuntimeException("Error occurred while refreshing Gmail Access Token", e);
+            throw new IllegalStateException("Error occurred while fetching Gmail access token", e);
         }
     }
 }

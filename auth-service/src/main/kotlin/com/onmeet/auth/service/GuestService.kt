@@ -19,7 +19,10 @@ class GuestService(
     private val userRepository: UserRepository,
     private val emailService: EmailService,
     private val tokenService: TokenService,
-    private val invitationProperties: InvitationProperties
+    private val invitationProperties: InvitationProperties,
+    private val internalRoomClient: com.onmeet.common.client.InternalRoomClient,
+    @org.springframework.beans.factory.annotation.Value("\${gateway.shared-secret}")
+    private val gatewaySecret: String
 ) {
 
     companion object {
@@ -32,13 +35,11 @@ class GuestService(
         val user = userRepository.findByEmail(inviterEmail)
             .orElseThrow { UserNotFoundException("User not found") }
 
-        // roomId 형식 검증 (경로 탐색 및 오픈 리다이렉트 방지)
-        require(request.roomId.matches(ROOM_ID_PATTERN)) {
-            "Invalid roomId format. Only alphanumeric characters, hyphens, and underscores are allowed."
+        // [Security] [IDOR 방어] video-service 연동을 통해 초대자가 해당 roomId의 호스트인지 검증
+        val room = internalRoomClient.getRoomByCode(request.roomId, gatewaySecret)
+        if (room.hostUserId != (user.id ?: 0L)) {
+            throw com.onmeet.common.exception.InsufficientPermissionException("You do not have permission to invite guests to this room.")
         }
-
-        // TODO: room-service 연동을 통해 inviterEmail이 해당 roomId의 호스트인지 권한 검증 필요
-        // (현재 auth-service는 room 정보를 보유하지 않으므로 형식 검증만 수행)
 
         val uuid = UUID.randomUUID().toString()
         val expiresAt = LocalDateTime.now().plusDays(invitationProperties.guestExpiryDays)
