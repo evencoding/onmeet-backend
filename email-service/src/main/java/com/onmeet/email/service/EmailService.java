@@ -38,12 +38,6 @@ public class EmailService {
     }
 
     public void sendEmail(String to, String subject, String templateName, Map<String, Object> variables) {
-        log.info("============== [EMAIL SENDING] ==============");
-        log.info("To: {}", to);
-        log.info("Subject: {}", subject);
-        log.info("Template: {}", templateName);
-        log.info("=============================================");
-
         // [Security] templateName 화이트리스트 검증 (Path Traversal 방지)
         if (!ALLOWED_TEMPLATES.contains(templateName)) {
             log.error("Rejected illegal templateName '{}'. Allowed templates: {}", templateName, ALLOWED_TEMPLATES);
@@ -51,38 +45,42 @@ public class EmailService {
         }
 
         try {
-            // 1. OAuth2 Access Token 갱신
-            String accessToken = tokenService.getAccessToken();
+            // OAuth2 Access Token 설정
+            configureOAuth2TokenIfPossible();
 
-            // Set the token as password dynamically for XOAUTH2
-            if (javaMailSender instanceof JavaMailSenderImpl mailSenderImpl) {
-                mailSenderImpl.setPassword(accessToken);
-            } else {
-                log.warn("JavaMailSender is not an instance of JavaMailSenderImpl. Cannot inject access token.");
-            }
-
-            // 2. Thymeleaf Template Process
+            // Thymeleaf Template Process
             Context context = new Context();
             if (variables != null) {
                 context.setVariables(variables);
             }
             String htmlBody = templateEngine.process(templateName, context);
 
-            // 3. 메일 구성 (MimeMessage for HTML)
+            // 메일 구성 (MimeMessage for HTML)
             MimeMessage message = javaMailSender.createMimeMessage();
             MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
             helper.setTo(to);
             helper.setSubject(subject);
-            helper.setText(htmlBody, true); // true indicates HTML content
+            helper.setText(htmlBody, true);
             helper.setFrom(fromEmail);
 
-            // 4. 메일 발송
+            // 메일 발송
             javaMailSender.send(message);
             log.info("Email sent successfully to: {}", to);
         } catch (IllegalArgumentException e) {
-            throw e; // 화이트리스트 검증 실패는 재throw
+            throw e;
         } catch (Exception e) {
             log.error("Failed to send email to: {}", to, e);
+        }
+    }
+
+    private void configureOAuth2TokenIfPossible() {
+        if (javaMailSender instanceof JavaMailSenderImpl implementation) {
+            try {
+                String accessToken = tokenService.getAccessToken();
+                implementation.setPassword(accessToken);
+            } catch (Exception e) {
+                throw new IllegalStateException("Could not configure OAuth2 token for email sender", e);
+            }
         }
     }
 }
