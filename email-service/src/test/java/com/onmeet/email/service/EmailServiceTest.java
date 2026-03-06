@@ -8,6 +8,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
@@ -18,6 +19,9 @@ class EmailServiceTest {
 
     @Mock
     private JavaMailSender javaMailSender;
+
+    @Mock
+    private GmailOAuth2TokenService tokenService;
 
     @InjectMocks
     private EmailService emailService;
@@ -33,16 +37,16 @@ class EmailServiceTest {
         String to = "user@example.com";
         String subject = "Test Subject";
         String body = "Test Body";
+        String fakeToken = "ya29.fakeToken";
+
+        when(tokenService.getAccessToken()).thenReturn(fakeToken);
 
         // When
         emailService.sendEmail(to, subject, body);
 
         // Then
-        // Hiện tại EmailService đang comment out javaMailSender.send(message);
-        // Nên chúng ta không verify send() được nếu muốn test thực tế.
-        // Tuy nhiên, chúng ta có thể kiểm tra xem logic tạo message có lỗi gì không (thông qua coverage).
-        // Nếu sau này uncomment send(), test này sẽ cần verify(javaMailSender).send(any(SimpleMailMessage.class));
-        // Mockito verify nothing happens on javaMailSender because it's commented out in implementation
-        verify(javaMailSender, times(0)).send(any(SimpleMailMessage.class));
+        // Verify that token fetching and mail sending was called
+        verify(tokenService, times(1)).getAccessToken();
+        verify(javaMailSender, times(1)).send(any(SimpleMailMessage.class));
     }
 }
