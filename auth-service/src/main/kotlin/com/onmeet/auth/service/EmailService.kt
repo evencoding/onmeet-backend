@@ -48,7 +48,7 @@ class EmailServiceImpl(
     }
 
     override fun sendGuestInvitationEmail(to: String, uuid: String, hostName: String, roomName: String) {
-        val joinLink = "$apiBaseUrl/api/v1/guests/join/$uuid"
+        val joinLink = "$apiBaseUrl/auth/v1/guests/join/$uuid"
         
         EmailMessage(
             to = to,
