@@ -42,27 +42,36 @@ class GuestController(
     fun joinMeeting(@PathVariable uuid: String): ResponseEntity<Void> {
         val result = guestService.joinMeeting(uuid)
 
+        // [Fix] HttpHeaders.add()를 사용해 두 Set-Cookie 헤더가 모두 전송되도록 수정
+        // (기존 .header() 체인 방식은 동일 헤더명을 덮어씌우는 버그 존재)
+        val responseHeaders = HttpHeaders()
+
         val accessTokenCookie = ResponseCookie.from(JwtConstants.ACCESS_TOKEN_COOKIE_NAME, result.accessToken)
             .httpOnly(true)
             .secure(jwtProperties.cookie.secure)
             .path("/")
-            .maxAge(4 * 60 * 60) // 4 hours
+            .maxAge(jwtProperties.cookie.maxAge)
             .sameSite("Lax")
             .build()
-            
-        val refreshTokenCookie = ResponseCookie.from(JwtConstants.REFRESH_TOKEN_COOKIE_NAME, result.refreshToken)
-            .httpOnly(true)
-            .secure(jwtProperties.cookie.secure)
-            .path("/")
-            .maxAge(24 * 60 * 60) // 1 day
-            .sameSite("Lax")
-            .build()
+        responseHeaders.add(HttpHeaders.SET_COOKIE, accessTokenCookie.toString())
 
+        // refreshToken이 존재하는 경우에만 쿠키 설정
+        result.refreshToken?.let { refreshToken ->
+            val refreshTokenCookie = ResponseCookie.from(JwtConstants.REFRESH_TOKEN_COOKIE_NAME, refreshToken)
+                .httpOnly(true)
+                .secure(jwtProperties.cookie.secure)
+                .path("/")
+                .maxAge(jwtProperties.refreshCookie.maxAge)
+                .sameSite("Lax")
+                .build()
+            responseHeaders.add(HttpHeaders.SET_COOKIE, refreshTokenCookie.toString())
+        }
+
+        // [Fix] roomId가 GuestService에서 이미 형식 검증되었으므로 안전하게 사용 가능
         val redirectUri = URI.create("$frontendUrl/rooms/${result.roomId}")
 
         return ResponseEntity.status(HttpStatus.FOUND)
-            .header(HttpHeaders.SET_COOKIE, accessTokenCookie.toString())
-            .header(HttpHeaders.SET_COOKIE, refreshTokenCookie.toString())
+            .headers(responseHeaders)
             .location(redirectUri)
             .build()
     }

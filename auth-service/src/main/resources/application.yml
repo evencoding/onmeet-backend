@@ -27,25 +27,7 @@ app:
   team:
     initial-color: ${INITIAL_TEAM_COLOR:#FFFFFF}
     initial-description: ${INITIAL_TEAM_DESCRIPTION:Initial team}
-
-auth:
-  encryption-key: ${AUTH_ENCRYPTION_KEY}
-privacy:
-  encryption:
-    key: ${PRIVACY_ENCRYPTION_KEY}
-gateway:
-  shared-secret: ${GATEWAY_SHARED_SECRET}
-
-jwt:
-  validity-in-ms: 3600000 # 1 hour
-  key-id: ${JWT_KEY_ID:onmeet-auth-key}
-  cookie:
-    secure: ${COOKIE_SECURE:true}
-    max-age: 3600
-  refresh-cookie:
-    max-age: 604800 # 7 days
-invitation:
-  expiry-days: ${INVITATION_EXPIRY_DAYS:7}
+  api-base-url: ${APP_API_BASE_URL:http://localhost:8000}
 
 management:
   endpoints:
