@@ -58,7 +58,7 @@ class InvitationServiceTest {
         every { invitationProperties.expiryDays } returns 7L
         every { invitationRepository.findByEmail(email) } returns Optional.empty()
         every { invitationRepository.save(any()) } returns invitation
-        every { emailService.sendInvitationEmail(any(), any()) } returns Unit
+        every { emailService.sendInvitationEmail(any(), any(), any()) } returns Unit
 
         // When
         val result = invitationService.createInvitation(companyId, email, role)
@@ -67,6 +67,6 @@ class InvitationServiceTest {
         assertEquals(invitation, result)
         verify { companyRepository.findById(companyId) }
         verify { invitationRepository.save(any()) }
-        verify { emailService.sendInvitationEmail(email, any()) }
+        verify { emailService.sendInvitationEmail(email, any(), "Test Company") }
     }
 }

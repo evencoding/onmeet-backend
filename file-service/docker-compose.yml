@@ -32,12 +32,12 @@ services:
       MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
       MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioadmin}
     ports:
-      - "127.0.0.1:9000:9000"  # MinIO API
-      - "127.0.0.1:9001:9001"  # MinIO Console
+      - "127.0.0.1:9000:9000" # MinIO API
+      - "127.0.0.1:9001:9001" # MinIO Console
     volumes:
       - minio-data:/data
     healthcheck:
-      test: ["CMD", "mc", "ready", "local"]
+      test: [ "CMD", "mc", "ready", "local" ]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -59,23 +59,19 @@ services:
       minio:
         condition: service_healthy
     entrypoint: >
-      /bin/sh -c "
-      mc alias set myminio http://minio:9000 ${MINIO_ROOT_USER:-minioadmin} ${MINIO_ROOT_PASSWORD:-minioadmin};
-      mc mb myminio/file-bucket --ignore-existing;
-      mc anonymous set download myminio/file-bucket;
-      echo 'MinIO bucket initialized successfully';
-      "
+      /bin/sh -c " mc alias set myminio http://minio:9000 ${MINIO_ROOT_USER:-minioadmin} ${MINIO_ROOT_PASSWORD:-minioadmin}; mc mb myminio/file-bucket --ignore-existing; mc anonymous set download myminio/file-bucket; echo 'MinIO bucket initialized successfully'; "
     networks:
       - onmeet-network
 
   file-service:
     image: ${DOCKER_REGISTRY:-onmeet}/file-service:latest
+    container_name: file-service
     ports:
-      - "127.0.0.1:8087:8087"
+      - "127.0.0.1:8086:8086"
     environment:
       - DB_URL=host=postgres-file user=${DB_USERNAME} password=${DB_ROOT_PASSWORD} dbname=file_db port=5432 sslmode=disable
       - GATEWAY_SHARED_SECRET=${GATEWAY_SHARED_SECRET}
-      - SERVER_PORT=${FILE_SERVICE_PORT:-8087}
+      - SERVER_PORT=${FILE_SERVICE_PORT:-8086}
       - AWS_ACCESS_KEY_ID=${MINIO_ROOT_USER:-minioadmin}
       - AWS_SECRET_ACCESS_KEY=${MINIO_ROOT_PASSWORD:-minioadmin}
       - AWS_REGION=${AWS_REGION:-ap-northeast-2}
@@ -106,4 +102,4 @@ volumes:
 
 networks:
   onmeet-network:
-    external: true
+    name: onmeet-network

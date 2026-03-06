@@ -1,17 +1,22 @@
 package com.onmeet.email.dto;
 
+import java.util.Map;
+
 public class EmailRequestDto {
+
     private String to;
     private String subject;
-    private String body;
+    private String templateName;
+    private Map<String, Object> variables;
 
     public EmailRequestDto() {
     }
 
-    public EmailRequestDto(String to, String subject, String body) {
+    public EmailRequestDto(String to, String subject, String templateName, Map<String, Object> variables) {
         this.to = to;
         this.subject = subject;
-        this.body = body;
+        this.templateName = templateName;
+        this.variables = variables;
     }
 
     public String getTo() {
@@ -30,11 +35,19 @@ public class EmailRequestDto {
         this.subject = subject;
     }
 
-    public String getBody() {
-        return body;
+    public String getTemplateName() {
+        return templateName;
     }
 
-    public void setBody(String body) {
-        this.body = body;
+    public void setTemplateName(String templateName) {
+        this.templateName = templateName;
+    }
+
+    public Map<String, Object> getVariables() {
+        return variables;
+    }
+
+    public void setVariables(Map<String, Object> variables) {
+        this.variables = variables;
     }
 }

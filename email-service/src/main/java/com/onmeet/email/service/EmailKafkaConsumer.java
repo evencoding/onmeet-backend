@@ -38,7 +38,7 @@ public class EmailKafkaConsumer {
         log.info("Received Kafka message: {}", message);
         try {
             EmailRequestDto emailRequest = objectMapper.readValue(message, EmailRequestDto.class);
-            emailService.sendEmail(emailRequest.getTo(), emailRequest.getSubject(), emailRequest.getBody());
+            emailService.sendEmail(emailRequest.getTo(), emailRequest.getSubject(), emailRequest.getTemplateName(), emailRequest.getVariables());
         } catch (com.fasterxml.jackson.core.JsonProcessingException e) {
             log.error("Error processing Kafka message: {}", message, e);
         }

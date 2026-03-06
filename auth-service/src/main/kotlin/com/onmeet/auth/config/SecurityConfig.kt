@@ -42,15 +42,20 @@ class SecurityConfig(
     @Bean
     fun filterChain(http: HttpSecurity): SecurityFilterChain {
         http
-            .cors { it.configurationSource(corsConfigurationSource()) }
+            .cors { it.disable() }
             .csrf { it.disable() }
             .sessionManagement { it.sessionCreationPolicy(SessionCreationPolicy.STATELESS) }
             .authorizeHttpRequests { auth ->
                 auth.requestMatchers(
-                    "/v1/auth/**",
+                    "/v1/register/**",
+                    "/v1/login/**",
+                    "/v1/invitations/**",
+                    "/v1/check",
+                    "/v1/refresh",
+                    "/v1/logout",
                     "/v1/internal/**",
-                    "/actuator/**", "/.well-known/jwks.json",
-                    "/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html"
+                    "/actuator/**",
+                    "/v1/.well-known/jwks.json"
                 ).permitAll()
                 auth.requestMatchers("/v1/manager/**").hasAnyRole("MANAGER", "ADMIN")
                 auth.anyRequest().authenticated()
@@ -75,6 +80,8 @@ class SecurityConfig(
             "http://localhost:3000",
             "http://localhost:8080",
             "https://*.onmeet.com",
+            "https://*.onmeet.cloud",
+            "https://api.onmeet.cloud",
             "https://onmeeteven.netlify.app"
         ) + envOrigins
 
