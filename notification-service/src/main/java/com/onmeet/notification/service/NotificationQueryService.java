@@ -1,0 +1,72 @@
+package com.onmeet.notification.service;
+
+import com.onmeet.notification.dto.NotificationResponseDto;
+import com.onmeet.notification.entity.NotificationRecipient;
+import com.onmeet.notification.repository.NotificationRecipientRepository;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+@Service
+@RequiredArgsConstructor
+@Slf4j
+@Transactional(readOnly = true)
+public class NotificationQueryService {
+
+    private final NotificationRecipientRepository recipientRepository;
+
+    /**
+     * 내 알림 목록을 페이징으로 조회합니다.
+     */
+    public Page<NotificationResponseDto> getMyNotifications(Long userId, Pageable pageable) {
+        return recipientRepository.findAllByUserIdOrderByCreatedAtDesc(userId, pageable)
+                .map(recipient -> NotificationResponseDto.from(recipient.getNotification()));
+    }
+
+    /**
+     * 미읽음 알림 수를 반환합니다.
+     */
+    public long getUnreadCount(Long userId) {
+        return recipientRepository.countByUserIdAndReadAtIsNull(userId);
+    }
+
+    /**
+     * 단건 알림을 읽음 처리합니다.
+     */
+    @Transactional
+    public void markAsRead(Long recipientId, Long userId) {
+        NotificationRecipient recipient = recipientRepository.findByIdAndUserId(recipientId, userId)
+                .orElseThrow(() -> new IllegalArgumentException("알림을 찾을 수 없습니다. id=" + recipientId));
+        recipient.markAsRead();
+    }
+
+    /**
+     * 내 모든 알림을 읽음 처리합니다.
+     */
+    @Transactional
+    public int markAllAsRead(Long userId) {
+        return recipientRepository.markAllAsReadByUserId(userId);
+    }
+
+    /**
+     * 단건 알림을 삭제합니다.
+     */
+    @Transactional
+    public void deleteNotification(Long recipientId, Long userId) {
+        NotificationRecipient recipient = recipientRepository.findByIdAndUserId(recipientId, userId)
+                .orElseThrow(() -> new IllegalArgumentException("알림을 찾을 수 없습니다. id=" + recipientId));
+        recipientRepository.delete(recipient);
+    }
+
+    /**
+     * 내 모든 알림을 삭제합니다.
+     */
+    @Transactional
+    public void deleteAllNotifications(Long userId) {
+        recipientRepository.deleteAllByUserId(userId);
+        log.info("Deleted all notifications for userId={}", userId);
+    }
+}
