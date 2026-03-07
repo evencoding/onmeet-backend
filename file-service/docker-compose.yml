@@ -9,7 +9,7 @@ services:
     ports:
       - "127.0.0.1:5433:5432"
     volumes:
-      - ./.data/postgres-file:/var/lib/postgresql/data
+      - postgres-file-data:/var/lib/postgresql/data
     healthcheck:
       test: [ "CMD-SHELL", "pg_isready -U ${DB_USERNAME:-postgres} -d file_db" ]
       interval: 10s
@@ -37,7 +37,7 @@ services:
       - "127.0.0.1:9000:9000" # MinIO API
       - "127.0.0.1:9001:9001" # MinIO Console
     volumes:
-      - ./.data/minio:/data
+      - minio-data:/data
     healthcheck:
       test: [ "CMD", "mc", "ready", "local" ]
       interval: 10s
@@ -101,3 +101,7 @@ services:
 networks:
   onmeet-network:
     name: onmeet-network
+
+volumes:
+  postgres-file-data:
+  minio-data:

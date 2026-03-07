@@ -8,7 +8,7 @@ services:
     ports:
       - "3311:3306"
     volumes:
-      - ./.data/mysql-notification:/var/lib/mysql
+      - mysql-notification-data:/var/lib/mysql
     healthcheck:
       test: [ "CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${DB_ROOT_PASSWORD}" ]
       interval: 10s
@@ -56,3 +56,6 @@ services:
 networks:
   onmeet-network:
     name: onmeet-network
+
+volumes:
+  mysql-notification-data:
