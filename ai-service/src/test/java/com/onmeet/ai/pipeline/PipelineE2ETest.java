@@ -2,7 +2,6 @@ package com.onmeet.ai.pipeline;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.onmeet.ai.dto.event.ChatMessageEvent;
-import com.onmeet.ai.dto.event.TranscriptFinalizedEvent;
 import com.onmeet.ai.dto.event.VoiceSegmentCreatedEvent;
 import com.onmeet.ai.pipeline.storage.StorageClient;
 import com.onmeet.ai.service.TranscriptBuilderService;
@@ -13,13 +12,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Import;
-import org.springframework.kafka.test.context.EmbeddedKafka;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.TestPropertySource;
-import org.springframework.test.context.DynamicPropertyRegistry;
-import org.springframework.test.context.DynamicPropertySource;
-import org.testcontainers.utility.DockerImageName;
 import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
 import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
 import software.amazon.awssdk.regions.Region;
@@ -52,11 +46,11 @@ import static org.awaitility.Awaitility.await;
                 "app.kafka.topics.chat-events=chat.events",
                 "app.kafka.topics.audio-chunk-ready=audio.chunk.ready",
                 "app.kafka.topics.meeting-ended=meeting.ended",
-                "app.kafka.topics.minutes-generated=minutes.generated"
+                "app.kafka.topics.minutes-generated=minutes.generated",
+                "gateway.shared-secret=test-secret"
 })
 class PipelineE2ETest {
 
-        // S3Client 빈 재정의 (LocalStack 용)
         @TestConfiguration
         static class LocalStackConfig {
                 @Bean
@@ -82,7 +76,6 @@ class PipelineE2ETest {
 
         @BeforeEach
         void setup() {
-                // S3 버킷 생성 (LocalStack)
                 try {
                         S3Client s3 = S3Client.builder()
                                         .endpointOverride(URI.create("http://localhost:4566"))
@@ -93,47 +86,35 @@ class PipelineE2ETest {
                                         .build();
                         s3.createBucket(b -> b.bucket("onmeet-transcripts"));
                 } catch (Exception ignored) {
-                        // 이미 존재하면 무시
                 }
         }
 
         @Test
         @DisplayName("채팅과 음성 세그먼트가 입력되면 트랜스크립트가 생성되고 S3에 업로드되어야 한다")
         void shouldGenerateTranscriptAndUploadToS3() throws Exception {
-                String meetingId = "meeting-e2e-test";
+                Long roomId = 42L;
 
-                // 1. Ingest Chat
                 transcriptBuilderService.ingestChat(ChatMessageEvent.builder()
-                                .meetingId(meetingId)
+                                .roomId(roomId)
                                 .messageId("msg-1")
-                                .senderId("user-A")
+                                .senderId(1L)
                                 .content("Hello E2E")
-                                .atMs(100L)
+                                .timestamp(Instant.now())
                                 .seq(1)
-                                .occurredAtEpochMs(Instant.now().toEpochMilli())
                                 .build());
 
-                // 2. Ingest Voice
                 transcriptBuilderService.ingestVoice(VoiceSegmentCreatedEvent.builder()
-                                .meetingId(meetingId)
+                                .roomId(roomId)
                                 .segmentId("seg-1")
-                                .participantId("user-B")
+                                .userId(2L)
                                 .text("This is voice")
                                 .startMs(200L)
                                 .endMs(500L)
                                 .seq(2L)
-                                .occurredAtEpochMs(Instant.now().toEpochMilli())
+                                .timestamp(Instant.now())
                                 .build());
 
-                // 3. Finalize Meeting
-                transcriptBuilderService.finalizeMeeting(meetingId, Instant.now().toEpochMilli());
-
-                // 4. Verify S3 Upload
-                // key pattern: transcripts/{meetingId}/{transcriptId}.json but logic might
-                // separate via StorageKeyFactory
-                // We need to know the key. Since we don't have the event listener to catch the
-                // finalized event easy here without custom consumer,
-                // we can guess the prefix or list objects.
+                transcriptBuilderService.finalizeMeeting(roomId, Instant.now());
 
                 S3Client s3 = S3Client.builder()
                                 .endpointOverride(java.net.URI.create("http://localhost:4566"))
@@ -145,7 +126,7 @@ class PipelineE2ETest {
 
                 await().atMost(10, TimeUnit.SECONDS).untilAsserted(() -> {
                         var response = s3.listObjectsV2(
-                                        b -> b.bucket("onmeet-transcripts").prefix("transcripts/" + meetingId));
+                                        b -> b.bucket("onmeet-transcripts").prefix("transcripts/" + roomId));
                         assertThat(response.contents()).isNotEmpty();
 
                         String key = response.contents().get(0).key();

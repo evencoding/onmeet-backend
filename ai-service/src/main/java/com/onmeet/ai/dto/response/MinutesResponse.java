@@ -11,7 +11,8 @@ import java.time.Instant;
 @Getter
 @Builder
 public class MinutesResponse {
-    private String meetingId;
+    private Long id;
+    private Long roomId;
     private String transcriptId;
     private String transcriptS3Key;
     private String summaryS3Key;
@@ -28,7 +29,8 @@ public class MinutesResponse {
 
     public static MinutesResponse from(Minutes m) {
         return MinutesResponse.builder()
-                .meetingId(m.getMeetingId())
+                .id(m.getId())
+                .roomId(m.getRoomId())
                 .transcriptId(m.getTranscriptId())
                 .transcriptS3Key(m.getTranscriptS3Key())
                 .summaryS3Key(m.getSummaryS3Key())

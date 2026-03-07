@@ -48,7 +48,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
         "app.kafka.topics.chat-events=chat.events",
         "app.kafka.topics.audio-chunk-ready=audio.chunk.ready",
         "app.kafka.topics.meeting-ended=meeting.ended",
-        "app.kafka.topics.minutes-generated=minutes.generated"
+        "app.kafka.topics.minutes-generated=minutes.generated",
+        "gateway.shared-secret=test-secret"
 })
 class MinutesApiIntegrationTest {
 
@@ -73,50 +74,46 @@ class MinutesApiIntegrationTest {
     void setup() {
         minutesRepository.deleteAll();
 
-        // 초기 데이터 세팅
         existingMinutes = Minutes.createGenerated(
-                "meeting-1",
+                1L,
                 "transcript-1",
-                "s3/transcripts/meeting-1/1.json",
-                "s3/summaries/meeting-1/1.json",
+                "s3/transcripts/1/1.json",
+                "s3/summaries/1/1.json",
                 "{\"summary\":\"Original Summary\"}");
         minutesRepository.save(existingMinutes);
     }
 
     @Test
-    @DisplayName("GET /api/minutes/{meetingId} - 조회 성공")
+    @DisplayName("GET /v1/minutes/{roomId} - 조회 성공")
     void getMinutes_Success() throws Exception {
-        mockMvc.perform(get("/api/minutes/meeting-1"))
+        mockMvc.perform(get("/v1/minutes/1"))
                 .andDo(print())
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.meetingId").value("meeting-1"))
+                .andExpect(jsonPath("$.roomId").value(1))
                 .andExpect(jsonPath("$.summaryJson").value("{\"summary\":\"Original Summary\"}"))
                 .andExpect(jsonPath("$.accessScope").value("PRIVATE"));
     }
 
     @Test
-    @DisplayName("GET /api/minutes/{meetingId} - 존재하지 않는 경우 404 또는 Error")
+    @DisplayName("GET /v1/minutes/{roomId} - 존재하지 않는 경우 404 또는 Error")
     void getMinutes_NotFound() throws Exception {
-        // GlobalExceptionHandler가 없으면 500이나 400이 나올 수 있음.
-        // 현재 코드상 IllegalArgumentException 발생 -> Default Handler나 500 예상
-        // 여기서는 예외가 발생하는지 확인.
         try {
-            mockMvc.perform(get("/api/minutes/unknown-id"))
+            mockMvc.perform(get("/v1/minutes/9999"))
                     .andDo(print())
-                    .andExpect(status().is5xxServerError()); // 기본 Spring Boot 에러 처리
+                    .andExpect(status().is5xxServerError());
         } catch (Exception e) {
             // MVC 테스트에서 Exception이 밖으로 던져질 수 있음
         }
     }
 
     @Test
-    @DisplayName("PATCH /api/minutes/{meetingId} - 공개범위 및 사용자 편집본 수정")
+    @DisplayName("PATCH /v1/minutes/{roomId} - 공개범위 및 사용자 편집본 수정")
     void patchMinutes_Success() throws Exception {
         MinutesPatchRequest req = new MinutesPatchRequest();
         req.setAccessScope(MinutesAccessScope.PUBLIC);
         req.setUserEditedSummaryJson("{\"summary\":\"Edited by User\"}");
 
-        mockMvc.perform(patch("/api/minutes/meeting-1")
+        mockMvc.perform(patch("/v1/minutes/1")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(om.writeValueAsString(req)))
                 .andDo(print())
@@ -127,34 +124,29 @@ class MinutesApiIntegrationTest {
     }
 
     @Test
-    @DisplayName("POST /api/minutes/{meetingId}/regenerate - 요약 재생성")
+    @DisplayName("POST /v1/minutes/{roomId}/regenerate - 요약 재생성")
     void regenerateMinutes_Success() throws Exception {
         // Given
-        // 1. S3에서 transcript 읽기 Mocking
-        String mockTranscriptDoc = "{\"events\":[{\"type\":\"CHAT\",\"text\":\"Hello World\",\"atMs\":1000,\"actorId\":\"user1\"}]}"; // TranscriptDocument
-                                                                                                                                      // 구조
-        // 구조
+        // TranscriptDocument.Event has timestamp instead of atMs
+        String mockTranscriptDoc = "{\"events\":[{\"type\":\"CHAT\",\"text\":\"Hello World\",\"timestamp\":\"2026-03-07T12:00:00Z\",\"actorId\":\"1\"}]}";
         Mockito.when(storageClient.readText(anyString())).thenReturn(mockTranscriptDoc);
 
-        // 2. SummarizerClient Mocking
         String newSummary = "{\"summary\":\"Regenerated Summary\"}";
         Mockito.when(summarizerClient.summarize(anyString(), eq("ko"), eq("bullets"), eq("claude-pro")))
                 .thenReturn(newSummary);
 
-        // Request
         MinutesRegenerateRequest req = new MinutesRegenerateRequest();
         req.setStyle("bullets");
         req.setModel("claude-pro");
 
         // When & Then
-        mockMvc.perform(post("/api/minutes/meeting-1/regenerate")
+        mockMvc.perform(post("/v1/minutes/1/regenerate")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(om.writeValueAsString(req)))
                 .andDo(print())
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.summaryJson").value(newSummary));
 
-        // Verify Storage Write
         Mockito.verify(storageClient).writeText(anyString(), eq(newSummary), eq("application/json"));
     }
 }

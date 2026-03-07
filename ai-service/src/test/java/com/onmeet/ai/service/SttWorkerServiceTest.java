@@ -14,7 +14,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import java.util.UUID;
+import java.time.Instant;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
@@ -41,13 +41,14 @@ class SttWorkerServiceTest {
     @BeforeEach
     void setUp() {
         sampleEvent = AudioChunkReadyEvent.builder()
-                .meetingId("test-meeting-id")
-                .participantId("test-participant-id")
+                .roomId(1L)
+                .userId(100L)
                 .audioFileKey("s3/audio/chunk-1.webm")
                 .format("webm")
                 .chunkSeq(1)
                 .chunkStartMs(0L)
                 .chunkEndMs(1000L)
+                .timestamp(Instant.now())
                 .build();
     }
 
@@ -67,11 +68,12 @@ class SttWorkerServiceTest {
         verify(producer, times(1)).publish(captor.capture());
 
         VoiceSegmentCreatedEvent capturedEvent = captor.getValue();
-        assertThat(capturedEvent.getMeetingId()).isEqualTo(sampleEvent.getMeetingId());
+        assertThat(capturedEvent.getRoomId()).isEqualTo(sampleEvent.getRoomId());
         assertThat(capturedEvent.getText()).isEqualTo("Hello world");
-        assertThat(capturedEvent.getParticipantId()).isEqualTo(sampleEvent.getParticipantId());
+        assertThat(capturedEvent.getUserId()).isEqualTo(sampleEvent.getUserId());
         assertThat(capturedEvent.getStartMs()).isEqualTo(sampleEvent.getChunkStartMs());
         assertThat(capturedEvent.getEndMs()).isEqualTo(sampleEvent.getChunkEndMs());
+        assertThat(capturedEvent.getTimestamp()).isNotNull();
     }
 
     @Test
@@ -94,7 +96,7 @@ class SttWorkerServiceTest {
     void handleAudioChunk_ShouldUseDefaultMimeType_WhenFormatIsNull() {
         // Given
         AudioChunkReadyEvent nullFormatEvent = AudioChunkReadyEvent.builder()
-                .meetingId("meeting-id")
+                .roomId(1L)
                 .audioFileKey("key")
                 .format(null)
                 .chunkSeq(1)

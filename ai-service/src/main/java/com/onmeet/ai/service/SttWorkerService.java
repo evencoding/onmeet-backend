@@ -31,24 +31,22 @@ public class SttWorkerService {
 
         String text = sttClient.transcribe(audio, filename, mimeType).trim();
         if (text.isBlank()) {
-            // 빈 텍스트도 segment로 남길지 정책인데, 일단 skip 추천
             return;
         }
 
-        // v1: chunk 전체를 1개 segment로 취급 (나중에 word timestamp 나오면 쪼개면 됨)
         String segmentId = UUID.randomUUID().toString();
 
-        long seq = ((long) e.getChunkSeq()) * 1_000_000L; // tie-breaker 기본값
+        long seq = ((long) e.getChunkSeq()) * 1_000_000L;
 
         producer.publish(VoiceSegmentCreatedEvent.builder()
-                .meetingId(e.getMeetingId())
+                .roomId(e.getRoomId())
                 .segmentId(segmentId)
-                .participantId(e.getParticipantId())
+                .userId(e.getUserId())
                 .startMs(e.getChunkStartMs())
                 .endMs(e.getChunkEndMs())
                 .seq(seq)
                 .text(text)
-                .occurredAtEpochMs(Instant.now().toEpochMilli())
+                .timestamp(Instant.now())
                 .build());
     }
 

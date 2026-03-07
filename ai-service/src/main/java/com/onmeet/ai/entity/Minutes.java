@@ -16,8 +16,11 @@ import java.time.Instant;
 public class Minutes {
 
     @Id
-    @Column(name = "meeting_id", length = 64, nullable = false)
-    private String meetingId;
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @Column(name = "room_id", nullable = false)
+    private Long roomId;
 
     @Column(name = "transcript_id", length = 64, nullable = false)
     private String transcriptId;
@@ -53,30 +56,30 @@ public class Minutes {
     @Column(name = "updated_at", nullable = false)
     private Instant updatedAt;
 
-    private Minutes(String meetingId,
+    private Minutes(Long roomId,
                     String transcriptId,
                     String transcriptS3Key,
                     String summaryS3Key,
                     String summaryJson) {
-        this.meetingId = meetingId;
+        this.roomId = roomId;
         this.transcriptId = transcriptId;
         this.transcriptS3Key = transcriptS3Key;
         this.summaryS3Key = summaryS3Key;
         this.summaryJson = summaryJson;
         this.userEditedSummaryJson = null;
         this.status = MinutesStatus.GENERATED;
-        this.accessScope = MinutesAccessScope.PRIVATE; // 기본값
+        this.accessScope = MinutesAccessScope.PRIVATE;
         this.lastError = null;
         this.createdAt = Instant.now();
         this.updatedAt = this.createdAt;
     }
 
-    public static Minutes createGenerated(String meetingId,
+    public static Minutes createGenerated(Long roomId,
                                           String transcriptId,
                                           String transcriptS3Key,
                                           String summaryS3Key,
                                           String summaryJson) {
-        return new Minutes(meetingId, transcriptId, transcriptS3Key, summaryS3Key, summaryJson);
+        return new Minutes(roomId, transcriptId, transcriptS3Key, summaryS3Key, summaryJson);
     }
 
     public void applyGenerated(String transcriptId,
