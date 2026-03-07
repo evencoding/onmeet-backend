@@ -46,7 +46,7 @@ public class RoomRecording {
     @Column(nullable = false, length = 20)
     private RecordingStatus status;
 
-    @Column(length = 500)
+    @Column(name = "s3_path", length = 500)
     private String s3Path;
 
     private Long fileSizeBytes;
@@ -81,7 +81,7 @@ public class RoomRecording {
     }
 
     public RoomRecording(MeetingRoom room, String egressId, RecordingType type, Instant startedAt,
-                         String participantIdentity, String trackSid) {
+            String participantIdentity, String trackSid) {
         this(room, egressId, type, startedAt);
         this.participantIdentity = participantIdentity;
         this.trackSid = trackSid;
