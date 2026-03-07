@@ -42,12 +42,8 @@ public class SummaryWorkerService {
         this.producer = producer;
     }
 
-    /**
-     * transcript.finalized 이벤트를 받아 요약 생성 + minutes upsert + minutes.generated 발행
-     */
     public void handleTranscriptFinalized(TranscriptFinalizedEvent e) {
 
-        // 1) transcript 로드
         String transcriptJson = storageClient.readText(e.getTranscriptS3Key());
 
         TranscriptDocument doc;
@@ -57,51 +53,45 @@ public class SummaryWorkerService {
             throw new IllegalStateException("failed to parse transcript json: " + e.getTranscriptS3Key(), ex);
         }
 
-        // 2) plain text 변환
         String plain = renderer.toPlainText(doc);
         if (plain == null || plain.isBlank()) {
             throw new IllegalStateException("empty transcript");
         }
 
-        // 3) 요약 생성 (v1 기본값)
         String summaryJson = summarizerClient.summarize(plain, "ko", "default", "claude-sonnet");
 
-        // 4) summary S3 저장 (권장)
-        String summaryS3Key = StorageKeyFactory.summaryKey(e.getMeetingId(), e.getTranscriptId());
+        String summaryS3Key = StorageKeyFactory.summaryKey(e.getRoomId(), e.getTranscriptId());
         storageClient.writeText(summaryS3Key, summaryJson, "application/json");
 
-        // 5) minutes upsert (DB)
         upsertMinutes(
-                e.getMeetingId(),
+                e.getRoomId(),
                 e.getTranscriptId(),
                 e.getTranscriptS3Key(),
                 summaryS3Key,
                 summaryJson
         );
 
-        // 6) minutes.generated 발행
         producer.publish(MinutesGeneratedEvent.builder()
-                .meetingId(e.getMeetingId())
+                .roomId(e.getRoomId())
                 .transcriptId(e.getTranscriptId())
                 .transcriptS3Key(e.getTranscriptS3Key())
-                // (원하면 event에 summaryS3Key 필드 추가해서 함께 발행 추천)
-                .generatedAtEpochMs(Instant.now().toEpochMilli())
+                .generatedAt(Instant.now())
                 .build());
     }
 
     @Transactional
     protected void upsertMinutes(
-            String meetingId,
+            Long roomId,
             String transcriptId,
             String transcriptS3Key,
             String summaryS3Key,
             String summaryJson
     ) {
-        Minutes m = minutesRepository.findById(meetingId).orElse(null);
+        Minutes m = minutesRepository.findByRoomId(roomId).orElse(null);
 
         if (m == null) {
             minutesRepository.save(
-                    Minutes.createGenerated(meetingId, transcriptId, transcriptS3Key, summaryS3Key, summaryJson)
+                    Minutes.createGenerated(roomId, transcriptId, transcriptS3Key, summaryS3Key, summaryJson)
             );
             return;
         }
