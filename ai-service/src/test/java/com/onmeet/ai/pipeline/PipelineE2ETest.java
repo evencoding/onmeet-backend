@@ -106,10 +106,10 @@ class PipelineE2ETest {
                 transcriptBuilderService.ingestVoice(VoiceSegmentCreatedEvent.builder()
                                 .roomId(roomId)
                                 .segmentId("seg-1")
-                                .userId(2L)
+                                .participantIdentity("참가자2")
                                 .text("This is voice")
-                                .startMs(200L)
-                                .endMs(500L)
+                                .segmentStartMs(200L)
+                                .segmentEndMs(500L)
                                 .seq(2L)
                                 .timestamp(Instant.now())
                                 .build());

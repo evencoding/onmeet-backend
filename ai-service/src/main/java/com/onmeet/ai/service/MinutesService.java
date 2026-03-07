@@ -84,9 +84,6 @@ public class MinutesService {
     public MinutesResponse patch(Long roomId, MinutesPatchRequest req) {
         Minutes m = findMinutesOrThrow(roomId);
 
-        if (req.getAccessScope() != null) {
-            m.updateAccessScope(req.getAccessScope());
-        }
         if (req.getUserEditedSummaryJson() != null) {
             m.applyUserEdit(req.getUserEditedSummaryJson());
         }

@@ -4,7 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.onmeet.ai.dto.request.MinutesPatchRequest;
 import com.onmeet.ai.dto.request.MinutesRegenerateRequest;
 import com.onmeet.ai.entity.Minutes;
-import com.onmeet.ai.enums.MinutesAccessScope;
+
 import com.onmeet.ai.pipeline.nlp.SummarizerClient;
 import com.onmeet.ai.pipeline.storage.StorageClient;
 import com.onmeet.ai.repository.MinutesRepository;
@@ -90,8 +90,7 @@ class MinutesApiIntegrationTest {
                 .andDo(print())
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.roomId").value(1))
-                .andExpect(jsonPath("$.summaryJson").value("{\"summary\":\"Original Summary\"}"))
-                .andExpect(jsonPath("$.accessScope").value("PRIVATE"));
+                .andExpect(jsonPath("$.summaryJson").value("{\"summary\":\"Original Summary\"}"));
     }
 
     @Test
@@ -107,10 +106,9 @@ class MinutesApiIntegrationTest {
     }
 
     @Test
-    @DisplayName("PATCH /v1/minutes/{roomId} - 공개범위 및 사용자 편집본 수정")
+    @DisplayName("PATCH /v1/minutes/{roomId} - 사용자 편집본 수정")
     void patchMinutes_Success() throws Exception {
         MinutesPatchRequest req = new MinutesPatchRequest();
-        req.setAccessScope(MinutesAccessScope.PUBLIC);
         req.setUserEditedSummaryJson("{\"summary\":\"Edited by User\"}");
 
         mockMvc.perform(patch("/v1/minutes/1")
@@ -118,7 +116,6 @@ class MinutesApiIntegrationTest {
                 .content(om.writeValueAsString(req)))
                 .andDo(print())
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.accessScope").value("PUBLIC"))
                 .andExpect(jsonPath("$.userEditedSummaryJson").value("{\"summary\":\"Edited by User\"}"))
                 .andExpect(jsonPath("$.status").value("EDITED_BY_USER"));
     }

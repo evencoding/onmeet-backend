@@ -61,9 +61,9 @@ class TranscriptBuilderServiceTest {
 
         VoiceSegmentCreatedEvent voiceEvent = VoiceSegmentCreatedEvent.builder()
                 .segmentId("seg-1")
-                .userId(2L)
+                .participantIdentity("참가자2")
                 .text("Hi there")
-                .startMs(200L)
+                .segmentStartMs(200L)
                 .seq(2L)
                 .timestamp(Instant.ofEpochMilli(200L))
                 .build();

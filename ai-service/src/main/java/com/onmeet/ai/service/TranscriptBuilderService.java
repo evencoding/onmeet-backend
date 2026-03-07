@@ -66,13 +66,13 @@ public class TranscriptBuilderService {
                 events.add(TranscriptDocument.Event.builder()
                         .id(e.getSegmentId())
                         .type("VOICE")
-                        .actorId(String.valueOf(e.getUserId()))
+                        .actorId(e.getParticipantIdentity())
                         // voice event does not have absolute audio timestamp yet, using occurred timestamp or startMs mapping
-                        .timestamp(e.getTimestamp() != null ? e.getTimestamp() : Instant.ofEpochMilli(e.getStartMs()))
+                        .timestamp(e.getTimestamp() != null ? e.getTimestamp() : Instant.ofEpochMilli(e.getSegmentStartMs()))
                         .seq(e.getSeq())
                         .text(e.getText())
-                        .startMs(e.getStartMs())
-                        .endMs(e.getEndMs())
+                        .segmentStartMs(e.getSegmentStartMs())
+                        .segmentEndMs(e.getSegmentEndMs())
                         .build());
             }
         }

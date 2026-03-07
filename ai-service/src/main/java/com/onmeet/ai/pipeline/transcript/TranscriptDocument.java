@@ -18,14 +18,14 @@ public class TranscriptDocument {
     public static class Event {
         private String id;      // messageId or segmentId
         private String type;    // CHAT | VOICE
-        private String actorId; // senderId or userId (String for JSON flexibility)
+        private String actorId; // senderId or participantIdentity
 
-        private Instant timestamp; // CHAT: timestamp / VOICE: timestamp (or startMs as Instant)
-        private Long seq;          // tie-breaker
+        private Instant timestamp;
+        private Long seq;
         private String text;
 
         // optional(voice)
-        private Long startMs;
-        private Long endMs;
+        private Long segmentStartMs;
+        private Long segmentEndMs;
     }
 }
