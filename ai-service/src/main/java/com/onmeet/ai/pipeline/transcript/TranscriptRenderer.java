@@ -51,7 +51,7 @@ public class TranscriptRenderer {
     }
 
     private long resolveAtMs(TranscriptDocument.Event e) {
-        if (e.getAtMs() != null) return e.getAtMs();
+        if (e.getTimestamp() != null) return e.getTimestamp().toEpochMilli();
         if (e.getStartMs() != null) return e.getStartMs();
         return 0L;
     }

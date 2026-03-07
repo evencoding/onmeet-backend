@@ -25,7 +25,7 @@ public class TranscriptEventsProducer {
 
     public void publish(TranscriptFinalizedEvent event) {
         try {
-            kafkaTemplate.send(topic, event.getMeetingId(), om.writeValueAsString(event));
+            kafkaTemplate.send(topic, String.valueOf(event.getRoomId()), om.writeValueAsString(event));
         } catch (Exception e) {
             throw new IllegalStateException("failed to publish transcript.finalized", e);
         }
