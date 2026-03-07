@@ -74,13 +74,14 @@ data: ping
   "resourceType": "MEETING",
   "dedupeKey": "invite_abc123_1",
   "resourceId": "abc123",
-  "actorUserId": 5
+  "actorUserId": 5,
+  "isRead": false
 }
 ```
 
 | 필드 | 타입 | 설명 |
 |------|------|------|
-| `id` | `number` | 알림 고유 ID |
+| `id` | `number` | 알림 수신 고유 ID (알림 읽음/삭제 시 이 ID 사용) |
 | `type` | `string` | 알림 타입 (아래 [5. 알림 타입 목록](#5-알림-타입-목록) 참고) |
 | `title` | `string` | 알림 제목 |
 | `body` | `string` | 알림 본문 (한국어 렌더링됨) |
@@ -91,6 +92,7 @@ data: ping
 | `dedupeKey` | `string \| null` | 중복 방지 키 |
 | `resourceId` | `string` | 관련 리소스 ID (회의 ID 등) |
 | `actorUserId` | `number \| null` | 알림을 유발한 사용자 ID |
+| `isRead` | `boolean` | **알림 읽음 여부** (false: 안 읽음, true: 읽음) |
 
 ---
 
@@ -117,7 +119,8 @@ GET /notification/v1/notifications?page=0&size=20
       "createdAt": "2026-03-07T11:00:00",
       "resourceType": "MEETING",
       "resourceId": "abc123",
-      "actorUserId": 5
+      "actorUserId": 5,
+      "isRead": false
     }
   ],
   "totalElements": 50,
