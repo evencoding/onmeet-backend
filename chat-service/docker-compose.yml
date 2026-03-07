@@ -7,6 +7,8 @@ services:
       MYSQL_DATABASE: chat_db
     ports:
       - "127.0.0.1:3310:3306"
+    volumes:
+      - ./.data/mysql-chat:/var/lib/mysql
     healthcheck:
       test: [ "CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${DB_ROOT_PASSWORD}" ]
       interval: 10s
