@@ -1,25 +1,22 @@
 package com.onmeet.auth.controller
 
 import com.fasterxml.jackson.databind.ObjectMapper
-import com.ninjasquad.springmockk.MockkBean
-import com.onmeet.auth.config.JwtProperties
+import com.onmeet.auth.dto.InvitationRequest
 import com.onmeet.auth.dto.UserResponseDto
+import com.onmeet.auth.entity.Invitation
 import com.onmeet.auth.service.AuthService
 import com.onmeet.auth.service.UserService
 import io.mockk.every
 import io.mockk.just
 import io.mockk.runs
 import org.junit.jupiter.api.Test
-import org.springframework.beans.factory.annotation.Autowired
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc
-import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest
 import org.springframework.http.MediaType
-import org.springframework.security.test.context.support.WithMockUser
 import org.springframework.test.web.servlet.MockMvc
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete
+import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
-import org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user
+import org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath
 import com.onmeet.auth.entity.User
 import org.springframework.web.method.support.HandlerMethodArgumentResolver
 import org.springframework.core.MethodParameter
@@ -29,44 +26,27 @@ import org.springframework.web.bind.support.WebDataBinderFactory
 import com.onmeet.auth.entity.Company
 import org.junit.jupiter.api.BeforeEach
 import org.springframework.test.web.servlet.setup.MockMvcBuilders
+import java.time.LocalDateTime
 
-@WebMvcTest(ManagerController::class)
-@AutoConfigureMockMvc(addFilters = false)class ManagerControllerTest {
+class ManagerControllerTest {
     private lateinit var mockMvc: MockMvc
-    @MockkBean
     private lateinit var userService: UserService
-
-    @MockkBean
     private lateinit var authService: AuthService
-
-    @MockkBean
     private lateinit var teamService: com.onmeet.auth.service.TeamService
-
-    @MockkBean
     private lateinit var invitationService: com.onmeet.auth.service.InvitationService
-
-    @MockkBean
     private lateinit var jobTitleService: com.onmeet.auth.service.JobTitleService
-
-    @MockkBean
-    private lateinit var jwtProperties: JwtProperties
-
-    @MockkBean
-    private lateinit var jwtTokenProvider: com.onmeet.auth.security.JwtTokenProvider
-
-    @MockkBean
-    private lateinit var gatewayProperties: com.onmeet.auth.config.GatewayProperties
-
-    @MockkBean
-    private lateinit var authGatewayPreAuthFilter: com.onmeet.auth.security.AuthGatewayPreAuthFilter
-
-    @MockkBean
-    private lateinit var jwtAuthenticationFilter: com.onmeet.auth.security.JwtAuthenticationFilter
-    @Autowired
-    private lateinit var objectMapper: ObjectMapper
+    private val objectMapper = ObjectMapper().apply {
+        registerModule(com.fasterxml.jackson.module.kotlin.KotlinModule.Builder().build())
+    }
 
     @BeforeEach
     fun setup() {
+        userService = io.mockk.mockk()
+        authService = io.mockk.mockk()
+        teamService = io.mockk.mockk()
+        invitationService = io.mockk.mockk()
+        jobTitleService = io.mockk.mockk()
+
         mockMvc = MockMvcBuilders
             .standaloneSetup(ManagerController(userService, authService, teamService, invitationService, jobTitleService))
             .setCustomArgumentResolvers(object : HandlerMethodArgumentResolver {
@@ -87,10 +67,10 @@ import org.springframework.test.web.servlet.setup.MockMvcBuilders
                     )
                 }
             })
+            .setMessageConverters(org.springframework.http.converter.json.MappingJackson2HttpMessageConverter(objectMapper))
             .build()
     }
     @Test
-    @WithMockUser(roles = ["MANAGER"])
     fun `deactivateUser should return success`() {
         // given
         val userId = 1L
@@ -109,7 +89,6 @@ import org.springframework.test.web.servlet.setup.MockMvcBuilders
             .andExpect(status().isOk)    }
 
     @Test
-    @WithMockUser(roles = ["MANAGER"])
     fun `resetProfileImage should return no content`() {
         // given
         val userId = 1L
@@ -122,4 +101,84 @@ import org.springframework.test.web.servlet.setup.MockMvcBuilders
                 .principal(org.springframework.security.authentication.UsernamePasswordAuthenticationToken("manager@test.com", null))
         )
             .andExpect(status().isNoContent)    }
+
+    @Test
+    fun `inviteMember should return invitation ids for multiple emails`() {
+        // given
+        val testCompany = Company(id = 1L, name = "Test Company")
+        val emails = listOf("user1@company.com", "user2@company.com", "user3@company.com")
+        val request = InvitationRequest(emails = emails)
+
+        val invitation1 = Invitation(
+            id = 101L,
+            email = emails[0],
+            code = "CODE1",
+            role = User.Role.USER,
+            company = testCompany,
+            expiresAt = LocalDateTime.now().plusDays(7)
+        )
+        val invitation2 = Invitation(
+            id = 102L,
+            email = emails[1],
+            code = "CODE2",
+            role = User.Role.USER,
+            company = testCompany,
+            expiresAt = LocalDateTime.now().plusDays(7)
+        )
+        val invitation3 = Invitation(
+            id = 103L,
+            email = emails[2],
+            code = "CODE3",
+            role = User.Role.USER,
+            company = testCompany,
+            expiresAt = LocalDateTime.now().plusDays(7)
+        )
+
+        every { invitationService.createInvitation(eq(1L), eq(emails[0]), eq(User.Role.USER)) } returns invitation1
+        every { invitationService.createInvitation(eq(1L), eq(emails[1]), eq(User.Role.USER)) } returns invitation2
+        every { invitationService.createInvitation(eq(1L), eq(emails[2]), eq(User.Role.USER)) } returns invitation3
+
+        // when & then
+        mockMvc.perform(
+            post("/auth/v1/manager/invite")
+                .contextPath("/auth")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(request))
+        )
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$").isArray)
+            .andExpect(jsonPath("$[0]").value(101))
+            .andExpect(jsonPath("$[1]").value(102))
+            .andExpect(jsonPath("$[2]").value(103))
+    }
+
+    @Test
+    fun `inviteMember should return single invitation id for single email`() {
+        // given
+        val testCompany = Company(id = 1L, name = "Test Company")
+        val email = "user@company.com"
+        val request = InvitationRequest(emails = listOf(email))
+
+        val invitation = Invitation(
+            id = 100L,
+            email = email,
+            code = "CODE",
+            role = User.Role.USER,
+            company = testCompany,
+            expiresAt = LocalDateTime.now().plusDays(7)
+        )
+
+        every { invitationService.createInvitation(eq(1L), eq(email), eq(User.Role.USER)) } returns invitation
+
+        // when & then
+        mockMvc.perform(
+            post("/auth/v1/manager/invite")
+                .contextPath("/auth")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(request))
+        )
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$").isArray)
+            .andExpect(jsonPath("$[0]").value(100))
+    }
 }
