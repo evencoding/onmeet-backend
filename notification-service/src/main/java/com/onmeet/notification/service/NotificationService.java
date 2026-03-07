@@ -33,6 +33,8 @@ public class NotificationService {
     private final NotificationSettingService settingService;
     private final FcmService fcmService;
     private final AuthServiceClient authServiceClient;
+    // TODO: [notification-service] VideoServiceClient 추가 - roomId로 방 제목(title) 조회
+    // API 호출용
 
     // In-memory storage for active emitters (for real-time push)
     // Structure: Map<UserId, Map<EmitterId, SseEmitter>>
@@ -261,7 +263,8 @@ public class NotificationService {
             params.put("receiverName", "알 수 없는 사용자");
         }
 
-        // 제목 (방/회의 이름으로 활용)
+        // TODO: [notification-service] Kafka 전환 시 roomId로 video-service API 호출하여 방 제목
+        // 조회 필요
         params.put("title", dto.getTitle() != null ? dto.getTitle() : "");
 
         // 원본 body (SYSTEM, EVENT 템플릿에서 사용)
