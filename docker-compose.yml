@@ -1,4 +1,5 @@
 include:
+  - nginx/docker-compose.yml
   - gateway-service/docker-compose.yml
   - auth-service/docker-compose.yml
   - ai-service/docker-compose.yml
