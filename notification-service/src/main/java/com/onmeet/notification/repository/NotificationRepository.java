@@ -27,7 +27,7 @@ public interface NotificationRepository extends JpaRepository<Notification, Long
                         @Param("now") LocalDateTime now,
                         Pageable pageable);
 
-        @Query("SELECT n FROM Notification n JOIN NotificationRecipient nr ON n.id = nr.notification.id WHERE nr.userId = :userId AND nr.isRead = false")
+        @Query("SELECT n FROM Notification n JOIN NotificationRecipient nr ON n.id = nr.notification.id WHERE nr.userId = :userId AND nr.readAt IS NULL")
         List<Notification> findUnreadByUserIdWithFetch(@Param("userId") Long userId);
 
         @Modifying
