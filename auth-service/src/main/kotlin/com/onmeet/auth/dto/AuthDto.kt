@@ -90,6 +90,7 @@ data class TeamRequest(
 @Schema(description = "초대 요청")
 data class InvitationRequest(
     @field:jakarta.validation.constraints.NotEmpty(message = "At least one email is required")
+    @field:jakarta.validation.constraints.Size(max = 100, message = "Maximum 100 emails allowed per request")
     @Schema(description = "초대할 이메일 리스트", example = "[\"user1@company.com\", \"user2@company.com\"]")
     val emails: List<@jakarta.validation.constraints.Email(message = "Invalid email format") String>
 )
