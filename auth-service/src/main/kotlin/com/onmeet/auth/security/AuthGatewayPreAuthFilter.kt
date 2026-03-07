@@ -1,15 +1,18 @@
 package com.onmeet.auth.security
 
 import com.onmeet.auth.config.GatewayProperties
-import com.onmeet.common.security.GatewayPreAuthFilter
+import jakarta.servlet.FilterChain
 import jakarta.servlet.http.HttpServletRequest
+import jakarta.servlet.http.HttpServletResponse
 import org.springframework.stereotype.Component
+import org.springframework.web.filter.OncePerRequestFilter
+import java.security.MessageDigest
 
 @Component
 class AuthGatewayPreAuthFilter(
-    gatewayProperties: com.onmeet.auth.config.GatewayProperties,
+    private val gatewayProperties: GatewayProperties,
     @org.springframework.beans.factory.annotation.Value("\${server.servlet.context-path:}") private val contextPath: String
-) : GatewayPreAuthFilter(gatewayProperties.sharedSecret) {
+) : OncePerRequestFilter() {
 
     private val allowedPaths by lazy {
         setOf(
@@ -50,5 +53,26 @@ class AuthGatewayPreAuthFilter(
             return true
         }
         return allowedPaths.contains(path)
+    }
+
+    override fun doFilterInternal(
+        request: HttpServletRequest,
+        response: HttpServletResponse,
+        filterChain: FilterChain
+    ) {
+        // Validate Gateway Shared Secret to prevent spoofing
+        val gatewaySecret = request.getHeader("X-Gateway-Secret") ?: ""
+        if (!MessageDigest.isEqual(
+                gatewaySecret.toByteArray(Charsets.UTF_8),
+                gatewayProperties.sharedSecret.toByteArray(Charsets.UTF_8)
+            )
+        ) {
+            response.sendError(HttpServletResponse.SC_FORBIDDEN, "Invalid Gateway Secret")
+            return
+        }
+
+        // DO NOT inject X-User-Id into SecurityContext
+        // Auth service uses JwtAuthenticationFilter for authentication
+        filterChain.doFilter(request, response)
     }
 }
