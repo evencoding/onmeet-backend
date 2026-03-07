@@ -26,7 +26,7 @@ spring:
         dialect: org.hibernate.dialect.MySQLDialect
 
 gateway:
-  shared-secret: ${GATEWAY_SHARED_SECRET}
+  shared-secret: ${GATEWAY_SHARED_SECRET:my-super-secret-gateway-key-1234!}
 
 onmeet:
   auth:
