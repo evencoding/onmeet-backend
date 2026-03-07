@@ -21,7 +21,6 @@ jobs:
       gateway: ${{ steps.changes.outputs.gateway }}
       ai: ${{ steps.changes.outputs.ai }}
       video: ${{ steps.changes.outputs.video }}
-      chat: ${{ steps.changes.outputs.chat }}
       notification: ${{ steps.changes.outputs.notification }}
       email: ${{ steps.changes.outputs.email }}
       file: ${{ steps.changes.outputs.file }}
@@ -87,14 +86,6 @@ jobs:
             ANY_CHANGED=true
           else
             echo "video=false" >> $GITHUB_OUTPUT
-          fi
-
-          # chat-service
-          if echo "$CHANGED_FILES" | grep -q "^chat-service/" || [ "$COMMON_CHANGED" == "true" ]; then
-            echo "chat=true" >> $GITHUB_OUTPUT
-            ANY_CHANGED=true
-          else
-            echo "chat=false" >> $GITHUB_OUTPUT
           fi
 
           # notification-service
@@ -176,7 +167,6 @@ jobs:
           needs.detect-changes.outputs.gateway == 'true' ||
           needs.detect-changes.outputs.ai == 'true' ||
           needs.detect-changes.outputs.video == 'true' ||
-          needs.detect-changes.outputs.chat == 'true' ||
           needs.detect-changes.outputs.notification == 'true' ||
           needs.detect-changes.outputs.email == 'true'
         uses: actions/setup-java@v4
@@ -190,7 +180,6 @@ jobs:
           needs.detect-changes.outputs.gateway == 'true' ||
           needs.detect-changes.outputs.ai == 'true' ||
           needs.detect-changes.outputs.video == 'true' ||
-          needs.detect-changes.outputs.chat == 'true' ||
           needs.detect-changes.outputs.notification == 'true' ||
           needs.detect-changes.outputs.email == 'true'
         uses: gradle/actions/setup-gradle@v4
@@ -205,7 +194,6 @@ jobs:
           needs.detect-changes.outputs.gateway == 'true' ||
           needs.detect-changes.outputs.ai == 'true' ||
           needs.detect-changes.outputs.video == 'true' ||
-          needs.detect-changes.outputs.chat == 'true' ||
           needs.detect-changes.outputs.notification == 'true' ||
           needs.detect-changes.outputs.email == 'true'
         run: |
@@ -218,7 +206,6 @@ jobs:
           needs.detect-changes.outputs.gateway == 'true' ||
           needs.detect-changes.outputs.ai == 'true' ||
           needs.detect-changes.outputs.video == 'true' ||
-          needs.detect-changes.outputs.chat == 'true' ||
           needs.detect-changes.outputs.notification == 'true' ||
           needs.detect-changes.outputs.email == 'true'
         env:
@@ -239,9 +226,6 @@ jobs:
           fi
           if [ "${{ needs.detect-changes.outputs.video }}" == "true" ]; then
             TARGETS="$TARGETS :video-service:jib"
-          fi
-          if [ "${{ needs.detect-changes.outputs.chat }}" == "true" ]; then
-            TARGETS="$TARGETS :chat-service:jib"
           fi
           if [ "${{ needs.detect-changes.outputs.notification }}" == "true" ]; then
             TARGETS="$TARGETS :notification-service:jib"
@@ -346,7 +330,6 @@ jobs:
             if [ "${{ needs.detect-changes.outputs.gateway }}" == "true" ]; then TARGETS="$TARGETS gateway-service"; fi
             if [ "${{ needs.detect-changes.outputs.ai }}" == "true" ]; then TARGETS="$TARGETS ai-service"; fi
             if [ "${{ needs.detect-changes.outputs.video }}" == "true" ]; then TARGETS="$TARGETS video-service"; fi
-            if [ "${{ needs.detect-changes.outputs.chat }}" == "true" ]; then TARGETS="$TARGETS chat-service"; fi
             if [ "${{ needs.detect-changes.outputs.notification }}" == "true" ]; then TARGETS="$TARGETS notification-service"; fi
             if [ "${{ needs.detect-changes.outputs.email }}" == "true" ]; then TARGETS="$TARGETS email-service"; fi
             if [ "${{ needs.detect-changes.outputs.file }}" == "true" ]; then TARGETS="$TARGETS file-service"; fi
