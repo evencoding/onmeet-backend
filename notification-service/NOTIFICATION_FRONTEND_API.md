@@ -394,6 +394,7 @@ interface Notification {
   resourceType: string;
   resourceId: string;
   actorUserId: number | null;
+  isRead: boolean;
 }
 
 export function useNotificationSSE() {
