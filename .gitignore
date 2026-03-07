@@ -7,9 +7,14 @@ build/
 .env
 
 # Local Logs & Docs
+# Local Logs & Docs
 *.log
 *_logs.txt
+*_output.txt
 IMPROVEMENTS.md
+
+# Local Docker Data
+.data/
 
 # HTTP Client
 http-client.env.json

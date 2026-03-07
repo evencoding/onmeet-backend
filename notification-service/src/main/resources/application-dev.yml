@@ -3,6 +3,8 @@ management:
     sampling:
       probability: 1.0
 spring:
+  kafka:
+    bootstrap-servers: localhost:9092
   jpa:
     show-sql: true
     properties:

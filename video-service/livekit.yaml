@@ -12,5 +12,6 @@ logging:
   level: info
 
 webhook:
+  api_key: ${LIVEKIT_API_KEY:-devkey}
   urls:
     - http://video-service:8083/video/webhook/livekit

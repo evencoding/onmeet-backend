@@ -11,7 +11,7 @@ services:
     ports:
       - "3308:3306"
     volumes:
-      - mysql-ai-data:/var/lib/mysql
+      - ./.data/mysql-ai:/var/lib/mysql
     networks:
       - onmeet-network
     healthcheck:
@@ -20,35 +20,14 @@ services:
       timeout: 5s
       retries: 5
 
-  # ✅ Kafka Message Broker (KRaft mode, no Zookeeper)
-  kafka:
-    image: apache/kafka:3.7.0
-    container_name: kafka
-    ports:
-      - "9092:9092"
-      - "9094:9094"
-    environment:
-      KAFKA_NODE_ID: 1
-      KAFKA_PROCESS_ROLES: "broker,controller"
-      KAFKA_LISTENERS: "PLAINTEXT://:9092,CONTROLLER://:9093,EXTERNAL://:9094"
-      KAFKA_ADVERTISED_LISTENERS: "PLAINTEXT://kafka:9092,EXTERNAL://localhost:9094"
-      KAFKA_CONTROLLER_LISTENER_NAMES: "CONTROLLER"
-      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: "CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT,EXTERNAL:PLAINTEXT"
-      KAFKA_CONTROLLER_QUORUM_VOTERS: "1@kafka:9093"
-      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
-      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
-      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
-      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
-      KAFKA_NUM_PARTITIONS: 3
-    networks:
-      - onmeet-network
-
   # Redis for Event Store
   redis:
     image: redis:7.0
     container_name: redis
     ports:
       - "6380:6379"
+    volumes:
+      - ./.data/redis-ai:/data
     networks:
       - onmeet-network
 
@@ -74,9 +53,7 @@ services:
 
   # AI Service
   ai-service:
-    build:
-      context: ../ # ✅ 프로젝트 루트(gradlew 있는 곳)
-      dockerfile: ai-service/Dockerfile # ✅ Dockerfile 경로만 ai-service 폴더로
+    image: ${DOCKER_REGISTRY:-onmeet}/ai-service:latest
     container_name: ai-service
     ports:
       - "8082:8082"
@@ -87,7 +64,7 @@ services:
       - SPRING_DATASOURCE_PASSWORD=root
 
       # ✅ Kafka
-      - SPRING_KAFKA_BOOTSTRAP_SERVERS=kafka:9092
+      - SPRING_KAFKA_BOOTSTRAP_SERVERS=kafka:29092
 
       # AWS S3 (LocalStack)
       - AWS_REGION=ap-northeast-2
@@ -98,24 +75,17 @@ services:
 
       # Application
       - SPRING_PROFILES_ACTIVE=docker
+      - GATEWAY_SHARED_SECRET=${GATEWAY_SHARED_SECRET:-my-super-secret-gateway-key-1234!}
     depends_on:
       mysql-ai:
         condition: service_started
       kafka:
-        condition: service_started
+        condition: service_healthy
       localstack:
         condition: service_started
     networks:
       - onmeet-network
     restart: on-failure
-
-volumes:
-  mysql-ai-data:
-    driver: local
-  kafka-data:
-    driver: local
-  localstack-data:
-    driver: local
 
 networks:
   onmeet-network:

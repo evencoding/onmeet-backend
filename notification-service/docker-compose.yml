@@ -7,6 +7,8 @@ services:
       MYSQL_DATABASE: notification_db
     ports:
       - "3311:3306"
+    volumes:
+      - ./.data/mysql-notification:/var/lib/mysql
     healthcheck:
       test: [ "CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${DB_ROOT_PASSWORD}" ]
       interval: 10s
