@@ -1,0 +1,100 @@
+server:
+  port: ${SERVER_PORT:8081}
+  servlet:
+    context-path: /auth
+  forward-headers-strategy: framework
+
+spring:
+  application:
+    name: auth-service
+  kafka:
+    bootstrap-servers: ${SPRING_KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+  datasource:
+    url: ${SPRING_DATASOURCE_URL}
+    username: ${SPRING_DATASOURCE_USERNAME}
+    password: ${SPRING_DATASOURCE_PASSWORD}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    hikari:
+      max-lifetime: 600000
+      keepalive-time: 30000
+      connection-timeout: 30000
+      initialization-fail-timeout: -1
+  jpa:
+    hibernate:
+      ddl-auto: validate
+  flyway:
+    baseline-on-migrate: true
+
+app:
+  api-base-url: ${APP_API_BASE_URL:http://localhost:8080}
+  team:
+    initial-color: ${INITIAL_TEAM_COLOR:#FFFFFF}
+    initial-description: ${INITIAL_TEAM_DESCRIPTION:Initial team}
+
+auth:
+  encryption-key: ${AUTH_ENCRYPTION_KEY}
+privacy:
+  encryption:
+    key: ${PRIVACY_ENCRYPTION_KEY}
+gateway:
+  shared-secret: ${GATEWAY_SHARED_SECRET}
+
+jwt:
+  validity-in-ms: 3600000 # 1 hour
+  key-id: ${JWT_KEY_ID:onmeet-auth-key}
+  cookie:
+    secure: ${COOKIE_SECURE:true}
+    max-age: 3600
+  refresh-cookie:
+    max-age: 604800 # 7 days
+invitation:
+  expiry-days: ${INVITATION_EXPIRY_DAYS:7}
+  guest-expiry-days: ${GUEST_INVITATION_EXPIRY_DAYS:1}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health, info, prometheus
+
+  zipkin:
+    tracing:
+      endpoint: http://zipkin:9411/api/v2/spans
+  tracing:
+    sampling:
+      probability: 0.0 # Zipkin disabled (observability stack not running)
+
+springdoc:
+  api-docs:
+    path: /v1/v3/api-docs
+
+logging:
+  level:
+    root: INFO
+    com.onmeet: INFO
+    org.springframework.security: INFO
+    org.springframework.web: INFO
+
+onmeet:
+  auth:
+    internal-url: ${AUTH_INTERNAL_URL:http://auth-service:8081}
+  file:
+    internal-url: ${FILE_SERVICE_URL:http://file-service:8086}
+  video:
+    internal-url: ${VIDEO_SERVICE_URL:http://video-service:8083}
+
+resilience4j:
+  circuitbreaker:
+    instances:
+      fileService:
+        registerHealthIndicator: true
+        slidingWindowSize: 10
+        minimumNumberOfCalls: 5
+        permittedNumberOfCallsInHalfOpenState: 3
+        automaticTransitionFromOpenToHalfOpenEnabled: true
+        waitDurationInOpenState: 5s
+        failureRateThreshold: 50
+        eventConsumerBufferSize: 10

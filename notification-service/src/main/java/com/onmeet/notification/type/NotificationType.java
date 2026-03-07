@@ -1,0 +1,28 @@
+package com.onmeet.notification.type;
+
+public enum NotificationType {
+    MEETING_CREATED,
+    MEETING_TODAY,
+    MEETING_STARTED,
+    TEAM_MEMBER_ADDED,
+    SYSTEM,
+    EVENT,
+
+    // 회의 초대 관련
+    MEETING_INVITATION,
+    INVITATION_ACCEPTED,
+    INVITATION_DECLINED,
+    INVITATION_CANCELLED,
+
+    // 참가자 관리 관련
+    PARTICIPANT_KICKED,
+    WAITING_ROOM_ADMITTED,
+    WAITING_ROOM_REJECTED,
+
+    // 회의 진행 관련
+    PARTICIPANT_JOINED_NOTIFY,
+    SCHEDULE_CREATED,
+    SCHEDULE_CHANGED,
+    SCHEDULE_CANCELLED,
+    MEETING_REMINDER
+}

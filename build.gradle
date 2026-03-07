@@ -1,0 +1,138 @@
+plugins {
+    id 'org.springframework.boot' version '3.3.5' apply false
+    id 'io.spring.dependency-management' version '1.1.6' apply false
+    id 'org.jetbrains.kotlin.jvm' version '1.9.25' apply false
+    id 'org.jetbrains.kotlin.plugin.spring' version '1.9.25' apply false
+    id 'org.jetbrains.kotlin.plugin.jpa' version '1.9.25' apply false
+    id 'org.jetbrains.kotlin.kapt' version '1.9.25' apply false
+    id 'com.google.cloud.tools.jib' version '3.4.3' apply false
+    id 'jacoco'
+}
+
+repositories {
+    mavenCentral()
+}
+
+ext {
+    springDocVersion = '2.6.0'
+    springDocWebFluxVersion = '2.2.0'
+    lombokVersion = '1.18.36'
+    mapstructVersion = '1.6.2'
+    lombokMapstructBindingVersion = '0.2.0'
+    resilience4jVersion = '2.2.0'
+}
+
+subprojects {
+    group = 'com.onmeet'
+    version = '0.0.1-SNAPSHOT'
+
+    repositories {
+        mavenCentral()
+    }
+
+    apply plugin: 'jacoco'
+
+    if (it.name.endsWith("-service") && it.name != "file-service") {
+        apply plugin: 'com.google.cloud.tools.jib'
+        
+        jib {
+            from {
+                image = 'eclipse-temurin:17-jre-jammy'
+                platforms {
+                    platform {
+                        architecture = 'arm64'
+                        os = 'linux'
+                    }
+                    platform {
+                        architecture = 'amd64'
+                        os = 'linux'
+                    }
+                }
+            }
+            to {
+                // GitHub Actions에서 DOCKER_REGISTRY_PREFIX 환경변수로 전달, 기본값은 'onmeet'
+                def dockerRegistry = System.getenv('DOCKER_REGISTRY_PREFIX') ?: 'onmeet'
+                image = "${dockerRegistry}/${project.name}"
+
+                // GitHub Actions에서 jib.to.tags 시스템 속성으로 태그 전달 가능
+                // 예: -Djib.to.tags=latest,v0.1.0
+                def tagsProperty = System.getProperty('jib.to.tags')
+                if (tagsProperty) {
+                    tags = tagsProperty.split(',').collect { it.trim() }
+                } else {
+                    tags = ['latest', project.version]
+                }
+            }
+            container {
+                creationTime = 'USE_CURRENT_TIMESTAMP'
+                jvmFlags = ['-Xms512m', '-Xmx512m']
+            }
+        }
+    }
+    
+    afterEvaluate {
+        tasks.withType(Test) {
+            finalizedBy jacocoTestReport
+        }
+
+        tasks.named('jacocoTestReport') {
+            dependsOn tasks.named('test')
+            reports {
+                xml.required = true
+                csv.required = false
+                html.required = true
+            }
+            classDirectories.setFrom(
+                files(classDirectories.files.collect {
+                    fileTree(dir: it, exclude: [
+                        "**/dto/**",
+                        "**/entity/**",
+                        "**/exception/**",
+                        "**/config/**",
+                        "**/*Config*",
+                        "**/*Properties*"
+                    ])
+                })
+            )
+        }
+    }
+}
+
+// 루트 프로젝트용: 하위 프로젝트들의 test 및 jacoco 결과를 모아서 통합 리포트 생성
+tasks.register('jacocoRootReport', JacocoReport) {
+    description = 'Generates an aggregate report from all subprojects'
+    
+    // coverage 리포팅을 적용할 서비스 모듈만 필터링 
+    // 설정에 따라 필요한 모듈을 추가하거나 불필요한 모듈을 제외할 수 있습니다.
+    def coverageProjects = subprojects.findAll { 
+        it.name.endsWith("-service") || it.name == "onmeet-common" || it.name == "common-security" 
+    }
+    
+    dependsOn coverageProjects.test // 각 하위 프로젝트의 테스트 실행 의존성 추가
+    
+    additionalSourceDirs.from = files(coverageProjects.sourceSets.main.allSource.srcDirs)
+    sourceDirectories.from = files(coverageProjects.sourceSets.main.allSource.srcDirs)
+    
+    // 모아진 클래스 파일들 중 불필요한 파일들 제외 (DTO, Entity, Exception, Config 등)
+    def excludes = [
+        "**/dto/**",
+        "**/entity/**",
+        "**/exception/**",
+        "**/config/**",
+        "**/*Config*",
+        "**/*Properties*",
+        "**/security/**"
+    ]
+    
+    classDirectories.from = files(coverageProjects.sourceSets.main.output.classesDirs).asFileTree.matching {
+        exclude excludes
+    }
+    
+    executionData.from = files(coverageProjects.jacocoTestReport.executionData)
+    
+    reports {
+        html.required = true
+        xml.required = true
+        csv.required = true
+    }
+}
