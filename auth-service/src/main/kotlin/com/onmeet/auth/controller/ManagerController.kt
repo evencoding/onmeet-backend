@@ -571,7 +571,7 @@ class ManagerController(
     @PreAuthorize("hasRole('MANAGER')")
     fun inviteMember(
         @AuthenticationPrincipal user: User,
-        @RequestBody request: InvitationRequest
+        @RequestBody @jakarta.validation.Valid request: InvitationRequest
     ): ResponseEntity<List<Long>> {
         val invitationIds = request.emails.map { email ->
             invitationService.createInvitation(user.company.requireId(), email, User.Role.USER).requireId()
