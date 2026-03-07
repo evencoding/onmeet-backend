@@ -1,6 +1,5 @@
 package com.onmeet.ai.entity;
 
-import com.onmeet.ai.enums.MinutesAccessScope;
 import com.onmeet.ai.enums.MinutesStatus;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
@@ -43,9 +42,7 @@ public class Minutes {
     @Column(name = "status", length = 32, nullable = false)
     private MinutesStatus status;
 
-    @Enumerated(EnumType.STRING)
-    @Column(name = "access_scope", length = 16, nullable = false)
-    private MinutesAccessScope accessScope;
+
 
     @Column(name = "last_error", length = 1024)
     private String lastError;
@@ -68,7 +65,6 @@ public class Minutes {
         this.summaryJson = summaryJson;
         this.userEditedSummaryJson = null;
         this.status = MinutesStatus.GENERATED;
-        this.accessScope = MinutesAccessScope.PRIVATE;
         this.lastError = null;
         this.createdAt = Instant.now();
         this.updatedAt = this.createdAt;
@@ -101,10 +97,7 @@ public class Minutes {
         touch();
     }
 
-    public void updateAccessScope(MinutesAccessScope scope) {
-        this.accessScope = scope;
-        touch();
-    }
+
 
     public void applyUserEdit(String userEditedSummaryJson) {
         this.userEditedSummaryJson = userEditedSummaryJson;

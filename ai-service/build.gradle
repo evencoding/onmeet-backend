@@ -68,6 +68,10 @@ dependencies {
     implementation 'io.micrometer:micrometer-tracing-bridge-brave'
     implementation 'io.zipkin.reporter2:zipkin-reporter-brave'
 
+    // VAD (Voice Activity Detection) - Silero VAD via ONNX Runtime
+    implementation 'com.microsoft.onnxruntime:onnxruntime:1.17.1'
+    implementation 'org.gagravarr:vorbis-java-core:0.8'
+
     // Jackson for JSON
     implementation 'com.fasterxml.jackson.core:jackson-databind'
     implementation 'com.fasterxml.jackson.datatype:jackson-datatype-jsr310'

@@ -12,11 +12,10 @@ public class VoiceSegmentCreatedEvent {
     private Long roomId;
     private String segmentId;
 
-    private Long userId;
-    private String trackId;
+    private String participantIdentity;
 
-    private long startMs;
-    private long endMs;
+    private long segmentStartMs;
+    private long segmentEndMs;
 
     private long seq;
 

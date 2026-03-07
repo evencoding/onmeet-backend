@@ -69,8 +69,8 @@ public class RedisMeetingEventStore {
         try {
             String json = om.writeValueAsString(e);
             // using timestamp for score, or fallback to startMs
-            long score = e.getTimestamp() != null ? e.getTimestamp().toEpochMilli() : e.getStartMs();
-            String member = padSeq(e.getSeq()) + "|VOICE|" + e.getSegmentId() + "|" + e.getUserId() + "|" + json;
+            long score = e.getTimestamp() != null ? e.getTimestamp().toEpochMilli() : e.getSegmentStartMs();
+            String member = padSeq(e.getSeq()) + "|VOICE|" + e.getSegmentId() + "|" + e.getParticipantIdentity() + "|" + json;
 
             redis.opsForZSet().add(eventsKey(e.getRoomId()), member, (double) score);
             touchTtl(e.getRoomId());

@@ -6,15 +6,14 @@ import java.time.Instant;
 @Getter @NoArgsConstructor @AllArgsConstructor @Builder
 public class AudioChunkReadyEvent {
     private Long roomId;
-    private Long userId;
-    private String trackId;
+    private String participantIdentity;
 
-    private int chunkSeq;
-    private long chunkStartMs;
-    private long chunkEndMs;
+    private int segmentIndex;
 
-    private String audioFileKey;
-    private String format;
+    private String s3Path;
+
+    private Instant startTime;
+    private Instant endTime;
 
     private Instant timestamp;
 }

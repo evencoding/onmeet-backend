@@ -1,7 +1,6 @@
 package com.onmeet.ai.dto.response;
 
 import com.onmeet.ai.entity.Minutes;
-import com.onmeet.ai.enums.MinutesAccessScope;
 import com.onmeet.ai.enums.MinutesStatus;
 import lombok.Builder;
 import lombok.Getter;
@@ -21,7 +20,7 @@ public class MinutesResponse {
     private String userEditedSummaryJson;
 
     private MinutesStatus status;
-    private MinutesAccessScope accessScope;
+
 
     private String lastError;
     private Instant createdAt;
@@ -37,7 +36,6 @@ public class MinutesResponse {
                 .summaryJson(m.getSummaryJson())
                 .userEditedSummaryJson(m.getUserEditedSummaryJson())
                 .status(m.getStatus())
-                .accessScope(m.getAccessScope())
                 .lastError(m.getLastError())
                 .createdAt(m.getCreatedAt())
                 .updatedAt(m.getUpdatedAt())
