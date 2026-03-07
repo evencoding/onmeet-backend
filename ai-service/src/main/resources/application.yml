@@ -12,7 +12,7 @@ spring:
     password: ${SPRING_DATASOURCE_PASSWORD:root}
     driver-class-name: com.mysql.cj.jdbc.Driver
     hikari:
-      max-lifetime: 600000
+      max-lifetime: 240000
       keepalive-time: 30000
       connection-timeout: 30000
       initialization-fail-timeout: -1
