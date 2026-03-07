@@ -9,8 +9,8 @@ services:
     ports:
       - "2181:2181"
     volumes:
-      - ./.data/zookeeper/data:/var/lib/zookeeper/data
-      - ./.data/zookeeper/log:/var/lib/zookeeper/log
+      - zookeeper-data:/var/lib/zookeeper/data
+      - zookeeper-log:/var/lib/zookeeper/log
     healthcheck:
       test: [ "CMD-SHELL", "echo srvr | nc localhost 2181 || exit 1" ]
       interval: 10s
@@ -45,7 +45,7 @@ services:
     ports:
       - "9092:9092"
     volumes:
-      - ./.data/kafka:/var/lib/kafka/data
+      - kafka-data:/var/lib/kafka/data
     environment:
       KAFKA_BROKER_ID: 1
       KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
@@ -65,3 +65,8 @@ services:
 networks:
   onmeet-network:
     external: true
+
+volumes:
+  zookeeper-data:
+  zookeeper-log:
+  kafka-data:
