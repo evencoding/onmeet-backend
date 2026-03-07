@@ -24,9 +24,27 @@ spring:
         "[format_sql]": false
         "[show_sql]": false
         dialect: org.hibernate.dialect.MySQLDialect
+  flyway:
+    baseline-on-migrate: true
 
 gateway:
-  shared-secret: ${GATEWAY_SHARED_SECRET}
+  shared-secret: ${GATEWAY_SHARED_SECRET:my-super-secret-gateway-key-1234!}
+
+app:
+  kafka:
+    topics:
+      audio-chunk-ready: ${KAFKA_TOPIC_AUDIO_CHUNK_READY:audio-chunk-ready}
+      voice-segment-created: ${KAFKA_TOPIC_VOICE_SEGMENT_CREATED:voice-segment-created}
+      transcript-finalized: ${KAFKA_TOPIC_TRANSCRIPT_FINALIZED:transcript-finalized}
+      meeting-ended: ${KAFKA_TOPIC_MEETING_ENDED:meeting-ended}
+      chat-events: ${KAFKA_TOPIC_CHAT_EVENTS:chat-events}
+      minutes-generated: ${KAFKA_TOPIC_MINUTES_GENERATED:minutes-generated}
+
+aws:
+  region: ${AWS_REGION:ap-northeast-2}
+  s3:
+    endpoint: ${AWS_ENDPOINT:}
+    bucket-name: ${S3_BUCKET_NAME:onmeet-transcripts}
 
 onmeet:
   auth:

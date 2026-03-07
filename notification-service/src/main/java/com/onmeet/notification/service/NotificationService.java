@@ -33,8 +33,6 @@ public class NotificationService {
     private final NotificationSettingService settingService;
     private final FcmService fcmService;
     private final AuthServiceClient authServiceClient;
-    // TODO: [notification-service] VideoServiceClient 추가 - roomId로 방 제목(title) 조회
-    // API 호출용
 
     // In-memory storage for active emitters (for real-time push)
     // Structure: Map<UserId, Map<EmitterId, SseEmitter>>
@@ -134,7 +132,7 @@ public class NotificationService {
                 return;
             }
 
-            boolean sseSent = sendToClient(dto.getUserId(), notification);
+            boolean sseSent = sendToClient(dto.getUserId(), recipient);
             if (sseSent) {
                 recipient.markAsSent();
             }
@@ -158,7 +156,7 @@ public class NotificationService {
      * 특정 유저의 *모든* 연결된 SSE Emitter로 알림을 전송합니다.
      * 하나라도 성공하면 true를 반환합니다.
      */
-    public boolean sendToClient(Long userId, Notification notification) {
+    public boolean sendToClient(Long userId, NotificationRecipient recipient) {
         Map<String, SseEmitter> userEmitters = emitters.get(userId);
         if (userEmitters == null || userEmitters.isEmpty()) {
             return false;
@@ -170,9 +168,9 @@ public class NotificationService {
             SseEmitter emitter = entry.getValue();
             try {
                 emitter.send(SseEmitter.event()
-                        .id(String.valueOf(notification.getId()))
+                        .id(String.valueOf(recipient.getNotification().getId()))
                         .name("notification")
-                        .data(NotificationResponseDto.from(notification)));
+                        .data(NotificationResponseDto.from(recipient)));
                 anySuccess = true;
             } catch (IOException e) {
                 log.error("Failed to send notification to user: {}, emitterId={}", userId, emitterId, e);
@@ -263,8 +261,8 @@ public class NotificationService {
             params.put("receiverName", "알 수 없는 사용자");
         }
 
-        // TODO: [notification-service] Kafka 전환 시 roomId로 video-service API 호출하여 방 제목
-        // 조회 필요
+        // Kafka Producer(예: video-service)에서 이벤트 발행 시 title 값을 DTO에 담아서 보내도록 스펙 정의됨
+        // -> 알림 서비스에서 동기적으로 외부 API를 찔러 방 제목을 조회하는 것은 지양(결합도 및 병목 방지)
         params.put("title", dto.getTitle() != null ? dto.getTitle() : "");
 
         // 원본 body (SYSTEM, EVENT 템플릿에서 사용)
