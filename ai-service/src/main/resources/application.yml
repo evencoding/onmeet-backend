@@ -39,6 +39,13 @@ app:
       meeting-ended: ${KAFKA_TOPIC_MEETING_ENDED:meeting-ended}
       chat-events: ${KAFKA_TOPIC_CHAT_EVENTS:chat-events}
       minutes-generated: ${KAFKA_TOPIC_MINUTES_GENERATED:minutes-generated}
+  vad:
+    enabled: ${VAD_ENABLED:true}
+    model-path: classpath:models/silero_vad.onnx
+    threshold: 0.5
+    min-speech-duration-ms: 250
+    min-silence-duration-ms: 300
+    speech-pad-ms: 30
 
 aws:
   region: ${AWS_REGION:ap-northeast-2}

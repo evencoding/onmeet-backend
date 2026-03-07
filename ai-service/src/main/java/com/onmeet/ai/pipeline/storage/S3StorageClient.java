@@ -16,7 +16,7 @@ public class S3StorageClient implements StorageClient {
     private final String bucket;
 
     public S3StorageClient(S3Client s3,
-                           @Value("${aws.s3.bucket-name}") String bucket) {
+            @Value("${aws.s3.bucket-name}") String bucket) {
         this.s3 = s3;
         this.bucket = bucket;
     }

@@ -2,12 +2,13 @@ package com.onmeet.ai.pipeline.transcript;
 
 import lombok.*;
 
+import java.time.Instant;
 import java.util.List;
 
 @Getter @NoArgsConstructor @AllArgsConstructor @Builder
 public class TranscriptDocument {
 
-    private String meetingId;
+    private Long roomId;
     private String transcriptId;
     private int version;
 
@@ -17,14 +18,14 @@ public class TranscriptDocument {
     public static class Event {
         private String id;      // messageId or segmentId
         private String type;    // CHAT | VOICE
-        private String actorId; // senderId or participantId
+        private String actorId; // senderId or participantIdentity
 
-        private Long atMs;      // CHAT: atMs / VOICE: startMs
-        private Long seq;       // tie-breaker
+        private Instant timestamp;
+        private Long seq;
         private String text;
 
         // optional(voice)
-        private Long startMs;
-        private Long endMs;
+        private Long segmentStartMs;
+        private Long segmentEndMs;
     }
 }

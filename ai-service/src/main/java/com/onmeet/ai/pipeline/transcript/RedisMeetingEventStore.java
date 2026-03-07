@@ -26,12 +26,12 @@ public class RedisMeetingEventStore {
         this.om = om;
     }
 
-    private String eventsKey(String meetingId) {
-        return "mt:" + meetingId + ":events";
+    private String eventsKey(Long roomId) {
+        return "mt:" + roomId + ":events";
     }
 
-    private String dedupKey(String meetingId) {
-        return "mt:" + meetingId + ":dedup";
+    private String dedupKey(Long roomId) {
+        return "mt:" + roomId + ":dedup";
     }
 
     private String padSeq(long seq) {
@@ -39,8 +39,7 @@ public class RedisMeetingEventStore {
     }
 
     public void appendChat(ChatMessageEvent e) {
-        // dedup: messageId
-        String dKey = dedupKey(e.getMeetingId());
+        String dKey = dedupKey(e.getRoomId());
         Long added = redis.opsForSet().add(dKey, "CHAT:" + e.getMessageId());
         boolean isNew = (added != null && added > 0);
         if (!isNew) {
@@ -51,42 +50,41 @@ public class RedisMeetingEventStore {
             String json = om.writeValueAsString(e);
             String member = padSeq(e.getSeq()) + "|CHAT|" + e.getMessageId() + "|" + e.getSenderId() + "|" + json;
 
-            redis.opsForZSet().add(eventsKey(e.getMeetingId()), member, e.getAtMs());
-            touchTtl(e.getMeetingId());
+            // Redis SortedSet score requires double (using epochMilli)
+            redis.opsForZSet().add(eventsKey(e.getRoomId()), member, (double) e.getTimestamp().toEpochMilli());
+            touchTtl(e.getRoomId());
         } catch (Exception ex) {
-            // dedup set 롤백은 선택(여기선 단순 throw)
             throw new IllegalStateException("failed to append chat to redis", ex);
         }
     }
 
     public void appendVoice(VoiceSegmentCreatedEvent e) {
-        // dedup: segmentId
-        String dKey = dedupKey(e.getMeetingId());
+        String dKey = dedupKey(e.getRoomId());
         Long added = redis.opsForSet().add(dKey, "VOICE:" + e.getSegmentId());
         boolean isNew = (added != null && added > 0);
         if (!isNew) {
-            return; // 중복이면 스킵
+            return;
         }
 
         try {
             String json = om.writeValueAsString(e);
-            long atMs = e.getStartMs(); // voice는 startMs 기준 정렬
-            String member = padSeq(e.getSeq()) + "|VOICE|" + e.getSegmentId() + "|" + e.getParticipantId() + "|" + json;
+            // using timestamp for score, or fallback to startMs
+            long score = e.getTimestamp() != null ? e.getTimestamp().toEpochMilli() : e.getSegmentStartMs();
+            String member = padSeq(e.getSeq()) + "|VOICE|" + e.getSegmentId() + "|" + e.getParticipantIdentity() + "|" + json;
 
-            redis.opsForZSet().add(eventsKey(e.getMeetingId()), member, atMs);
-            touchTtl(e.getMeetingId());
+            redis.opsForZSet().add(eventsKey(e.getRoomId()), member, (double) score);
+            touchTtl(e.getRoomId());
         } catch (Exception ex) {
             throw new IllegalStateException("failed to append voice to redis", ex);
         }
     }
 
-    public List<StoredEvent> readAll(String meetingId) {
-        Set<String> members = redis.opsForZSet().range(eventsKey(meetingId), 0, -1);
+    public List<StoredEvent> readAll(Long roomId) {
+        Set<String> members = redis.opsForZSet().range(eventsKey(roomId), 0, -1);
         if (members == null || members.isEmpty()) return List.of();
 
         List<StoredEvent> out = new ArrayList<>(members.size());
         for (String m : members) {
-            // member: seqPad|TYPE|id|actorId|json
             int p1 = m.indexOf('|');
             int p2 = m.indexOf('|', p1 + 1);
             int p3 = m.indexOf('|', p2 + 1);
@@ -104,20 +102,20 @@ public class RedisMeetingEventStore {
         return out;
     }
 
-    public void clearMeeting(String meetingId) {
-        redis.delete(eventsKey(meetingId));
-        redis.delete(dedupKey(meetingId));
+    public void clearMeeting(Long roomId) {
+        redis.delete(eventsKey(roomId));
+        redis.delete(dedupKey(roomId));
     }
 
-    private void touchTtl(String meetingId) {
-        redis.expire(eventsKey(meetingId), DEFAULT_TTL);
-        redis.expire(dedupKey(meetingId), DEFAULT_TTL);
+    private void touchTtl(Long roomId) {
+        redis.expire(eventsKey(roomId), DEFAULT_TTL);
+        redis.expire(dedupKey(roomId), DEFAULT_TTL);
     }
 
     @Getter
     @AllArgsConstructor
     public static class StoredEvent {
-        private String type;   // CHAT|VOICE
+        private String type;
         private String id;
         private String actorId;
         private long seq;
