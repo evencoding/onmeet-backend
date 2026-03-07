@@ -132,7 +132,7 @@ public class NotificationService {
                 return;
             }
 
-            boolean sseSent = sendToClient(dto.getUserId(), notification);
+            boolean sseSent = sendToClient(dto.getUserId(), recipient);
             if (sseSent) {
                 recipient.markAsSent();
             }
@@ -156,7 +156,7 @@ public class NotificationService {
      * 특정 유저의 *모든* 연결된 SSE Emitter로 알림을 전송합니다.
      * 하나라도 성공하면 true를 반환합니다.
      */
-    public boolean sendToClient(Long userId, Notification notification) {
+    public boolean sendToClient(Long userId, NotificationRecipient recipient) {
         Map<String, SseEmitter> userEmitters = emitters.get(userId);
         if (userEmitters == null || userEmitters.isEmpty()) {
             return false;
@@ -168,9 +168,9 @@ public class NotificationService {
             SseEmitter emitter = entry.getValue();
             try {
                 emitter.send(SseEmitter.event()
-                        .id(String.valueOf(notification.getId()))
+                        .id(String.valueOf(recipient.getNotification().getId()))
                         .name("notification")
-                        .data(NotificationResponseDto.from(notification)));
+                        .data(NotificationResponseDto.from(recipient)));
                 anySuccess = true;
             } catch (IOException e) {
                 log.error("Failed to send notification to user: {}, emitterId={}", userId, emitterId, e);

@@ -41,7 +41,7 @@ public class ScheduledNotificationProcessor {
                     continue;
                 }
 
-                boolean success = notificationService.sendToClient(recipient.getUserId(), notification);
+                boolean success = notificationService.sendToClient(recipient.getUserId(), recipient);
                 if (success) {
                     recipient.markAsSent();
                 } else {
