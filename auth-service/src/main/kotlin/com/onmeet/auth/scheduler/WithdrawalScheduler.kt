@@ -1,6 +1,6 @@
 package com.onmeet.auth.scheduler
 
-import com.onmeet.auth.repository.WithdrawnUserRepository
+import com.onmeet.auth.repository.jpa.WithdrawnUserRepository
 import org.springframework.scheduling.annotation.Scheduled
 import org.springframework.stereotype.Component
 import org.springframework.transaction.annotation.Transactional

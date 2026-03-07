@@ -1,32 +1,28 @@
 services:
   nginx:
-    image: nginx:1.27-alpine
-    container_name: nginx
+    image: nginx:1.25.3-alpine
+    container_name: onmeet-nginx
+    restart: always
     ports:
       - "80:80"
       - "443:443"
-    environment:
-      - API_DOMAIN=${API_DOMAIN:-api.onmeet.cloud}
-      - LIVEKIT_DOMAIN=${LIVEKIT_DOMAIN:-livekit.onmeet.cloud}
     volumes:
-      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
-      - ./nginx/conf.d:/etc/nginx/templates:ro
-      - ./nginx/ssl:/etc/nginx/ssl:ro
-    depends_on:
-      - gateway-service
-      - livekit
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./certbot/conf:/etc/letsencrypt:ro
+      - ./certbot/www:/var/www/certbot:ro
     networks:
-      - msa-network
-    deploy:
-      resources:
-        limits:
-          cpus: '0.25'
-          memory: 128M
-        reservations:
-          cpus: '0.05'
-          memory: 64M
+      - onmeet-network
+
+  certbot:
+    image: certbot/certbot:v2.7.4
+    container_name: onmeet-certbot
+    volumes:
+      - ./certbot/conf:/etc/letsencrypt
+      - ./certbot/www:/var/www/certbot
+    entrypoint: "/bin/sh -c 'trap exit TERM; while :; do certbot renew; sleep 12h & wait $${!}; done;'"
+    networks:
+      - onmeet-network
 
 networks:
-  msa-network:
+  onmeet-network:
     name: onmeet-network
-    external: true

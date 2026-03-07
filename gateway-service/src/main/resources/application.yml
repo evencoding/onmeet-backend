@@ -53,22 +53,26 @@ spring:
         - id: file-service-public
           uri: ${FILE_SERVICE_URL:http://file-service:8086}
           predicates:
-            - Path=/file/doc.json,/file/swagger/**,/file/actuator/**
+            - Path=/file/swagger/**,/file/actuator/**
           filters:
             - UserHeaderFilter
       default-filters:
         - name: RequestRateLimiter
           args:
-            'redis-rate-limiter.replenishRate': 10
-            'redis-rate-limiter.burstCapacity': 20
-            'redis-rate-limiter.requestedTokens': 1
+            "redis-rate-limiter.replenishRate": 10
+            "redis-rate-limiter.burstCapacity": 20
+            "redis-rate-limiter.requestedTokens": 1
             key-resolver: "#{@ipKeyResolver}"
       globalcors:
         cors-configurations:
-          '[/**]':
+          "[/**]":
             allowedOriginPatterns:
+              - "http://localhost:8080"
               - "http://localhost:[*]"
               - "http://127.0.0.1:[*]"
+              - "https://onmeet.cloud"
+              - "https://api.onmeet.cloud"
+              - "https://*.onmeet.cloud"
             allowedMethods:
               - GET
               - POST
@@ -110,8 +114,7 @@ springdoc:
         url: /email/v1/v3/api-docs
 
       - name: file-service
-        url: /file/doc.json
-
+        url: /file/swagger/doc.json
 
 management:
   endpoints:
@@ -123,4 +126,4 @@ management:
       endpoint: http://zipkin:9411/api/v2/spans
   tracing:
     sampling:
-      probability: 1.0
+      probability: 0.0 # Zipkin disabled (observability stack not running)

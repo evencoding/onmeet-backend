@@ -3,7 +3,8 @@ name: CI/CD Pipeline for Onmeet Backend
 on:
   push:
     branches:
-      - main
+      - "release/**" # release/v0.1.0, release/v0.2.0 등 버전별 릴리즈 브랜치
+  workflow_dispatch: # 수동 트리거 가능
 
 env:
   DOCKER_REGISTRY: docker.io
@@ -11,9 +12,9 @@ env:
   DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
 
 jobs:
-  # Job 1: 변경된 서비스 감지
+  # Job 1: 변경된 서비스 감지 및 버전 추출
   detect-changes:
-    name: Detect Changed Services
+    name: Detect Changed Services & Extract Version
     runs-on: ubuntu-latest
     outputs:
       auth: ${{ steps.changes.outputs.auth }}
@@ -24,12 +25,14 @@ jobs:
       notification: ${{ steps.changes.outputs.notification }}
       email: ${{ steps.changes.outputs.email }}
       file: ${{ steps.changes.outputs.file }}
+      nginx: ${{ steps.changes.outputs.nginx }}
       any-service-changed: ${{ steps.changes.outputs.any-service-changed }}
+      version: ${{ steps.extract-version.outputs.version }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
-          fetch-depth: 2  # 이전 커밋과 비교를 위해 최소 2개 커밋 필요
+          fetch-depth: 2 # 이전 커밋과 비교를 위해 최소 2개 커밋 필요
 
       - name: Detect changes in services
         id: changes
@@ -118,7 +121,44 @@ jobs:
             echo "file=false" >> $GITHUB_OUTPUT
           fi
 
+          # kafka / zookeeper
+          if echo "$CHANGED_FILES" | grep -q "^kafka/"; then
+            echo "kafka=true" >> $GITHUB_OUTPUT
+            ANY_CHANGED=true
+          else
+            echo "kafka=false" >> $GITHUB_OUTPUT
+          fi
+
+          # nginx
+          if echo "$CHANGED_FILES" | grep -q "^nginx/"; then
+            echo "nginx=true" >> $GITHUB_OUTPUT
+            ANY_CHANGED=true
+          else
+            echo "nginx=false" >> $GITHUB_OUTPUT
+          fi
+
           echo "any-service-changed=$ANY_CHANGED" >> $GITHUB_OUTPUT
+
+      - name: Extract version from branch name
+        id: extract-version
+        run: |
+          # release/v0.1.0 → v0.1.0 추출
+          BRANCH_NAME="${{ github.ref_name }}"
+          echo "Branch name: $BRANCH_NAME"
+
+          if [[ $BRANCH_NAME =~ release/v([0-9]+\.[0-9]+\.[0-9]+) ]]; then
+            VERSION="v${BASH_REMATCH[1]}"
+            echo "version=$VERSION" >> $GITHUB_OUTPUT
+            echo "Extracted version: $VERSION"
+          elif [[ $BRANCH_NAME =~ release/(v[0-9]+\.[0-9]+\.[0-9]+) ]]; then
+            VERSION="${BASH_REMATCH[1]}"
+            echo "version=$VERSION" >> $GITHUB_OUTPUT
+            echo "Extracted version: $VERSION"
+          else
+            # 버전 정보가 없으면 latest만 사용
+            echo "version=latest" >> $GITHUB_OUTPUT
+            echo "No version found, using 'latest'"
+          fi
 
   # Job 2: 변경된 서비스 빌드 및 푸시
   build-and-push:
@@ -141,8 +181,8 @@ jobs:
           needs.detect-changes.outputs.email == 'true'
         uses: actions/setup-java@v4
         with:
-          distribution: 'temurin'
-          java-version: '17'
+          distribution: "temurin"
+          java-version: "17"
 
       - name: Setup Gradle
         if: |
@@ -167,7 +207,8 @@ jobs:
           needs.detect-changes.outputs.notification == 'true' ||
           needs.detect-changes.outputs.email == 'true'
         run: |
-          echo "${{ secrets.DOCKER_PASSWORD }}" | docker login -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
+          export DOCKER_API_VERSION=1.41
+            echo "${{ secrets.DOCKER_PASSWORD }}" | docker login -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
 
       - name: Build changed Kotlin/Java services with Jib
         if: |
@@ -180,6 +221,7 @@ jobs:
           needs.detect-changes.outputs.email == 'true'
         env:
           DOCKER_REGISTRY_PREFIX: ${{ secrets.DOCKER_USERNAME }}
+          VERSION: ${{ needs.detect-changes.outputs.version }}
         run: |
           # 변경된 서비스만 빌드하도록 동적으로 타겟 생성
           TARGETS=""
@@ -209,11 +251,22 @@ jobs:
           if [ -n "$TARGETS" ]; then
             echo "Building services:$TARGETS"
             echo "Docker registry: $DOCKER_REGISTRY_PREFIX"
+            echo "Version tag: $VERSION"
+
+            # 버전 태그와 latest 태그 모두 생성
+            if [ "$VERSION" != "latest" ]; then
+              TAG_LIST="latest,$VERSION"
+            else
+              TAG_LIST="latest"
+            fi
+
             ./gradlew $TARGETS \
               -Djib.to.auth.username=${{ secrets.DOCKER_USERNAME }} \
               -Djib.to.auth.password=${{ secrets.DOCKER_PASSWORD }} \
+              -Djib.to.tags=$TAG_LIST \
               --parallel \
               --no-daemon \
+              --no-configuration-cache \
               -x test
           else
             echo "No Kotlin/Java services to build"
@@ -223,6 +276,13 @@ jobs:
         if: needs.detect-changes.outputs.file == 'true'
         uses: docker/setup-buildx-action@v3
 
+      - name: Login to Docker Hub for file-service
+        if: needs.detect-changes.outputs.file == 'true'
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
       - name: Build and push file-service (Go)
         if: needs.detect-changes.outputs.file == 'true'
         uses: docker/build-push-action@v5
@@ -230,7 +290,9 @@ jobs:
           context: ./file-service
           file: ./file-service/Dockerfile
           push: true
-          tags: ${{ secrets.DOCKER_USERNAME }}/file-service:latest
+          tags: |
+            ${{ secrets.DOCKER_USERNAME }}/file-service:latest
+            ${{ secrets.DOCKER_USERNAME }}/file-service:${{ needs.detect-changes.outputs.version }}
           platforms: linux/amd64,linux/arm64
           cache-from: type=gha
           cache-to: type=gha,mode=max
@@ -239,8 +301,8 @@ jobs:
   deploy:
     name: Deploy to GCP Server
     runs-on: ubuntu-latest
-    needs: build-and-push
-    if: success()
+    needs: [detect-changes, build-and-push]
+    if: always() && needs.detect-changes.result == 'success' && (needs.build-and-push.result == 'success' || needs.build-and-push.result == 'skipped')
     steps:
       - name: Deploy to GCP via SSH
         uses: appleboy/ssh-action@v1.0.3
@@ -252,13 +314,55 @@ jobs:
           script: |
             cd ${{ secrets.GCP_PROJECT_PATH }}
 
+            # Retrieve latest configs
+            git fetch --all
+            git checkout ${{ github.ref_name }}
+            git reset --hard origin/${{ github.ref_name }}
+
+            # Ensure PRIVACY_ENCRYPTION_KEY is in .env file (무조건 덮어쓰기)
+            sed -i '/^PRIVACY_ENCRYPTION_KEY=/d' .env 2>/dev/null || true
+            echo "PRIVACY_ENCRYPTION_KEY=${{ secrets.PRIVACY_ENCRYPTION_KEY }}" >> .env
+            echo "Injected PRIVACY_ENCRYPTION_KEY from GitHub Secret"
+
             # Docker Hub 로그인
+            export DOCKER_API_VERSION=1.41
+            export DOCKER_REGISTRY=${{ secrets.DOCKER_USERNAME }}
             echo "${{ secrets.DOCKER_PASSWORD }}" | docker login -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
 
-            # 최신 이미지 pull
-            docker compose pull
+            # 변경된 서비스만 추출
+            TARGETS=""
+            if [ "${{ needs.detect-changes.outputs.auth }}" == "true" ]; then TARGETS="$TARGETS auth-service"; fi
+            if [ "${{ needs.detect-changes.outputs.gateway }}" == "true" ]; then TARGETS="$TARGETS gateway-service"; fi
+            if [ "${{ needs.detect-changes.outputs.ai }}" == "true" ]; then TARGETS="$TARGETS ai-service"; fi
+            if [ "${{ needs.detect-changes.outputs.video }}" == "true" ]; then TARGETS="$TARGETS video-service"; fi
+            if [ "${{ needs.detect-changes.outputs.chat }}" == "true" ]; then TARGETS="$TARGETS chat-service"; fi
+            if [ "${{ needs.detect-changes.outputs.notification }}" == "true" ]; then TARGETS="$TARGETS notification-service"; fi
+            if [ "${{ needs.detect-changes.outputs.email }}" == "true" ]; then TARGETS="$TARGETS email-service"; fi
+            if [ "${{ needs.detect-changes.outputs.file }}" == "true" ]; then TARGETS="$TARGETS file-service"; fi
+            if [ "${{ needs.detect-changes.outputs.kafka }}" == "true" ]; then TARGETS="$TARGETS kafka zookeeper"; fi
+            if [ "${{ needs.detect-changes.outputs.nginx }}" == "true" ]; then TARGETS="$TARGETS nginx certbot"; fi
 
-            # 서비스 재시작 (무중단 배포)
+            echo "Deploying changed services: $TARGETS"
+
+            # 최신 이미지 pull (변경된 타겟만)
+            if [ -n "$TARGETS" ]; then
+              echo "Pulling targets: $TARGETS"
+              docker compose pull $TARGETS
+            else
+              echo "No service targets to pull."
+            fi
+
+            # 변경된 서비스가 있으면 해당 컨테이너 중지 및 제거 후 재생성
+            if [ -n "$TARGETS" ]; then
+              echo "Stopping and removing changed services: $TARGETS"
+              docker compose stop $TARGETS
+              docker compose rm -f $TARGETS
+              echo "Recreating changed services: $TARGETS"
+              docker compose up -d $TARGETS
+            fi
+
+            # 전체 스택 상태 확인 및 꺼져있는 컨테이너 실행 (재생성 없이)
+            echo "Ensuring all services are running..."
             docker compose up -d --remove-orphans
 
             # 사용하지 않는 이미지 정리
@@ -276,11 +380,14 @@ jobs:
           script: |
             cd ${{ secrets.GCP_PROJECT_PATH }}
 
+            export DOCKER_API_VERSION=1.41
+            export DOCKER_REGISTRY=${{ secrets.DOCKER_USERNAME }}
+
             # 컨테이너 상태 확인
             docker compose ps
 
             # 헬스체크 (gateway-service 기준)
-            max_attempts=30
+            max_attempts=120
             attempt=0
             until curl -f http://localhost:8080/actuator/health || [ $attempt -eq $max_attempts ]; do
               attempt=$((attempt+1))
@@ -290,6 +397,12 @@ jobs:
 
             if [ $attempt -eq $max_attempts ]; then
               echo "Health check failed after $max_attempts attempts"
+              echo "--- Gateway Service Logs ---"
+              docker compose logs --tail=100 gateway-service || true
+              echo "--- Zookeeper Logs ---"
+              docker compose logs --tail=100 zookeeper || true
+              echo "--- MySQL Auth Logs ---"
+              docker compose logs --tail=100 mysql-auth || true
               exit 1
             fi
 

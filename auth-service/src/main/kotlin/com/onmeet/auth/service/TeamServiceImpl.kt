@@ -293,4 +293,14 @@ class TeamServiceImpl(
 
         teamRepository.delete(team)
     }
+
+    // Internal API - No permission check
+    override fun teamExists(teamId: Long): Boolean {
+        return teamRepository.existsById(teamId)
+    }
+
+    // Internal API - No permission check
+    override fun isTeamMember(teamId: Long, userId: Long): Boolean {
+        return teamMemberRepository.findByUserIdAndTeamId(userId, teamId) != null
+    }
 }
