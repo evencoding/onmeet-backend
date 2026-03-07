@@ -64,7 +64,7 @@ services:
       - SPRING_DATASOURCE_PASSWORD=root
 
       # ✅ Kafka
-      - SPRING_KAFKA_BOOTSTRAP_SERVERS=kafka:9092
+      - SPRING_KAFKA_BOOTSTRAP_SERVERS=kafka:29092
 
       # AWS S3 (LocalStack)
       - AWS_REGION=ap-northeast-2
