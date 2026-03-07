@@ -196,6 +196,8 @@ jobs:
         uses: gradle/actions/setup-gradle@v4
         with:
           cache-read-only: false
+          gradle-home-cache-excludes: |
+            caches/*/jib-cache
 
       - name: Login to Docker Hub for Jib
         if: |
