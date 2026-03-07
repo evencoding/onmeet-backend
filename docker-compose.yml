@@ -4,7 +4,6 @@ include:
   - auth-service/docker-compose.yml
   - ai-service/docker-compose.yml
   - video-service/docker-compose.yml
-  - chat-service/docker-compose.yml
   - notification-service/docker-compose.yml
   - file-service/docker-compose.yml
   - email-service/docker-compose.yml
