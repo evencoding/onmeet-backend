@@ -8,7 +8,7 @@ services:
     ports:
       - "127.0.0.1:3310:3306"
     volumes:
-      - ./.data/mysql-chat:/var/lib/mysql
+      - mysql-chat-data:/var/lib/mysql
     healthcheck:
       test: [ "CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${DB_ROOT_PASSWORD}" ]
       interval: 10s
@@ -57,3 +57,6 @@ services:
 networks:
   onmeet-network:
     name: onmeet-network
+
+volumes:
+  mysql-chat-data:

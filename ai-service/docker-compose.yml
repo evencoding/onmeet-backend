@@ -11,7 +11,7 @@ services:
     ports:
       - "3308:3306"
     volumes:
-      - ./.data/mysql-ai:/var/lib/mysql
+      - mysql-ai-data:/var/lib/mysql
     networks:
       - onmeet-network
     healthcheck:
@@ -27,7 +27,7 @@ services:
     ports:
       - "6380:6379"
     volumes:
-      - ./.data/redis-ai:/data
+      - redis-ai-data:/data
     networks:
       - onmeet-network
 
@@ -91,3 +91,7 @@ networks:
   onmeet-network:
     name: onmeet-network
     driver: bridge
+
+volumes:
+  mysql-ai-data:
+  redis-ai-data:
