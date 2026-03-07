@@ -23,7 +23,7 @@ public class NotificationQueryService {
      */
     public Page<NotificationResponseDto> getMyNotifications(Long userId, Pageable pageable) {
         return recipientRepository.findAllByUserIdOrderByCreatedAtDesc(userId, pageable)
-                .map(recipient -> NotificationResponseDto.from(recipient.getNotification()));
+                .map(NotificationResponseDto::from);
     }
 
     /**
