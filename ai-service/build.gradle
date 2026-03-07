@@ -2,7 +2,6 @@ plugins {
     id 'java'
     id 'org.springframework.boot' version '3.3.5'
     id 'io.spring.dependency-management' version '1.1.6'
-    id 'com.google.cloud.tools.jib'
 }
 
 group = 'com.onmeet'
@@ -20,17 +19,26 @@ repositories {
 
 ext {
     set('springCloudVersion', "2023.0.3")
+    set('mapstructVersion', "1.6.2")
+    set('awsSdkVersion', "2.20.26")
 }
 
 dependencies {
     // Core
-    implementation project(':common-security')
-    implementation project(':onmeet-common')
     implementation 'org.springframework.boot:spring-boot-starter-web'
     implementation 'org.springframework.boot:spring-boot-starter-validation'
     implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
     implementation 'org.springframework.boot:spring-boot-starter-security'
     implementation 'org.springframework.boot:spring-boot-starter-actuator'
+    implementation 'org.springframework.boot:spring-boot-starter-data-redis'
+    implementation 'org.springframework.boot:spring-boot-starter-webflux'
+
+    // Kafka
+    implementation 'org.springframework.kafka:spring-kafka'
+
+    // AWS SDK for S3
+    implementation platform("software.amazon.awssdk:bom:${awsSdkVersion}")
+    implementation 'software.amazon.awssdk:s3'
 
     // DB & Migration
     runtimeOnly 'com.mysql:mysql-connector-j'
@@ -38,26 +46,20 @@ dependencies {
     implementation 'org.flywaydb:flyway-mysql'
 
     // Tools
-    compileOnly "org.projectlombok:lombok:${lombokVersion}"
-    annotationProcessor "org.projectlombok:lombok:${lombokVersion}"
-    
+    compileOnly 'org.projectlombok:lombok'
+    annotationProcessor 'org.projectlombok:lombok'
+
     // MapStruct
     implementation "org.mapstruct:mapstruct:${mapstructVersion}"
     annotationProcessor "org.mapstruct:mapstruct-processor:${mapstructVersion}"
-    annotationProcessor "org.projectlombok:lombok-mapstruct-binding:${lombokMapstructBindingVersion}"
+    annotationProcessor "org.projectlombok:lombok-mapstruct-binding:0.2.0"
 
     // Swagger / OpenAPI
-    implementation "org.springdoc:springdoc-openapi-starter-webmvc-ui:${springDocVersion}"
+    implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.6.0'
 
-    // Observability - Micrometer (Prometheus & Brave Tracing)
-    implementation 'io.micrometer:micrometer-registry-prometheus'
-    implementation 'io.micrometer:micrometer-tracing-bridge-brave'
-    implementation 'io.zipkin.reporter2:zipkin-reporter-brave'
-
-    // Resilience4j Circuit Breaker
-    implementation "io.github.resilience4j:resilience4j-spring-boot3:${resilience4jVersion}"
-    implementation "io.github.resilience4j:resilience4j-circuitbreaker:${resilience4jVersion}"
-    implementation 'org.springframework.boot:spring-boot-starter-aop'
+    // Jackson for JSON
+    implementation 'com.fasterxml.jackson.core:jackson-databind'
+    implementation 'com.fasterxml.jackson.datatype:jackson-datatype-jsr310'
 
     // Test
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
@@ -65,8 +67,18 @@ dependencies {
     testImplementation 'org.springframework.boot:spring-boot-testcontainers'
     testImplementation 'org.testcontainers:junit-jupiter'
     testImplementation 'org.testcontainers:mysql'
+    testImplementation 'org.testcontainers:rabbitmq'
+    testImplementation 'org.testcontainers:localstack'
+    testImplementation 'io.rest-assured:rest-assured'
+    testImplementation 'org.awaitility:awaitility:4.2.0'
+    testImplementation 'org.springframework.kafka:spring-kafka-test'
 }
 
 tasks.named('test') {
     useJUnitPlatform()
+    testLogging {
+        events "passed", "skipped", "failed"
+        showStandardStreams = true
+        exceptionFormat = "full"
+    }
 }
