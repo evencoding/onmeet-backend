@@ -89,13 +89,10 @@ data class TeamRequest(
 
 @Schema(description = "초대 요청")
 data class InvitationRequest(
-    @field:jakarta.validation.constraints.Email(message = "Invalid email format")
-    @field:jakarta.validation.constraints.NotBlank(message = "Email is required")
-    @Schema(description = "초대할 이메일", example = "newuser@company.com")
-    val email: String,
-    
-    @Schema(description = "부여할 권한", example = "USER")
-    val role: com.onmeet.auth.entity.User.Role = com.onmeet.auth.entity.User.Role.USER
+    @field:jakarta.validation.constraints.NotEmpty(message = "At least one email is required")
+    @field:jakarta.validation.constraints.Size(max = 100, message = "Maximum 100 emails allowed per request")
+    @Schema(description = "초대할 이메일 리스트", example = "[\"user1@company.com\", \"user2@company.com\"]")
+    val emails: List<@jakarta.validation.constraints.Email(message = "Invalid email format") String>
 )
 
 @Schema(description = "유저 정보 상세 응답")

@@ -13,7 +13,7 @@ services:
     volumes:
       - mysql-ai-data:/var/lib/mysql
     networks:
-      - msa-network
+      - onmeet-network
     healthcheck:
       test: [ "CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-proot" ]
       interval: 10s
@@ -41,16 +41,16 @@ services:
       KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
       KAFKA_NUM_PARTITIONS: 3
     networks:
-      - msa-network
+      - onmeet-network
 
   # Redis for Event Store
   redis:
     image: redis:7.0
     container_name: redis
     ports:
-      - "6379:6379"
+      - "6380:6379"
     networks:
-      - msa-network
+      - onmeet-network
 
   # LocalStack for S3 (개발 환경용)
   localstack:
@@ -65,7 +65,7 @@ services:
       - "4566:4566"
 
     networks:
-      - msa-network
+      - onmeet-network
     healthcheck:
       test: [ "CMD", "curl", "-f", "http://localhost:4566/_localstack/health" ]
       interval: 10s
@@ -106,7 +106,7 @@ services:
       localstack:
         condition: service_started
     networks:
-      - msa-network
+      - onmeet-network
     restart: on-failure
 
 volumes:
@@ -118,6 +118,6 @@ volumes:
     driver: local
 
 networks:
-  msa-network:
+  onmeet-network:
     name: onmeet-network
     driver: bridge
