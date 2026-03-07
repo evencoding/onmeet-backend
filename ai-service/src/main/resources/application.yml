@@ -24,6 +24,9 @@ spring:
         "[format_sql]": false
         "[show_sql]": false
         dialect: org.hibernate.dialect.MySQLDialect
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
 
 gateway:
   shared-secret: ${GATEWAY_SHARED_SECRET:my-super-secret-gateway-key-1234!}
