@@ -75,6 +75,7 @@ services:
 
       # Application
       - SPRING_PROFILES_ACTIVE=docker
+      - GATEWAY_SHARED_SECRET=${GATEWAY_SHARED_SECRET:-my-super-secret-gateway-key-1234!}
     depends_on:
       mysql-ai:
         condition: service_started
