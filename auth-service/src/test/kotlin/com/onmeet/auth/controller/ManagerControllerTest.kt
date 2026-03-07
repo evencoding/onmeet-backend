@@ -109,34 +109,17 @@ class ManagerControllerTest {
         val emails = listOf("user1@company.com", "user2@company.com", "user3@company.com")
         val request = InvitationRequest(emails = emails)
 
-        val invitation1 = Invitation(
-            id = 101L,
-            email = emails[0],
-            code = "CODE1",
-            role = User.Role.USER,
-            company = testCompany,
-            expiresAt = LocalDateTime.now().plusDays(7)
-        )
-        val invitation2 = Invitation(
-            id = 102L,
-            email = emails[1],
-            code = "CODE2",
-            role = User.Role.USER,
-            company = testCompany,
-            expiresAt = LocalDateTime.now().plusDays(7)
-        )
-        val invitation3 = Invitation(
-            id = 103L,
-            email = emails[2],
-            code = "CODE3",
-            role = User.Role.USER,
-            company = testCompany,
-            expiresAt = LocalDateTime.now().plusDays(7)
-        )
-
-        every { invitationService.createInvitation(eq(1L), eq(emails[0]), eq(User.Role.USER)) } returns invitation1
-        every { invitationService.createInvitation(eq(1L), eq(emails[1]), eq(User.Role.USER)) } returns invitation2
-        every { invitationService.createInvitation(eq(1L), eq(emails[2]), eq(User.Role.USER)) } returns invitation3
+        emails.forEachIndexed { index, email ->
+            val invitation = Invitation(
+                id = 101L + index,
+                email = email,
+                code = "CODE${index + 1}",
+                role = User.Role.USER,
+                company = testCompany,
+                expiresAt = LocalDateTime.now().plusDays(7)
+            )
+            every { invitationService.createInvitation(eq(1L), eq(email), eq(User.Role.USER)) } returns invitation
+        }
 
         // when & then
         mockMvc.perform(
@@ -147,9 +130,7 @@ class ManagerControllerTest {
         )
             .andExpect(status().isOk)
             .andExpect(jsonPath("$").isArray)
-            .andExpect(jsonPath("$[0]").value(101))
-            .andExpect(jsonPath("$[1]").value(102))
-            .andExpect(jsonPath("$[2]").value(103))
+            .andExpect(jsonPath("$", org.hamcrest.Matchers.contains(101, 102, 103)))
     }
 
     @Test
