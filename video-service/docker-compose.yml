@@ -55,6 +55,7 @@ services:
     ports:
       - "127.0.0.1:8083:8083"
     environment:
+      - SPRING_PROFILES_ACTIVE=default
       - SPRING_DATASOURCE_URL=${VIDEO_DB_URL:-jdbc:mysql://mysql-video:3306/video_db?useSSL=false&allowPublicKeyRetrieval=true&characterEncoding=UTF-8&serverTimezone=UTC}
       - SPRING_DATASOURCE_USERNAME=${DB_USERNAME}
       - SPRING_DATASOURCE_PASSWORD=${DB_ROOT_PASSWORD}
@@ -64,7 +65,6 @@ services:
       - LIVEKIT_API_KEY=${LIVEKIT_API_KEY:-devkey}
       - LIVEKIT_API_SECRET=${LIVEKIT_API_SECRET:-devsecret}
       - MANAGEMENT_ENDPOINT_HEALTH_PROBES_ENABLED=true
-      - MANAGEMENT_ENDPOINTS_WEB_BASE_PATH=/video/actuator
     depends_on:
       mysql-video:
         condition: service_healthy

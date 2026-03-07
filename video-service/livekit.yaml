@@ -13,4 +13,4 @@ logging:
 
 webhook:
   urls:
-    - http://video-service:8083/webhook/livekit
+    - http://video-service:8083/video/webhook/livekit
