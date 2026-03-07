@@ -40,6 +40,12 @@ app:
       chat-events: ${KAFKA_TOPIC_CHAT_EVENTS:chat-events}
       minutes-generated: ${KAFKA_TOPIC_MINUTES_GENERATED:minutes-generated}
 
+aws:
+  region: ${AWS_REGION:ap-northeast-2}
+  s3:
+    endpoint: ${AWS_ENDPOINT:}
+    bucket-name: ${S3_BUCKET_NAME:onmeet-transcripts}
+
 onmeet:
   auth:
     internal-url: ${AUTH_INTERNAL_URL:http://auth-service:8081}
