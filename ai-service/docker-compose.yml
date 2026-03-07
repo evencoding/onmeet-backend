@@ -48,7 +48,7 @@ services:
     image: redis:7.0
     container_name: redis
     ports:
-      - "6379:6379"
+      - "6380:6379"
     networks:
       - onmeet-network
 
