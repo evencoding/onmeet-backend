@@ -40,6 +40,8 @@ class SecurityConfig(
                     "/auth/v1/login/**",
                     "/auth/v1/invitations/validate",
                     "/auth/v1/check",
+                    "/auth/v1/refresh",
+                    "/auth/v1/logout",
                     "/.well-known/**"
                 ).permitAll()
 
@@ -56,7 +58,8 @@ class SecurityConfig(
                     "/webjars/**",
                     "/v3/api-docs/**",
                     "/swagger-resources/**",
-                    "/*/v3/api-docs/**",
+                    "/*/v3/api-docs",
+                    "/*/v1/v3/api-docs",
                     "/file/doc.json",
                     "/file/swagger/**",
                     "/error"
@@ -86,7 +89,14 @@ class SecurityConfig(
     @Bean
     fun corsConfigurationSource(): CorsConfigurationSource {
         val configuration = CorsConfiguration()
-        configuration.allowedOriginPatterns = listOf("http://localhost:*", "http://127.0.0.1:*")
+        configuration.allowedOriginPatterns = listOf(
+            "http://localhost:8080", 
+            "http://localhost:*", 
+            "http://127.0.0.1:*", 
+            "https://onmeet.cloud",
+            "https://api.onmeet.cloud", 
+            "https://*.onmeet.cloud"
+        )
         configuration.allowedMethods = listOf("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH")
         configuration.allowedHeaders = listOf("*")
         configuration.allowCredentials = true

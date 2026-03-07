@@ -1,17 +1,21 @@
 package com.onmeet.auth.service
 
 import org.slf4j.LoggerFactory
+import org.springframework.beans.factory.annotation.Value
 import org.springframework.stereotype.Service
 import org.springframework.kafka.core.KafkaTemplate
 import com.onmeet.auth.dto.EmailMessage
 
 interface EmailService {
-    fun sendInvitationEmail(to: String, code: String)
+    fun sendInvitationEmail(to: String, code: String, companyName: String)
+    fun sendGuestInvitationEmail(to: String, uuid: String, hostName: String, roomName: String)
 }
 
 @Service
 class EmailServiceImpl(
-    private val kafkaTemplate: KafkaTemplate<String, Any>
+    private val kafkaTemplate: KafkaTemplate<String, Any>,
+    @Value("\${app.api-base-url}")
+    private val apiBaseUrl: String
 ) : EmailService {
     companion object {
         private val log = LoggerFactory.getLogger(EmailServiceImpl::class.java)
@@ -30,12 +34,32 @@ class EmailServiceImpl(
      * - 이 작업은 비동기로 처리됩니다.
      * - 실제 메일 발송은 'email-service'에서 수행됩니다.
      */
-    override fun sendInvitationEmail(to: String, code: String) {
+    override fun sendInvitationEmail(to: String, code: String, companyName: String) {
         EmailMessage(
             to = to,
-            subject = "You are invited to join OnMeet",
-            body = "Your invitation code is: $code. Please use this code to join your company on OnMeet."
-        ).also { log.info("Sending invitation email event to Kafka topic: $TOPIC for $to") }
+            subject = "Welcome to Onmeet Teams - Invitation",
+            templateName = "company-invitation",
+            variables = mapOf(
+                "companyName" to companyName,
+                "invitationCode" to code
+            )
+        ).also { log.info("Sending company invitation email event to Kafka topic: $TOPIC for $to") }
+            .let { kafkaTemplate.send(TOPIC, it) }
+    }
+
+    override fun sendGuestInvitationEmail(to: String, uuid: String, hostName: String, roomName: String) {
+        val joinLink = "$apiBaseUrl/auth/v1/guests/join/$uuid"
+        
+        EmailMessage(
+            to = to,
+            subject = "You're invited to join a meeting - $roomName",
+            templateName = "guest-invitation",
+            variables = mapOf(
+                "hostName" to hostName,
+                "roomName" to roomName,
+                "joinLink" to joinLink
+            )
+        ).also { log.info("Sending guest invitation email event to Kafka topic: $TOPIC for $to") }
             .let { kafkaTemplate.send(TOPIC, it) }
     }
 }

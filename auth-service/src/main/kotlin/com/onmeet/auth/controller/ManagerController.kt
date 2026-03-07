@@ -490,19 +490,19 @@ class ManagerController(
     ): ResponseEntity<Void> =
         teamService.assignLeader(teamId, user, userId).let { ResponseEntity.ok().build() }
 
-    @Operation(summary = "멤버 초대", description = "이메일로 새로운 멤버를 기업에 초대합니다 (매니저 권한 필요).")
+    @Operation(summary = "멤버 초대", description = "이메일 리스트로 새로운 멤버를 기업에 초대합니다 (매니저 권한 필요). 역할은 USER로 고정됩니다.")
     @ApiResponses(value = [
         ApiResponse(
             responseCode = "200",
-            description = "초대 발송 성공 - 생성된 초대 ID 반환",
+            description = "초대 발송 성공 - 생성된 초대 ID 리스트 반환",
             content = [Content(
                 mediaType = "application/json",
-                schema = Schema(implementation = Long::class)
+                schema = Schema(implementation = List::class)
             )]
         ),
         ApiResponse(
             responseCode = "400",
-            description = "잘못된 요청 - 유효하지 않은 이메일 형식",
+            description = "잘못된 요청 - 유효하지 않은 이메일 형식 또는 빈 리스트",
             content = [Content(
                 mediaType = "application/json",
                 schema = Schema(implementation = ErrorResponse::class),
@@ -571,11 +571,13 @@ class ManagerController(
     @PreAuthorize("hasRole('MANAGER')")
     fun inviteMember(
         @AuthenticationPrincipal user: User,
-        @RequestBody request: InvitationRequest
-    ): ResponseEntity<Long> =
-        ResponseEntity.ok(
-            invitationService.createInvitation(user.company.requireId(), request.email, request.role).requireId()
-        )
+        @RequestBody @jakarta.validation.Valid request: InvitationRequest
+    ): ResponseEntity<List<Long>> {
+        val invitationIds = request.emails.map { email ->
+            invitationService.createInvitation(user.company.requireId(), email, User.Role.USER).requireId()
+        }
+        return ResponseEntity.ok(invitationIds)
+    }
 
     @Operation(summary = "직급 생성", description = "새로운 직급을 생성합니다 (매니저 전용).")
     @ApiResponses(value = [

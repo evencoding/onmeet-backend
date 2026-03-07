@@ -1,56 +1,123 @@
 services:
+  # MySQL Database for AI Service
   mysql-ai:
     image: mysql:9.0
     container_name: mysql-ai
     environment:
-      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD}
+      MYSQL_ROOT_PASSWORD: root
       MYSQL_DATABASE: ai_db
+      MYSQL_CHARACTER_SET_SERVER: utf8mb4
+      MYSQL_COLLATION_SERVER: utf8mb4_unicode_ci
     ports:
-      - "127.0.0.1:3308:3306"
+      - "3308:3306"
+    volumes:
+      - mysql-ai-data:/var/lib/mysql
+    networks:
+      - msa-network
     healthcheck:
-      test: [ "CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${DB_ROOT_PASSWORD}" ]
+      test: [ "CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-proot" ]
       interval: 10s
       timeout: 5s
       retries: 5
-    networks:
-      - onmeet-network
-    deploy:
-      resources:
-        limits:
-          cpus: '0.25'
-          memory: 256M
-        reservations:
-          cpus: '0.05'
-          memory: 128M
 
+  # ✅ Kafka Message Broker (KRaft mode, no Zookeeper)
+  kafka:
+    image: apache/kafka:3.7.0
+    container_name: kafka
+    ports:
+      - "9092:9092"
+      - "9094:9094"
+    environment:
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: "broker,controller"
+      KAFKA_LISTENERS: "PLAINTEXT://:9092,CONTROLLER://:9093,EXTERNAL://:9094"
+      KAFKA_ADVERTISED_LISTENERS: "PLAINTEXT://kafka:9092,EXTERNAL://localhost:9094"
+      KAFKA_CONTROLLER_LISTENER_NAMES: "CONTROLLER"
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: "CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT,EXTERNAL:PLAINTEXT"
+      KAFKA_CONTROLLER_QUORUM_VOTERS: "1@kafka:9093"
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+      KAFKA_NUM_PARTITIONS: 3
+    networks:
+      - msa-network
+
+  # Redis for Event Store
+  redis:
+    image: redis:7.0
+    container_name: redis
+    ports:
+      - "6379:6379"
+    networks:
+      - msa-network
+
+  # LocalStack for S3 (개발 환경용)
+  localstack:
+    image: localstack/localstack:latest
+    container_name: localstack
+    environment:
+      - SERVICES=s3
+      - DEBUG=1
+      - DATA_DIR=/tmp/localstack/data
+      - AWS_DEFAULT_REGION=ap-northeast-2
+    ports:
+      - "4566:4566"
+
+    networks:
+      - msa-network
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:4566/_localstack/health" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # AI Service
   ai-service:
-    image: ${DOCKER_REGISTRY:-onmeet}/ai-service:latest
+    build:
+      context: ../ # ✅ 프로젝트 루트(gradlew 있는 곳)
+      dockerfile: ai-service/Dockerfile # ✅ Dockerfile 경로만 ai-service 폴더로
     container_name: ai-service
     ports:
-      - "127.0.0.1:8082:8082"
+      - "8082:8082"
     environment:
-      - SPRING_DATASOURCE_URL=${AI_DB_URL:-jdbc:mysql://mysql-ai:3306/ai_db?useSSL=false&allowPublicKeyRetrieval=true&characterEncoding=UTF-8&serverTimezone=UTC}
-      - SPRING_DATASOURCE_USERNAME=${DB_USERNAME}
-      - SPRING_DATASOURCE_PASSWORD=${DB_ROOT_PASSWORD}
-      - GATEWAY_SHARED_SECRET=${GATEWAY_SHARED_SECRET}
-      - SERVER_PORT=${AI_SERVICE_PORT:-8082}
-      - MANAGEMENT_ENDPOINT_HEALTH_PROBES_ENABLED=true
-      - MANAGEMENT_ENDPOINTS_WEB_BASE_PATH=/ai/actuator
-      - LOGGING_LEVEL_ORG_SPRINGFRAMEWORK_SECURITY=DEBUG
+      # Database
+      - SPRING_DATASOURCE_URL=jdbc:mysql://mysql-ai:3306/ai_db?useSSL=false&allowPublicKeyRetrieval=true&characterEncoding=UTF-8&serverTimezone=UTC
+      - SPRING_DATASOURCE_USERNAME=root
+      - SPRING_DATASOURCE_PASSWORD=root
+
+      # ✅ Kafka
+      - SPRING_KAFKA_BOOTSTRAP_SERVERS=kafka:9092
+
+      # AWS S3 (LocalStack)
+      - AWS_REGION=ap-northeast-2
+      - AWS_ENDPOINT=http://localstack:4566
+      - AWS_ACCESS_KEY_ID=test
+      - AWS_SECRET_ACCESS_KEY=test
+      - S3_BUCKET_NAME=onmeet-transcripts
+
+      # Application
+      - SPRING_PROFILES_ACTIVE=docker
     depends_on:
       mysql-ai:
-        condition: service_healthy
+        condition: service_started
+      kafka:
+        condition: service_started
+      localstack:
+        condition: service_started
     networks:
-      - onmeet-network
-    deploy:
-      resources:
-        limits:
-          cpus: '0.50'
-          memory: 768M
-        reservations:
-          cpus: '0.10'
-          memory: 256M
+      - msa-network
+    restart: on-failure
+
+volumes:
+  mysql-ai-data:
+    driver: local
+  kafka-data:
+    driver: local
+  localstack-data:
+    driver: local
 
 networks:
-  onmeet-network:
-    external: true
+  msa-network:
+    name: onmeet-network
+    driver: bridge

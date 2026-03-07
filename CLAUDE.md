@@ -64,9 +64,23 @@ docker compose down                      # Stop all
 - Event-driven communication via Kafka
 
 ## Git Workflow
-- Main branch: `develop`
-- Feature branches: `feat/ONMEET-<ticket>`
-- Commit style: `type(scope): description` (e.g., `feat(auth-service): Add profile management`)
+- **Main branch**: `develop` (개발 통합 브랜치)
+- **Production branch**: `main` (프로덕션 안정 버전)
+- **Release branches**: `release/v0.x.0` (릴리즈 준비 및 배포 트리거)
+  - 예: `release/v0.1.0`, `release/v0.2.0`
+  - develop → release → main 순서로 병합
+- **Feature branches**: `feat/ONMEET-<ticket>` (기능 개발)
+- **Hotfix branches**: `hotfix/v0.x.y` (긴급 수정, main에서 분기)
+- **Versioning**: Semantic Versioning 0.x.y
+  - 정식 출시 전까지 메이저 버전 0 유지
+  - 마이너 버전 증가: 기능 추가/변경 (0.1.0 → 0.2.0)
+  - 패치 버전 증가: 버그 수정 (0.2.0 → 0.2.1)
+- **CI/CD**: `release/**` 브랜치 push 시 자동 배포
+  - Docker 이미지 태그: `latest`, `v0.x.0`
+  - GCP 서버에 자동 배포
+- **Commit style**: `type(scope): description`
+  - 예: `feat(auth-service): Add OAuth2 login`
+- 📘 **상세 워크플로우**: [GIT_WORKFLOW.md](./GIT_WORKFLOW.md) 참고
 
 ## Antigravity (Architect) & Claude Code (Developer) Collaboration Guidelines
 - **Interactive Review**: 상위 기획자(Antigravity)는 CC에게 작업을 단순히 던지고 끝내는 것이 아니라, PTY나 파이프라인을 통해 상호작용하며 CC의 산출물을 중간 점검합니다.

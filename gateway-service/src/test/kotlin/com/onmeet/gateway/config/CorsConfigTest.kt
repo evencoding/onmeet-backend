@@ -9,8 +9,8 @@ import org.springframework.web.cors.CorsConfiguration
 class CorsConfigTest {
 
     @Test
-    // [Essential] CORS 설정 검증 - localhost 및 127.0.0.1 허용
-    fun `should configure CORS to allow localhost and 127_0_0_1`() {
+    // [Essential] CORS 설정 검증 - localhost 및 127.0.0.1 허용, onmeet.cloud 등
+    fun `should configure CORS to allow localhost, 127_0_0_1 and onmeet_cloud`() {
         // given
         val securityConfig = SecurityConfig(
             cookieServerAuthenticationConverter = org.mockito.Mockito.mock(
@@ -27,7 +27,17 @@ class CorsConfigTest {
 
         // then
         assertNotNull(corsConfig)
-        assertEquals(listOf("http://localhost:*", "http://127.0.0.1:*"), corsConfig?.allowedOriginPatterns)
+        assertEquals(
+            listOf(
+                "http://localhost:8080",
+                "http://localhost:*", 
+                "http://127.0.0.1:*", 
+                "https://onmeet.cloud",
+                "https://api.onmeet.cloud", 
+                "https://*.onmeet.cloud"
+            ),
+            corsConfig?.allowedOriginPatterns
+        )
         assertTrue(corsConfig?.allowedMethods?.contains("GET") == true)
         assertTrue(corsConfig?.allowedMethods?.contains("POST") == true)
         assertTrue(corsConfig?.allowedMethods?.contains("PUT") == true)

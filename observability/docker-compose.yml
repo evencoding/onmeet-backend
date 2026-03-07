@@ -5,7 +5,7 @@ services:
     ports:
       - "9411:9411"
     networks:
-      - msa-network
+      - onmeet-network
 
   prometheus:
     image: prom/prometheus
@@ -17,9 +17,8 @@ services:
     command:
       - '--config.file=/etc/prometheus/prometheus.yml'
     networks:
-      - msa-network
+      - onmeet-network
 
 networks:
-  msa-network:
+  onmeet-network:
     name: onmeet-network
-    external: true

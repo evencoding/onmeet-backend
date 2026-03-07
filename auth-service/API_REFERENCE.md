@@ -1,5 +1,9 @@
 # Auth Service API Reference
 
+**Version**: v0.1.0
+**Last Updated**: 2026-03-02
+**Status**: Production
+
 ## 개요 (Overview)
 `auth-service`는 사용자 인증 및 인가, 토큰 발급, 회원 가입, 초대 검증 등의 기능을 제공합니다.
 모든 인증은 **JWT (JSON Web Token)** 기반으로 동작하며, 클라이언트와의 통신에는 **HttpOnly Cookie**를 우선적으로 사용합니다.

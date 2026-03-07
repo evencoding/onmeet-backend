@@ -11,18 +11,34 @@ GitHub Actions를 활용하여 GCP 운영 서버에 자동 배포하는 CI/CD �
 │  (Local)        │─────▶│  (CI/CD)         │─────▶│  (Production)    │
 └─────────────────┘      └──────────────────┘      └──────────────────┘
       │                          │                          │
-      │ 1. Push to main          │ 2. Build & Push         │ 3. Pull & Deploy
-      │                          │    (Docker Hub)         │
+      │ develop → release/v0.x.0 │ 2. Build & Push         │ 3. Pull & Deploy
+      │ 1. PR & Merge            │    (Docker Hub)         │    (무중단)
+      │                          │    Tags: latest, v0.x.0 │
       └──────────────────────────┴─────────────────────────┘
 ```
 
+## Git Flow & Versioning
+
+**브랜치 전략**:
+- `develop` - 개발 통합 브랜치
+- `release/v0.x.0` - 릴리즈 브랜치 (CI/CD 트리거)
+- `main` - 프로덕션 안정 버전
+
+**버전 관리**:
+- Semantic Versioning 0.x.y (정식 출시 전)
+- 마이너 버전 증가: 기능 추가 (0.1.0 → 0.2.0)
+- 패치 버전 증가: 버그 수정 (0.2.0 → 0.2.1)
+
+📘 상세 워크플로우: [GIT_WORKFLOW.md](./GIT_WORKFLOW.md)
+
 ## 워크플로우 동작 방식
 
-### 1단계: 변경 감지 (detect-changes)
-- `main` 브랜치에 Push 이벤트 발생 시 트리거
+### 1단계: 변경 감지 및 버전 추출 (detect-changes)
+- `release/**` 브랜치에 Push 이벤트 발생 시 트리거 (예: `release/v0.1.0`)
 - Git diff로 변경된 서비스 자동 감지
+- 브랜치 이름에서 버전 추출 (`release/v0.1.0` → `v0.1.0`)
 - 공통 라이브러리(`onmeet-common`, `common-security`) 변경 시 모든 Kotlin/Java 서비스 리빌드
-- 각 서비스별 변경 여부를 Job Output으로 전달
+- 각 서비스별 변경 여부 및 버전 정보를 Job Output으로 전달
 
 ### 2단계: 빌드 및 푸시 (build-and-push)
 **Kotlin/Java 서비스 (Jib 사용):**
@@ -30,11 +46,13 @@ GitHub Actions를 활용하여 GCP 운영 서버에 자동 배포하는 CI/CD �
 - Gradle 캐시 활용으로 빌드 속도 향상
 - 변경된 서비스만 선택적으로 빌드 (`--parallel` 옵션)
 - Jib로 Docker 이미지 빌드 및 Docker Hub에 직접 푸시
+- **이미지 태그**: `latest` + 버전 태그 (예: `v0.1.0`)
 - Docker daemon 불필요 (빠른 빌드)
 
 **Go 서비스 (file-service):**
 - Docker Buildx 사용
 - Multi-platform 빌드 (linux/amd64, linux/arm64)
+- **이미지 태그**: `latest` + 버전 태그 (예: `v0.1.0`)
 - GitHub Actions 캐시 활용 (`type=gha`)
 
 ### 3단계: 배포 (deploy)
@@ -66,14 +84,30 @@ GitHub Actions를 활용하여 GCP 운영 서버에 자동 배포하는 CI/CD �
 5. 인프라 서비스 시작 (Kafka, MySQL, Redis 등)
 6. Docker Hub 로그인
 
-### Step 3: 첫 배포 실행
+### Step 3: 첫 릴리즈 배포
 ```bash
-# 로컬에서 main 브랜치에 push
-git checkout main
-git push origin main
+# develop 브랜치에서 릴리즈 브랜치 생성
+git checkout develop
+git pull origin develop
+git checkout -b release/v0.1.0
 
-# GitHub Actions 실행 확인
+# 버전 정보 커밋 (선택)
+git commit --allow-empty -m "chore: prepare release v0.1.0"
+git push origin release/v0.1.0
+
+# GitHub Actions 자동 실행 확인
 # https://github.com/your-org/onmeet-backend/actions
+
+# 배포 성공 후 main에 병합
+git checkout main
+git merge --no-ff release/v0.1.0
+git tag -a v0.1.0 -m "Release v0.1.0"
+git push origin main --tags
+
+# develop에 역병합
+git checkout develop
+git merge --no-ff release/v0.1.0
+git push origin develop
 ```
 
 ## 파일 구조
