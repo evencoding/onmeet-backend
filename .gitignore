@@ -9,6 +9,7 @@ build/
 # Local Logs & Docs
 *.log
 *_logs.txt
+*_output.txt
 IMPROVEMENTS.md
 
 # HTTP Client
