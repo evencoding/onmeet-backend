@@ -48,7 +48,7 @@ class AuthServiceTest {
     private lateinit var tokenService: TokenService
     
     @MockK
-    private lateinit var withdrawnUserRepository: com.onmeet.auth.repository.WithdrawnUserRepository
+    private lateinit var withdrawnUserRepository: com.onmeet.auth.repository.jpa.WithdrawnUserRepository
     
     // ...
 
