@@ -5,8 +5,13 @@ include:
   - video-service/docker-compose.yml
   - chat-service/docker-compose.yml
   - notification-service/docker-compose.yml
-  - image-service/docker-compose.yml
+  - file-service/docker-compose.yml
+  - email-service/docker-compose.yml
+  - kafka/docker-compose.yml
+  - nginx/docker-compose.yml
+  # Monitoring stack disabled to save memory on 8GB instance
+  # - observability/docker-compose.yml
 
 networks:
-  msa-network:
+  onmeet-network:
     name: onmeet-network

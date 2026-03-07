@@ -1,0 +1,61 @@
+server:
+  port: ${SERVER_PORT:8087}
+  servlet:
+    context-path: /email
+  forward-headers-strategy: framework
+
+spring:
+  application:
+    name: email-service
+
+onmeet:
+  auth:
+    internal-url: ${AUTH_INTERNAL_URL:http://auth-service:8081}
+  kafka:
+    bootstrap-servers: ${SPRING_KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    consumer:
+      group-id: email-service-group
+      auto-offset-reset: earliest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+    # AWS Config removed for Gmail migration
+  mail:
+    host: ${SPRING_MAIL_HOST:smtp.gmail.com}
+    port: ${SPRING_MAIL_PORT:587}
+    username: ${SPRING_MAIL_USERNAME}
+    # password는 Access Token으로 동적 주입될 예정이므로 properties에 빈 값 추가 혹은 생략 처리
+    properties:
+      mail:
+        smtp:
+          auth:
+            enable: true
+            mechanisms: XOAUTH2
+          starttls:
+            enable: true
+            required: true
+
+gmail:
+  oauth2:
+    client-id: ${GMAIL_CLIENT_ID}
+    client-secret: ${GMAIL_CLIENT_SECRET}
+    refresh-token: ${GMAIL_REFRESH_TOKEN}
+
+email:
+  from: ${EMAIL_FROM:noreply@onmeet.com}
+
+management:
+  endpoints:
+    web:
+      base-path: ${MANAGEMENT_ENDPOINTS_WEB_BASE_PATH:/email/actuator}
+      exposure:
+        include: health, info, metrics, prometheus
+  zipkin:
+    tracing:
+      endpoint: http://zipkin:9411/api/v2/spans
+  tracing:
+    sampling:
+      probability: 0.0 # Zipkin disabled (observability stack not running)
+
+springdoc:
+  api-docs:
+    path: /v1/v3/api-docs

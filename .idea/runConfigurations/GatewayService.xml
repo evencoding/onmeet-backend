@@ -1,0 +1,10 @@
+<component name="ProjectRunConfigurationManager">
+    <configuration default="false" name="GatewayService"
+        type="SpringBootApplicationConfigurationType" factoryName="Spring Boot">
+        <module name="onMeet.gateway-service.main" />
+        <option name="SPRING_BOOT_MAIN_CLASS" value="com.onmeet.gateway.GatewayApplicationKt" />
+        <method v="2">
+            <option name="Make" enabled="true" />
+        </method>
+    </configuration>
+</component>
