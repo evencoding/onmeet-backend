@@ -99,7 +99,7 @@ public class RoomParticipantService {
 
         liveKitClient.removeParticipant(room.getLivekitRoomName(), String.valueOf(targetUserId));
 
-        // TODO: [Notification Service] Kafka 알림 이벤트 추가 - PARTICIPANT_KICKED
+        // TODO: [video-service] Kafka 알림 이벤트 추가 - PARTICIPANT_KICKED
         eventPublisher.publishParticipantLeft(
                 new ParticipantEvent("PARTICIPANT_LEFT", roomId, targetUserId, now));
     }
@@ -217,7 +217,7 @@ public class RoomParticipantService {
                 participantName,
                 TokenGrants.forParticipant());
 
-        // TODO: [Notification Service] Kafka 알림 이벤트 추가 - WAITING_ROOM_ADMITTED
+        // TODO: [video-service] Kafka 알림 이벤트 추가 - WAITING_ROOM_ADMITTED
         eventPublisher.publishParticipantJoined(
                 new ParticipantEvent("PARTICIPANT_JOINED", roomId, targetUserId, now));
     }
@@ -233,7 +233,7 @@ public class RoomParticipantService {
 
         Instant now = clockProvider.now();
         participant.kick(now);
-        // TODO: [Notification Service] Kafka 알림 이벤트 추가 - WAITING_ROOM_REJECTED
+        // TODO: [video-service] Kafka 알림 이벤트 추가 - WAITING_ROOM_REJECTED
     }
 
     @Transactional
