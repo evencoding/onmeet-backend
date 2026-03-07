@@ -143,7 +143,7 @@ GET /notification/v1/notifications/unread/count
 ### 2.3 단건 읽음 처리
 
 ```
-PATCH /notification/v1/notifications/{recipientId}/read
+PATCH /notification/v1/notifications/{notificationId}/read
 ```
 
 **Response:** `200 OK`
@@ -164,7 +164,7 @@ PATCH /notification/v1/notifications/read/all
 ### 2.5 단건 삭제
 
 ```
-DELETE /notification/v1/notifications/{recipientId}
+DELETE /notification/v1/notifications/{notificationId}
 ```
 
 **Response:** `200 OK`

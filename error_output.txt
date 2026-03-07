@@ -1,0 +1,92 @@
+To honour the JVM settings for this build a single-use Daemon process will be forked. For more on this, please refer to https://docs.gradle.org/8.5/userguide/gradle_daemon.html#sec:disabling_the_daemon in the Gradle documentation.
+Daemon will be stopped at the end of the build 
+Reusing configuration cache.
+> Task :onmeet-common:checkKotlinGradlePluginConfigurationErrors
+> Task :onmeet-common:compileKotlin UP-TO-DATE
+> Task :onmeet-common:compileJava NO-SOURCE
+> Task :common-security:compileJava NO-SOURCE
+
+> Task :notification-service:compileJava
+C:\back_0900_jys\evenCoding\spring\onMeet\notification-service\src\main\java\com\onmeet\notification\kafka\NotificationKafkaConsumer.java:4: error: package com.onmeet.notification.dto does not exist
+import com.onmeet.notification.dto.NotificationRequestDto;
+                                  ^
+C:\back_0900_jys\evenCoding\spring\onMeet\notification-service\src\main\java\com\onmeet\notification\kafka\NotificationKafkaConsumer.java:7: error: package com.onmeet.notification.service does not exist
+import com.onmeet.notification.service.NotificationService;
+                                      ^
+C:\back_0900_jys\evenCoding\spring\onMeet\notification-service\src\main\java\com\onmeet\notification\kafka\NotificationKafkaConsumer.java:21: error: cannot find symbol
+    private final NotificationService notificationService;
+                  ^
+  symbol:   class NotificationService
+  location: class NotificationKafkaConsumer
+C:\back_0900_jys\evenCoding\spring\onMeet\notification-service\src\main\java\com\onmeet\notification\kafka\NotificationKafkaConsumer.java:18: error: cannot find symbol
+@RequiredArgsConstructor
+^
+  symbol:   class NotificationService
+  location: class NotificationKafkaConsumer
+C:\back_0900_jys\evenCoding\spring\onMeet\notification-service\src\main\java\com\onmeet\notification\NotificationApplication.java:8: error: cannot find symbol
+@EnableFeignClients
+ ^
+  symbol: class EnableFeignClients
+C:\back_0900_jys\evenCoding\spring\onMeet\notification-service\src\main\java\com\onmeet\notification\repository\NotificationRecipientRepository.java:3: error: cannot find symbol
+import com.onmeet.notification.entity.NotificationRecipient;
+                                     ^
+  symbol:   class NotificationRecipient
+  location: package com.onmeet.notification.entity
+C:\back_0900_jys\evenCoding\spring\onMeet\notification-service\src\main\java\com\onmeet\notification\repository\NotificationRecipientRepository.java:15: error: cannot find symbol
+public interface NotificationRecipientRepository extends JpaRepository<NotificationRecipient, Long> {
+                                                                       ^
+  symbol: class NotificationRecipient
+C:\back_0900_jys\evenCoding\spring\onMeet\notification-service\src\main\java\com\onmeet\notification\repository\NotificationRecipientRepository.java:17: error: cannot find symbol
+    List<NotificationRecipient> findAllByUserId(Long userId);
+         ^
+  symbol:   class NotificationRecipient
+  location: interface NotificationRecipientRepository
+C:\back_0900_jys\evenCoding\spring\onMeet\notification-service\src\main\java\com\onmeet\notification\repository\NotificationRecipientRepository.java:20: error: cannot find symbol
+    Page<NotificationRecipient> findAllByUserIdOrderByCreatedAtDesc(Long userId, Pageable pageable);
+         ^
+  symbol:   class NotificationRecipient
+  location: interface NotificationRecipientRepository
+C:\back_0900_jys\evenCoding\spring\onMeet\notification-service\src\main\java\com\onmeet\notification\repository\NotificationRecipientRepository.java:26: error: cannot find symbol
+    Optional<NotificationRecipient> findByIdAndUserId(Long id, Long userId);
+             ^
+  symbol:   class NotificationRecipient
+  location: interface NotificationRecipientRepository
+C:\back_0900_jys\evenCoding\spring\onMeet\notification-service\src\main\java\com\onmeet\notification\repository\NotificationRepository.java:3: error: cannot find symbol
+import com.onmeet.notification.entity.Notification;
+                                     ^
+  symbol:   class Notification
+  location: package com.onmeet.notification.entity
+C:\back_0900_jys\evenCoding\spring\onMeet\notification-service\src\main\java\com\onmeet\notification\repository\NotificationRepository.java:4: error: package com.onmeet.notification.type does not exist
+import com.onmeet.notification.type.NotificationStatus;
+                                   ^
+C:\back_0900_jys\evenCoding\spring\onMeet\notification-service\src\main\java\com\onmeet\notification\repository\NotificationRepository.java:14: error: cannot find symbol
+public interface NotificationRepository extends JpaRepository<Notification, Long> {
+                                                              ^
+  symbol: class Notification
+C:\back_0900_jys\evenCoding\spring\onMeet\notification-service\src\main\java\com\onmeet\notification\repository\NotificationRepository.java:26: error: cannot find symbol
+                        @Param("status") NotificationStatus status,
+                                         ^
+  symbol:   class NotificationStatus
+  location: interface NotificationRepository
+C:\back_0900_jys\evenCoding\spring\onMeet\notification-service\src\main\java\com\onmeet\notification\repository\NotificationRepository.java:25: error: cannot find symbol
+        List<Notification> findScheduledNotifications(
+             ^
+  symbol:   class Notification
+  location: interface NotificationRepository
+15 errors
+
+> Task :notification-service:compileJava FAILED
+
+FAILURE: Build failed with an exception.
+
+* What went wrong:
+Execution failed for task ':notification-service:compileJava'.
+> Compilation failed; see the compiler error output for details.
+
+* Try:
+> Run with --info option to get more log output.
+> Run with --scan to get full insights.
+
+BUILD FAILED in 9s
+3 actionable tasks: 2 executed, 1 up-to-date
+Configuration cache entry reused.

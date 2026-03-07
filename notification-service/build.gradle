@@ -35,6 +35,9 @@ dependencies {
     // Kafka
     implementation 'org.springframework.kafka:spring-kafka'
 
+    // Retry
+    implementation 'org.springframework.retry:spring-retry'
+
     // Firebase Cloud Messaging
     implementation 'com.google.firebase:firebase-admin:9.3.0'
 

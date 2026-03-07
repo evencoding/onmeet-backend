@@ -1,10 +1,7 @@
 package com.onmeet.notification.service;
 
 import com.google.firebase.FirebaseApp;
-import com.google.firebase.messaging.FirebaseMessaging;
 import com.google.firebase.messaging.FirebaseMessagingException;
-import com.google.firebase.messaging.Message;
-import com.google.firebase.messaging.Notification;
 import com.onmeet.notification.dto.FcmTokenRequestDto;
 import com.onmeet.notification.entity.FcmToken;
 import com.onmeet.notification.repository.FcmTokenRepository;
@@ -21,6 +18,7 @@ import java.util.List;
 public class FcmService {
 
     private final FcmTokenRepository fcmTokenRepository;
+    private final FcmPushRetryService fcmPushRetryService;
 
     // ──────────────────────────────────────────────
     // Token Management
@@ -68,6 +66,7 @@ public class FcmService {
 
     /**
      * 해당 유저의 모든 디바이스에 푸시 알림을 전송합니다.
+     * 각 디바이스로의 전송은 FcmPushRetryService를 통해 자동 재시도(최대 3회)됩니다.
      */
     public void sendPush(Long userId, String title, String body, String deeplink) {
         if (FirebaseApp.getApps().isEmpty()) {
@@ -83,18 +82,11 @@ public class FcmService {
 
         for (FcmToken fcmToken : tokens) {
             try {
-                Message message = Message.builder()
-                        .setToken(fcmToken.getToken())
-                        .setNotification(Notification.builder()
-                                .setTitle(title)
-                                .setBody(body)
-                                .build())
-                        .putData("deeplink", deeplink != null ? deeplink : "")
-                        .build();
-
-                String response = FirebaseMessaging.getInstance().send(message);
-                log.info("FCM push sent: userId={}, messageId={}", userId, response);
-
+                String response = fcmPushRetryService.sendToDevice(
+                        fcmToken.getToken(), title, body, deeplink);
+                if (response != null) {
+                    log.info("FCM push sent: userId={}, messageId={}", userId, response);
+                }
             } catch (FirebaseMessagingException e) {
                 log.error("FCM push failed: userId={}, token={}, error={}",
                         userId, fcmToken.getToken(), e.getMessage());
