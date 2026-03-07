@@ -24,6 +24,10 @@ ext {
 }
 
 dependencies {
+    // Common modules
+    implementation project(':common-security')
+    implementation project(':onmeet-common')
+
     // Core
     implementation project(':common-security')
     implementation project(':onmeet-common')
