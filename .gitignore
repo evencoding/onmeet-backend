@@ -6,6 +6,14 @@ build/
 !**/src/test/**/build/
 .env
 
+# Local Logs & Docs
+*.log
+*_logs.txt
+IMPROVEMENTS.md
+
+# HTTP Client
+http-client.env.json
+
 ### STS ###
 .apt_generated
 .classpath
