@@ -41,7 +41,7 @@ services:
       - SERVER_PORT=${AUTH_SERVICE_PORT:-8081}
       - MANAGEMENT_ENDPOINT_HEALTH_PROBES_ENABLED=true
       - SPRING_KAFKA_BOOTSTRAP_SERVERS=${KAFKA_BOOTSTRAP_SERVERS:-kafka:29092}
-      - ONMEET_FILE_INTERNAL_URL=http://file-service:8087
+      - ONMEET_FILE_INTERNAL_URL=http://file-service:8086
     depends_on:
       mysql-auth:
         condition: service_healthy
