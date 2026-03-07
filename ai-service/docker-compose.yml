@@ -51,9 +51,7 @@ services:
 
   # AI Service
   ai-service:
-    build:
-      context: ../ # ✅ 프로젝트 루트(gradlew 있는 곳)
-      dockerfile: ai-service/Dockerfile # ✅ Dockerfile 경로만 ai-service 폴더로
+    image: ${DOCKER_REGISTRY:-onmeet}/ai-service:latest
     container_name: ai-service
     ports:
       - "8082:8082"
