@@ -12,7 +12,9 @@
       "Bash(git stash push:*)",
       "Bash(git add:*)",
       "Bash(find:*)",
-      "Bash(grep:*)"
+      "Bash(grep:*)",
+      "WebSearch",
+      "WebFetch(domain:docs.livekit.io)"
     ]
   }
 }
