@@ -60,7 +60,6 @@ public class RoomInvitationService {
         RoomInvitation invitation = new RoomInvitation(room, inviterUserId, inviteeUserId);
         InvitationResponse response = toResponse(invitationRepository.save(invitation));
 
-        // TODO: [video-service] Kafka 알림 이벤트 추가 - MEETING_INVITATION
         // 초대받은 사용자에게 초대 알림 (기존 REST API 호출 로직은 추후 제거)
         notificationClient.sendNotification(
                 inviteeUserId, "MEETING_INVITATION",
@@ -136,7 +135,6 @@ public class RoomInvitationService {
 
         invitation.accept();
 
-        // TODO: [video-service] Kafka 알림 이벤트 추가 - INVITATION_ACCEPTED
         // 호스트에게 초대 수락 알림
         notificationClient.sendNotification(
                 invitation.getInviterUserId(), "INVITATION_ACCEPTED",
@@ -159,7 +157,6 @@ public class RoomInvitationService {
 
         invitation.decline();
 
-        // TODO: [video-service] Kafka 알림 이벤트 추가 - INVITATION_DECLINED
         // 호스트에게 초대 거절 알림
         notificationClient.sendNotification(
                 invitation.getInviterUserId(), "INVITATION_DECLINED",
@@ -188,7 +185,6 @@ public class RoomInvitationService {
 
         invitation.cancel();
 
-        // TODO: [video-service] Kafka 알림 이벤트 추가 - INVITATION_CANCELLED // title
         // 포함)
         // 초대 취소된 사용자에게 취소 알림
         notificationClient.sendNotification(
