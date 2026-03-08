@@ -128,7 +128,9 @@ class UserServiceImpl(
 
         validateManagerPermission(manager, user)
         user.deactivate()
-        return userRepository.save(user).toResponseDto()
+        val deactivatedUser = userRepository.save(user)
+        //TODO [notification-service][비동기][deactivatedUser] 계정 비활성화 알림 전송
+        return deactivatedUser.toResponseDto()
     }
 
     @Transactional
@@ -139,7 +141,9 @@ class UserServiceImpl(
 
         validateManagerPermission(manager, user)
         user.activate()
-        return userRepository.save(user).toResponseDto()
+        val activatedUser = userRepository.save(user)
+        //TODO [notification-service][비동기][activatedUser] 계정 활성화 알림 전송
+        return activatedUser.toResponseDto()
     }
 
     @Cacheable(value = ["userInfo"], key = "#user.id")
