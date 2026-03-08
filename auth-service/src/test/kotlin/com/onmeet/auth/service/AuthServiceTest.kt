@@ -652,18 +652,18 @@ class AuthServiceTest {
             id = 1L, email = "test@example.com", passwordHash = "old_hashed", name = "User Name",
             roles = mutableSetOf(User.Role.USER), company = company, status = User.UserStatus.ACTIVE
         )
-        var capturedPassword = ""
+        val passwordSlot = io.mockk.slot<String>()
 
         every { userRepository.findByEmail("test@example.com") } returns java.util.Optional.of(user)
         every { passwordEncoder.encode(any()) } returns "hashed_temp_password"
         every { userRepository.save(any()) } returns user
-        every { emailService.sendTemporaryPassword(any(), capture(io.mockk.slot<String> { capturedPassword = it }), any()) } returns Unit
+        every { emailService.sendTemporaryPassword(any(), capture(passwordSlot), any()) } returns Unit
 
         // when
         authService.findPassword("test@example.com")
 
         // then
-        assertEquals(8, capturedPassword.length)
-        assertTrue(capturedPassword.matches(Regex("^[A-Za-z0-9!@#\$%^&*]+$")))
+        assertEquals(8, passwordSlot.captured.length)
+        assertTrue(passwordSlot.captured.matches(Regex("^[A-Za-z0-9!@#\$%^&*]+$")))
     }
 }
