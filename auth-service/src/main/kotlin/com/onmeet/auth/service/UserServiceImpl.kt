@@ -8,6 +8,8 @@ import com.onmeet.auth.repository.jpa.UserRepository
 import com.onmeet.common.exception.CrossCompanyAccessException
 import com.onmeet.common.exception.EntityNotFoundException
 import com.onmeet.common.exception.InsufficientPermissionException
+import org.springframework.cache.annotation.CacheEvict
+import org.springframework.cache.annotation.Cacheable
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import org.springframework.data.domain.Pageable
@@ -22,6 +24,7 @@ class UserServiceImpl(
 ) : UserService {
 
     @Transactional
+    @CacheEvict(value = ["userInfo"], key = "#requester.id")
     override fun deleteMyProfileImage(requester: User): UserResponseDto {
         fileClient.deleteMyProfileImage()
         requester.profileImageId = null
@@ -29,6 +32,7 @@ class UserServiceImpl(
     }
 
     @Transactional
+    @CacheEvict(value = ["userInfo"], key = "#userId")
     override fun updateUserProfile(userId: Long, requester: User, request: UserProfileUpdateRequest, profileImage: MultipartFile?): UserResponseDto {
         val user = userRepository.findById(userId)
             .orElseThrow { UserNotFoundException("User not found: $userId") }
@@ -117,6 +121,7 @@ class UserServiceImpl(
     }
 
     @Transactional
+    @CacheEvict(value = ["userInfo"], key = "#userId")
     override fun deactivateUser(userId: Long, manager: User): UserResponseDto {
         val user = userRepository.findById(userId)
             .orElseThrow { UserNotFoundException("User not found: $userId") }
@@ -127,6 +132,7 @@ class UserServiceImpl(
     }
 
     @Transactional
+    @CacheEvict(value = ["userInfo"], key = "#userId")
     override fun activateUser(userId: Long, manager: User): UserResponseDto {
         val user = userRepository.findById(userId)
             .orElseThrow { UserNotFoundException("User not found: $userId") }
@@ -136,6 +142,7 @@ class UserServiceImpl(
         return userRepository.save(user).toResponseDto()
     }
 
+    @Cacheable(value = ["userInfo"], key = "#user.id")
     override fun getMyInfo(user: User): UserResponseDto {
         return user.toResponseDto()
     }
