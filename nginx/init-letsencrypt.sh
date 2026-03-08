@@ -5,7 +5,7 @@ if ! docker compose version > /dev/null 2>&1; then
   exit 1
 fi
 
-domains=(api.onmeet.cloud)
+domains=(api.onmeet.cloud rtc.onmeet.cloud)
 rsa_key_size=4096
 data_path="./nginx/certbot"
 email="evenhancoding@gmail.com"
