@@ -7,6 +7,8 @@ services:
       MYSQL_DATABASE: auth_db
     ports:
       - "127.0.0.1:3307:3306"
+    volumes:
+      - mysql-auth-data:/var/lib/mysql
     healthcheck:
       test: [ "CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${DB_ROOT_PASSWORD}" ]
       interval: 10s
@@ -67,6 +69,8 @@ services:
     container_name: redis-auth
     ports:
       - "127.0.0.1:6379:6379"
+    volumes:
+      - redis-auth-data:/data
     networks:
       - onmeet-network
     healthcheck:
@@ -86,3 +90,7 @@ services:
 networks:
   onmeet-network:
     name: onmeet-network
+
+volumes:
+  mysql-auth-data:
+  redis-auth-data:

@@ -12,7 +12,7 @@ spring:
     password: ${SPRING_DATASOURCE_PASSWORD:root}
     driver-class-name: com.mysql.cj.jdbc.Driver
     hikari:
-      max-lifetime: 600000
+      max-lifetime: 240000
       keepalive-time: 30000
       connection-timeout: 30000
       initialization-fail-timeout: -1
@@ -24,6 +24,20 @@ spring:
         "[format_sql]": true
         "[show_sql]": true
         dialect: org.hibernate.dialect.MySQLDialect
+
+  kafka:
+    bootstrap-servers: ${SPRING_KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    consumer:
+      group-id: notification-service
+      auto-offset-reset: earliest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.ErrorHandlingDeserializer
+      properties:
+        spring.deserializer.value.delegate.class: org.springframework.kafka.support.serializer.JsonDeserializer
+        spring.json.trusted.packages: "com.onmeet.notification.dto,com.onmeet.*"
+        spring.json.value.default.type: com.onmeet.notification.dto.NotificationRequestDto
+    listener:
+      missing-topics-fatal: false
 
 gateway:
   shared-secret: ${GATEWAY_SHARED_SECRET:my-super-secret-gateway-key-1234!}

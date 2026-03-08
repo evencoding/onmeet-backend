@@ -1,7 +1,10 @@
 package com.onmeet.notification.dto;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.onmeet.notification.type.NotificationType;
 import com.onmeet.notification.type.ResourceType;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
@@ -10,7 +13,10 @@ import java.time.LocalDateTime;
 
 @Getter
 @Setter
+@Builder
 @NoArgsConstructor
+@AllArgsConstructor
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class NotificationRequestDto {
     private Long userId;
     private NotificationType type;

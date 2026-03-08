@@ -188,7 +188,8 @@ public class RoomInvitationService {
 
         invitation.cancel();
 
-        // TODO: [video-service] Kafka 알림 이벤트 추가 - INVITATION_CANCELLED // title 포함)
+        // TODO: [video-service] Kafka 알림 이벤트 추가 - INVITATION_CANCELLED // title
+        // 포함)
         // 초대 취소된 사용자에게 취소 알림
         notificationClient.sendNotification(
                 inviteeUserId, "INVITATION_CANCELLED",

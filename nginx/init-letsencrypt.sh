@@ -5,7 +5,7 @@ if ! docker compose version > /dev/null 2>&1; then
   exit 1
 fi
 
-domains=(api.onmeet.cloud)
+domains=(api.onmeet.cloud rtc.onmeet.cloud)
 rsa_key_size=4096
 data_path="./nginx/certbot"
 email="evenhancoding@gmail.com"
@@ -15,6 +15,9 @@ staging=0 # Set to 1 if you're testing your setup to avoid hitting request limit
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
 cd "$PROJECT_ROOT"
+
+echo "### Ensuring docker network exists ..."
+docker network create onmeet-network 2>/dev/null || true
 
 if [ -d "$data_path" ]; then
   read -p "Existing data found for $domains. Continue and replace existing certificate? (y/N) " decision
@@ -32,27 +35,34 @@ if [ ! -e "$data_path/conf/options-ssl-nginx.conf" ] || [ ! -e "$data_path/conf/
 fi
 
 echo "### Creating dummy certificate for $domains ..."
-path="/etc/letsencrypt/live/$domains"
-mkdir -p "$data_path/conf/live/$domains"
-DOCKER_API_VERSION=1.41 docker compose -f nginx/docker-compose.yml run --rm --entrypoint "\
+domain_path_name="${domains[0]}"
+path="/etc/letsencrypt/live/$domain_path_name"
+# 컨테이너 내에서 certbot이 파일을 생성할 경로이므로, 호스트에서 직접 mkdir를 실행하면 
+# 권한 문제(sudo가 아닐 경우)가 발생할 수 있습니다. 그래서 호스트 디렉토리 생성 명령어를 제거하거나 
+# 컨테이너 실행 명령에 폴더 생성 로직을 추가합니다.
+echo "### Cleaning up old certbot directories to prevent 0001 folders ..."
+DOCKER_API_VERSION=1.41 docker compose -f docker-compose.yml run --rm --entrypoint "\
+  sh -c 'rm -rf /etc/letsencrypt/live/* /etc/letsencrypt/archive/* /etc/letsencrypt/renewal/* && \
+  mkdir -p /etc/letsencrypt/live/$domain_path_name && \
   openssl req -x509 -nodes -newkey rsa:$rsa_key_size -days 1\
-    -keyout '$path/privkey.pem' \
-    -out '$path/fullchain.pem' \
-    -subj '/CN=localhost'" certbot
+    -keyout \"/etc/letsencrypt/live/$domain_path_name/privkey.pem\" \
+    -out \"/etc/letsencrypt/live/$domain_path_name/fullchain.pem\" \
+    -subj \"/CN=localhost\"'" certbot
 echo
 
 
 echo "### Starting nginx ..."
 # 기존 컨테이너가 남아있을 경우 이름 충돌을 방지하기 위해 먼저 제거
 docker rm -f onmeet-nginx 2>/dev/null || true
-DOCKER_API_VERSION=1.41 docker compose -f nginx/docker-compose.yml up --force-recreate -d nginx
+DOCKER_API_VERSION=1.41 docker compose -f docker-compose.yml up --force-recreate -d nginx
 echo
 
 echo "### Deleting dummy certificate for $domains ..."
-DOCKER_API_VERSION=1.41 docker compose -f nginx/docker-compose.yml run --rm --entrypoint "\
-  rm -Rf /etc/letsencrypt/live/$domains && \
-  rm -Rf /etc/letsencrypt/archive/$domains && \
-  rm -Rf /etc/letsencrypt/renewal/$domains.conf" certbot
+domain_path_name="${domains[0]}"
+DOCKER_API_VERSION=1.41 docker compose -f docker-compose.yml run --rm --entrypoint "\
+  rm -Rf /etc/letsencrypt/live/$domain_path_name && \
+  rm -Rf /etc/letsencrypt/archive/$domain_path_name && \
+  rm -Rf /etc/letsencrypt/renewal/$domain_path_name.conf" certbot
 echo
 
 
@@ -71,7 +81,7 @@ esac
 # Enable staging mode if needed
 if [ $staging != "0" ]; then staging_arg="--staging"; fi
 
-DOCKER_API_VERSION=1.41 docker compose -f nginx/docker-compose.yml run --rm --entrypoint "\
+DOCKER_API_VERSION=1.41 docker compose -f docker-compose.yml run --rm --entrypoint "\
   certbot certonly --webroot -w /var/www/certbot \
     $staging_arg \
     $email_arg \
@@ -82,4 +92,4 @@ DOCKER_API_VERSION=1.41 docker compose -f nginx/docker-compose.yml run --rm --en
 echo
 
 echo "### Reloading nginx ..."
-DOCKER_API_VERSION=1.41 docker compose -f nginx/docker-compose.yml exec nginx nginx -s reload
+DOCKER_API_VERSION=1.41 docker compose -f docker-compose.yml exec nginx nginx -s reload

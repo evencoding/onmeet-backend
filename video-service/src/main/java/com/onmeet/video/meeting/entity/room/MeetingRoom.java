@@ -1,5 +1,14 @@
 package com.onmeet.video.meeting.entity.room;
 
+import java.security.SecureRandom;
+import java.time.Duration;
+import java.time.Instant;
+import java.util.UUID;
+
+import org.springframework.data.annotation.CreatedDate;
+import org.springframework.data.annotation.LastModifiedDate;
+import org.springframework.data.jpa.domain.support.AuditingEntityListener;
+
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EntityListeners;
@@ -9,16 +18,9 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
-import java.security.SecureRandom;
-import java.time.Duration;
-import java.time.Instant;
-import java.util.UUID;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-import org.springframework.data.annotation.CreatedDate;
-import org.springframework.data.annotation.LastModifiedDate;
-import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
@@ -67,7 +69,7 @@ public class MeetingRoom {
 
     private Long teamId;
 
-    @Column(nullable = false)
+    @Column(name = "is_locked", nullable = false)
     private boolean locked;
 
     @Column(length = 255)
@@ -90,8 +92,8 @@ public class MeetingRoom {
     private Instant updatedAt;
 
     public MeetingRoom(String title, String description, Long hostUserId,
-                       RoomType type, int maxParticipants, String password, Instant scheduledAt,
-                       RoomAccessScope accessScope, Long teamId) {
+            RoomType type, int maxParticipants, String password, Instant scheduledAt,
+            RoomAccessScope accessScope, Long teamId) {
         this.roomCode = generateRoomCode();
         this.livekitRoomName = "onmeet-" + UUID.randomUUID();
         this.title = title;

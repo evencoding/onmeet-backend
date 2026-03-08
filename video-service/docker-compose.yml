@@ -7,6 +7,8 @@ services:
       MYSQL_DATABASE: video_db
     ports:
       - "127.0.0.1:3309:3306"
+    volumes:
+      - mysql-video-data:/var/lib/mysql
     healthcheck:
       test: [ "CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${DB_ROOT_PASSWORD}" ]
       interval: 10s
@@ -84,3 +86,7 @@ services:
 
 networks:
   onmeet-network:
+
+
+volumes:
+  mysql-video-data:
