@@ -6,6 +6,8 @@ import com.onmeet.video.common.util.ClockProvider;
 import com.onmeet.video.infra.auth.AuthServiceClient;
 import com.onmeet.video.infra.livekit.LiveKitClient;
 import com.onmeet.video.infra.livekit.LiveKitClient.TokenGrants;
+import com.onmeet.video.infra.livekit.LiveKitProperties;
+import com.onmeet.video.meeting.service.waiting.WaitingRoomSseService;
 import com.onmeet.video.meeting.dto.participant.ParticipantRoleUpdateRequest;
 import com.onmeet.video.meeting.dto.participant.RoomParticipantResponse;
 import com.onmeet.video.meeting.entity.room.MeetingRoom;
@@ -29,22 +31,28 @@ public class RoomParticipantService {
     private final RoomParticipantRepository participantRepository;
     private final MeetingRoomRepository roomRepository;
     private final LiveKitClient liveKitClient;
+    private final LiveKitProperties liveKitProperties;
     private final MeetingEventPublisher eventPublisher;
     private final ClockProvider clockProvider;
     private final AuthServiceClient authServiceClient;
+    private final WaitingRoomSseService waitingRoomSseService;
 
     public RoomParticipantService(RoomParticipantRepository participantRepository,
             MeetingRoomRepository roomRepository,
             LiveKitClient liveKitClient,
+            LiveKitProperties liveKitProperties,
             MeetingEventPublisher eventPublisher,
             ClockProvider clockProvider,
-            AuthServiceClient authServiceClient) {
+            AuthServiceClient authServiceClient,
+            WaitingRoomSseService waitingRoomSseService) {
         this.participantRepository = participantRepository;
         this.roomRepository = roomRepository;
         this.liveKitClient = liveKitClient;
+        this.liveKitProperties = liveKitProperties;
         this.eventPublisher = eventPublisher;
         this.clockProvider = clockProvider;
         this.authServiceClient = authServiceClient;
+        this.waitingRoomSseService = waitingRoomSseService;
     }
 
     @Transactional(readOnly = true)
@@ -217,7 +225,9 @@ public class RoomParticipantService {
                 participantName,
                 TokenGrants.forParticipant());
 
-        // TODO: [video-service] Kafka 알림 이벤트 추가 - WAITING_ROOM_ADMITTED
+        waitingRoomSseService.sendAdmittedEvent(roomId, targetUserId, token,
+                liveKitProperties.getUrl(), room.getLivekitRoomName());
+
         eventPublisher.publishParticipantJoined(
                 new ParticipantEvent("PARTICIPANT_JOINED", roomId, targetUserId, now));
     }
@@ -233,7 +243,8 @@ public class RoomParticipantService {
 
         Instant now = clockProvider.now();
         participant.kick(now);
-        // TODO: [video-service] Kafka 알림 이벤트 추가 - WAITING_ROOM_REJECTED
+
+        waitingRoomSseService.sendRejectedEvent(roomId, targetUserId);
     }
 
     @Transactional
@@ -276,11 +287,15 @@ public class RoomParticipantService {
 
             String participantName = userNameMap.getOrDefault(p.getUserId(), "user-" + p.getUserId());
 
-            liveKitClient.generateToken(
+            String token = liveKitClient.generateToken(
                     room.getLivekitRoomName(),
                     String.valueOf(p.getUserId()),
                     participantName,
                     TokenGrants.forParticipant());
+
+            waitingRoomSseService.sendAdmittedEvent(roomId, p.getUserId(), token,
+                    liveKitProperties.getUrl(), room.getLivekitRoomName());
+
             eventPublisher.publishParticipantJoined(
                     new ParticipantEvent("PARTICIPANT_JOINED", roomId, p.getUserId(), now));
             admitted++;
