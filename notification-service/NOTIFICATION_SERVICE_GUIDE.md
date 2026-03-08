@@ -133,15 +133,9 @@
 ├─────────────────────┤       └──────────────────────────┘
 │ id (PK)             │
 │ user_id (UNIQUE)    │
-│ is_push_enabled     │
-│ is_meeting_invite.. │
-│ is_meeting_start..  │
-│ is_meeting_remind.. │
+│ is_meeting_notif..  │
 │ is_minutes_compl..  │
-│ is_system_notice..  │
-│ is_do_not_disturb.. │
-│ dnd_start_time      │
-│ dnd_end_time        │
+│ is_team_notif..     │
 └─────────────────────┘
 
 ┌─────────────────────┐
@@ -159,7 +153,7 @@
 | Enum | 값 |
 |------|-----|
 | `NotificationStatus` | `PENDING`, `SENT`, `FAILED` |
-| `NotificationType` | `MEETING_INVITATION`, `INVITATION_ACCEPTED`, `INVITATION_DECLINED`, `INVITATION_CANCELLED`, `PARTICIPANT_KICKED`, `WAITING_ROOM_ADMITTED`, `WAITING_ROOM_REJECTED`, `PARTICIPANT_JOINED_NOTIFY`, `MEETING_STARTED`, `MEETING_CREATED`, `MEETING_TODAY`, `SCHEDULE_CREATED`, `SCHEDULE_CHANGED`, `SCHEDULE_CANCELLED`, `MEETING_REMINDER`, `TEAM_MEMBER_ADDED`, `SYSTEM`, `EVENT` |
+| `NotificationType` | `MEETING_INVITATION`, `PARTICIPANT_KICKED`, `WAITING_ROOM_ADMITTED`, `WAITING_ROOM_REJECTED`, `PARTICIPANT_JOINED_NOTIFY`, `MEETING_STARTED`, `MEETING_CREATED`, `MEETING_TODAY`, `SCHEDULE_CREATED`, `SCHEDULE_CHANGED`, `SCHEDULE_CANCELLED`, `MEETING_REMINDER`, `TEAM_MEMBER_ADDED`, `SYSTEM`, `EVENT` |
 | `ResourceType` | 리소스 종류 (회의, 팀 등) |
 
 ---
@@ -172,9 +166,18 @@
 |--------|----------|------|
 | `GET` | `/notification/v1/sse/subscribe` | SSE 실시간 알림 구독 |
 
-#### 💡 SSE 인증 및 연결 방식
-- **일반 REST API**와 달리 브라우저의 `EventSource`는 기본적으로 추가 HTTP Header(Authorization 등)를 지원하지 않기 때문에, API Gateway를 거치는 구조에서는 보통 클라이언트가 **Query Parameter**로 토큰을 전달하거나, API Gateway 자체 설정에 따라 쿠키 세션을 사용하도록 구성합니다.
-- 프론트엔드 연결 예시:
+#### 💡 API 인증 및 SSE 연결 방식 (Gateway X-User-Id 주입)
+OnMeet 프로젝트는 `X-User-Id`를 클라이언트가 직접 헤더에 넣지 않으며, 아래와 같은 구조로 **API Gateway**가 모든 인증을 위임받아 처리합니다.
+
+1. **프론트엔드 요청**: 클라이언트는 로그인 시 발급받은 **JWT (Access Token)만**을 요청에 포함하여 전송합니다.
+   - 일반 REST API: `Authorization: Bearer <토큰>`
+   - SSE 구독 시: 브라우저 기본 API 제약으로 인해 Query Parameter로 전달 (`?token=<토큰>`)
+2. **Gateway 인증 처리**: 모든 요청은 API Gateway의 글로벌 필터(AuthorizationHeaderFilter 등)를 거치며 파싱 및 유효성 검증을 받습니다.
+3. **사용자 식별자 추출 및 주입**: 토큰 검증 성공 시, Payload에 있는 사용자 고유 식별자를 추출합니다.
+4. **마이크로서비스로 라우팅 (헤더 추가)**: Gateway는 원본 요청을 각각의 서비스(`notification-service`, `video-service` 등)로 넘겨줄 때, 식별자를 **`X-User-Id` HTTP Header에 강제 주입(삽입)**하여 전달합니다.
+5. **마이크로서비스 컨트롤러**: 각 서비스는 서명 검증 로직 없이 `@RequestHeader("X-User-Id")` 애노테이션만으로 안전하게 요청자의 ID를 획득할 수 있습니다.
+
+- **프론트엔드 SSE 연결 예시**:
   ```javascript
   const token = 'Bearer ...'; 
   const eventSource = new EventSource(`/notification/v1/sse/subscribe?token=${token}`);
@@ -276,7 +279,6 @@
 | 타입 | 제목 | 본문 템플릿 |
 |------|------|-------------|
 | `MEETING_INVITATION` | 회의 초대 | `{senderName}님이 {title} 회의에 초대했습니다.` |
-| `INVITATION_ACCEPTED` | 초대 수락 | `{senderName}님이 회의 초대를 수락했습니다.` |
 | `PARTICIPANT_JOINED_NOTIFY` | 참가자 입장 | `{senderName}님이 {title} 회의에 참가했습니다.` |
 | `MEETING_STARTED` | 회의 시작 | `{title} 회의가 시작되었습니다.` |
 | `SCHEDULE_CREATED` | 일정 생성 | `{senderName}님이 {title} 예약 회의를 생성했습니다.` |

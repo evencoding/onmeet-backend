@@ -6,7 +6,7 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
-import java.time.LocalTime;
+
 
 @Entity
 @Getter
@@ -21,66 +21,30 @@ public class NotificationSetting {
     @Column(name = "user_id", nullable = false, unique = true)
     private Long userId;
 
-    // Push Notification Toggle
-    @Column(name = "is_push_enabled")
-    private boolean isPushEnabled;
+    // 회의 알림 (초대 및 변경사항)
+    @Column(name = "is_meeting_notification", nullable = false)
+    private boolean isMeetingNotification = true;
 
-    // Meeting Notifications
-    @Column(name = "is_meeting_invite_notification")
-    private boolean isMeetingInviteNotification;
+    // 회의록 완성 알림
+    @Column(name = "is_minutes_completed_notification", nullable = false)
+    private boolean isMinutesCompletedNotification = true;
 
-    @Column(name = "is_meeting_start_notification")
-    private boolean isMeetingStartNotification;
-
-    @Column(name = "is_meeting_remind_notification")
-    private boolean isMeetingRemindNotification;
-
-    // Misc Notifications
-    @Column(name = "is_minutes_completed_notification")
-    private boolean isMinutesCompletedNotification;
-
-    @Column(name = "is_system_notice_notification")
-    private boolean isSystemNoticeNotification;
-
-    // Do Not Disturb
-    @Column(name = "is_do_not_disturb_enabled")
-    private boolean isDoNotDisturbEnabled;
-
-    @Column(name = "do_not_disturb_start_time")
-    private LocalTime doNotDisturbStartTime;
-
-    @Column(name = "do_not_disturb_end_time")
-    private LocalTime doNotDisturbEndTime;
+    // 팀 알림 (멤버 추가, 등등)
+    @Column(name = "is_team_notification", nullable = false)
+    private boolean isTeamNotification = true;
 
     @Builder
-    public NotificationSetting(Long userId, boolean isPushEnabled, boolean isMeetingInviteNotification,
-            boolean isMeetingStartNotification, boolean isMeetingRemindNotification,
-            boolean isMinutesCompletedNotification, boolean isSystemNoticeNotification,
-            boolean isDoNotDisturbEnabled, LocalTime doNotDisturbStartTime, LocalTime doNotDisturbEndTime) {
+    public NotificationSetting(Long userId, boolean isMeetingNotification,
+            boolean isMinutesCompletedNotification, boolean isTeamNotification) {
         this.userId = userId;
-        this.isPushEnabled = isPushEnabled;
-        this.isMeetingInviteNotification = isMeetingInviteNotification;
-        this.isMeetingStartNotification = isMeetingStartNotification;
-        this.isMeetingRemindNotification = isMeetingRemindNotification;
+        this.isMeetingNotification = isMeetingNotification;
         this.isMinutesCompletedNotification = isMinutesCompletedNotification;
-        this.isSystemNoticeNotification = isSystemNoticeNotification;
-        this.isDoNotDisturbEnabled = isDoNotDisturbEnabled;
-        this.doNotDisturbStartTime = doNotDisturbStartTime;
-        this.doNotDisturbEndTime = doNotDisturbEndTime;
+        this.isTeamNotification = isTeamNotification;
     }
 
-    public void update(boolean isPushEnabled, boolean isMeetingInviteNotification,
-            boolean isMeetingStartNotification, boolean isMeetingRemindNotification,
-            boolean isMinutesCompletedNotification, boolean isSystemNoticeNotification,
-            boolean isDoNotDisturbEnabled, LocalTime doNotDisturbStartTime, LocalTime doNotDisturbEndTime) {
-        this.isPushEnabled = isPushEnabled;
-        this.isMeetingInviteNotification = isMeetingInviteNotification;
-        this.isMeetingStartNotification = isMeetingStartNotification;
-        this.isMeetingRemindNotification = isMeetingRemindNotification;
+    public void update(boolean isMeetingNotification, boolean isMinutesCompletedNotification, boolean isTeamNotification) {
+        this.isMeetingNotification = isMeetingNotification;
         this.isMinutesCompletedNotification = isMinutesCompletedNotification;
-        this.isSystemNoticeNotification = isSystemNoticeNotification;
-        this.isDoNotDisturbEnabled = isDoNotDisturbEnabled;
-        this.doNotDisturbStartTime = doNotDisturbStartTime;
-        this.doNotDisturbEndTime = doNotDisturbEndTime;
+        this.isTeamNotification = isTeamNotification;
     }
 }
