@@ -11,7 +11,6 @@ B2B video conferencing platform with AI summarization, built as microservices ar
 | auth-service | 8081 | Kotlin | MySQL + Redis | Auth, users, teams, companies |
 | ai-service | 8082 | Java | MySQL | AI summarization (STT/LLM) |
 | video-service | 8083 | Java | MySQL | Video conferencing, WebRTC |
-| chat-service | 8084 | Java | MySQL | Real-time chat (WebSocket) |
 | notification-service | 8085 | Java | MySQL | Notifications (SSE) |
 | file-service | 8086 | Go | PostgreSQL | File upload/download, S3, profile images |
 | email-service | 8087 | Java | - | Email (AWS SES) |

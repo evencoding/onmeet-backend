@@ -631,7 +631,7 @@ public class MeetingRoomService {
             throw new BizException(ErrorCode.INVALID_REQUEST, "Cannot send reminder for an ended room");
         }
 
-        // TODO: [Notification Service] 초대된 참가자들에게 예약 회의 리마인더 알림
+        // TODO: [video-service] 초대된 참가자들에게 예약 회의 리마인더 알림 (Kafka 이벤트 발행)
         eventPublisher.publishMeetingStarted(
                 new MeetingEvent("MEETING_REMINDER", roomId, userId, 0, null, null));
     }

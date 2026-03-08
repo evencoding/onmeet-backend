@@ -1,20 +1,19 @@
 package com.onmeet.ai.dto.event;
 
 import lombok.*;
+import java.time.Instant;
 
 @Getter @NoArgsConstructor @AllArgsConstructor @Builder
 public class AudioChunkReadyEvent {
-    private String meetingId;
-    private String participantId;
-    private String trackId;
+    private Long roomId;
+    private String participantIdentity;
 
-    private int chunkSeq;
-    private long chunkStartMs;
-    private long chunkEndMs;
+    private int segmentIndex;
 
-    // 오디오 위치 (지금은 S3 key로 가정)
-    private String audioFileKey; // 예: audio-chunks/{meetingId}/{participantId}/{chunkSeq}.webm
-    private String format;       // webm/ogg/wav...
+    private String s3Path;
 
-    private long occurredAtEpochMs;
+    private Instant startTime;
+    private Instant endTime;
+
+    private Instant timestamp;
 }

@@ -8,6 +8,8 @@ services:
       POSTGRES_DB: file_db
     ports:
       - "127.0.0.1:5433:5432"
+    volumes:
+      - postgres-file-data:/var/lib/postgresql/data
     healthcheck:
       test: [ "CMD-SHELL", "pg_isready -U ${DB_USERNAME:-postgres} -d file_db" ]
       interval: 10s
@@ -96,10 +98,10 @@ services:
           cpus: '0.10'
           memory: 256M
 
-volumes:
-  minio-data:
-    driver: local
-
 networks:
   onmeet-network:
     name: onmeet-network
+
+volumes:
+  postgres-file-data:
+  minio-data:

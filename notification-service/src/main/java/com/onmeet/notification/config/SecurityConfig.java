@@ -11,6 +11,12 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 
 import com.onmeet.common.security.GatewayPreAuthFilter;
 
+/**
+ * Notification 서비스 보안 설정
+ * - Swagger 경로(permitAll)는 common-security의 CommonSwaggerSecurityConfig에서 처리
+ * - context-path: /notification
+ * - SSE 구독 엔드포인트(/notification/v1/sse/subscribe)는 인증 헤더(X-User-Id)로 처리되므로 인증 필요
+ */
 @Configuration
 @EnableWebSecurity
 public class SecurityConfig {
@@ -28,8 +34,9 @@ public class SecurityConfig {
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .addFilterBefore(gatewayPreAuthFilter, UsernamePasswordAuthenticationFilter.class)
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/notification/actuator/**").permitAll()
-                        .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
+                        // Actuator 엔드포인트 허용 (context-path: /notification)
+                        .requestMatchers("/actuator/**").permitAll()
+                        // 나머지 모든 요청은 인증 필요
                         .anyRequest().authenticated());
 
         return http.build();

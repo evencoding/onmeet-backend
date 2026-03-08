@@ -1,6 +1,7 @@
 package com.onmeet.notification.dto;
 
 import com.onmeet.notification.entity.Notification;
+import com.onmeet.notification.entity.NotificationRecipient;
 import com.onmeet.notification.type.NotificationType;
 import com.onmeet.notification.type.ResourceType;
 import lombok.Builder;
@@ -22,10 +23,12 @@ public class NotificationResponseDto {
     private String dedupeKey;
     private String resourceId;
     private Long actorUserId;
+    private boolean isRead;
 
-    public static NotificationResponseDto from(Notification notification) {
+    public static NotificationResponseDto from(NotificationRecipient recipient) {
+        Notification notification = recipient.getNotification();
         return NotificationResponseDto.builder()
-                .id(notification.getId())
+                .id(recipient.getId()) // recipient의 ID (우리가 단건 제어시 사용하는 ID)
                 .type(notification.getType())
                 .title(notification.getTitle())
                 .body(notification.getBody())
@@ -36,6 +39,7 @@ public class NotificationResponseDto {
                 .dedupeKey(notification.getDedupeKey())
                 .resourceId(notification.getResourceId())
                 .actorUserId(notification.getActorUserId())
+                .isRead(recipient.getReadAt() != null)
                 .build();
     }
 }

@@ -43,13 +43,8 @@ public class TranscriptBuilderService {
         store.appendVoice(event);
     }
 
-    /**
-     * ✅ endedAtEpochMs를 "정말 쓸 거면" TranscriptDocument에 메타로 넣는 게 맞고,
-     * 지금처럼 쓰지 않을 거면 파라미터 제거가 맞음.
-     * 여기서는 일단 파라미터는 유지하되, doc 메타에 포함시키는 방향으로 정리해 둠.
-     */
-    public void finalizeMeeting(String meetingId, long endedAtEpochMs) {
-        List<RedisMeetingEventStore.StoredEvent> items = store.readAll(meetingId);
+    public void finalizeMeeting(Long roomId, Instant endedAt) {
+        List<RedisMeetingEventStore.StoredEvent> items = store.readAll(roomId);
 
         String transcriptId = UUID.randomUUID().toString();
         int version = 1;
@@ -61,8 +56,8 @@ public class TranscriptBuilderService {
                 events.add(TranscriptDocument.Event.builder()
                         .id(e.getMessageId())
                         .type("CHAT")
-                        .actorId(e.getSenderId())
-                        .atMs(e.getAtMs())
+                        .actorId(String.valueOf(e.getSenderId()))
+                        .timestamp(e.getTimestamp())
                         .seq(e.getSeq())
                         .text(e.getContent())
                         .build());
@@ -71,47 +66,41 @@ public class TranscriptBuilderService {
                 events.add(TranscriptDocument.Event.builder()
                         .id(e.getSegmentId())
                         .type("VOICE")
-                        .actorId(e.getParticipantId())
-                        .atMs(e.getStartMs())
+                        .actorId(e.getParticipantIdentity())
+                        // voice event does not have absolute audio timestamp yet, using occurred timestamp or startMs mapping
+                        .timestamp(e.getTimestamp() != null ? e.getTimestamp() : Instant.ofEpochMilli(e.getSegmentStartMs()))
                         .seq(e.getSeq())
                         .text(e.getText())
-                        .startMs(e.getStartMs())
-                        .endMs(e.getEndMs())
+                        .segmentStartMs(e.getSegmentStartMs())
+                        .segmentEndMs(e.getSegmentEndMs())
                         .build());
             }
         }
 
-        // ✅ 안전 정렬: atMs → seq
         events = events.stream()
-                .sorted(Comparator.comparingLong(TranscriptDocument.Event::getAtMs)
+                .sorted(Comparator.comparing((TranscriptDocument.Event e) -> e.getTimestamp() != null ? e.getTimestamp().toEpochMilli() : 0L)
                         .thenComparingLong(TranscriptDocument.Event::getSeq))
                 .collect(Collectors.toList());
 
-        // ✅ TranscriptDocument에 endedAtEpochMs를 직접 넣을 필드가 없다면,
-        // (1) transcript document에 meta 필드 추가하거나
-        // (2) 일단 finalized 이벤트에만 넣고 doc에는 안 넣어도 됨.
         TranscriptDocument doc = TranscriptDocument.builder()
-                .meetingId(meetingId)
+                .roomId(roomId)
                 .transcriptId(transcriptId)
                 .version(version)
                 .events(events)
                 .build();
 
-        // ✅ key 하드코딩 제거
-        String s3Key = StorageKeyFactory.transcriptKey(meetingId, transcriptId);
+        String s3Key = StorageKeyFactory.transcriptKey(roomId, transcriptId);
         storageClient.writeText(s3Key, write(doc), "application/json");
 
         producer.publish(TranscriptFinalizedEvent.builder()
-                .meetingId(meetingId)
+                .roomId(roomId)
                 .transcriptId(transcriptId)
                 .transcriptS3Key(s3Key)
                 .version(version)
-                .finalizedAtEpochMs(Instant.now().toEpochMilli())
+                .finalizedAt(Instant.now())
                 .build());
 
-        // ✅ 정리 (메서드명은 네 store 구현에 맞게 통일!)
-        // store.clearMeeting(meetingId);  // 현재 네 코드
-        store.clearMeeting(meetingId);
+        store.clearMeeting(roomId);
     }
 
     private <T> T read(String json, Class<T> type) {

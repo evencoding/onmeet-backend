@@ -25,7 +25,7 @@ public class MinutesEventsProducer {
 
     public void publish(MinutesGeneratedEvent event) {
         try {
-            kafkaTemplate.send(topic, event.getMeetingId(), om.writeValueAsString(event));
+            kafkaTemplate.send(topic, String.valueOf(event.getRoomId()), om.writeValueAsString(event));
         } catch (Exception e) {
             throw new IllegalStateException("failed to publish minutes.generated", e);
         }
