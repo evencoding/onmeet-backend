@@ -557,7 +557,105 @@ class AuthController(
     ])
     @GetMapping("/internal/users/{userId}/company")
     fun getUserCompany(@PathVariable userId: Long): ResponseEntity<CompanyInfoDto> =
-        userService.getUserPermissions(userId).let { 
+        userService.getUserPermissions(userId).let {
             ResponseEntity.ok(CompanyInfoDto(id = it.companyId ?: 0L, name = "Company ${it.companyId}"))
         }
+
+    @Operation(
+        summary = "비밀번호 찾기",
+        description = """
+            이메일 주소를 입력받아 임시 비밀번호를 발급하고 이메일로 전송합니다.
+
+            **주요 기능:**
+            - 등록된 이메일 주소로 8자리 임시 비밀번호 발급
+            - 임시 비밀번호는 영문 대소문자, 숫자, 특수문자(!@#$%^&*)로 구성
+            - 사용자의 isPasswordReset 플래그를 true로 설정
+            - Kafka를 통해 email-service로 이메일 발송 요청
+
+            **보안 주의사항:**
+            - 임시 비밀번호로 로그인 후 반드시 비밀번호를 변경해야 합니다
+            - 비밀번호 변경 시 isPasswordReset 플래그가 자동으로 false로 초기화됩니다
+
+            **이메일 템플릿:**
+            - 템플릿명: temporary-password
+            - 변수: userName, temporaryPassword
+        """
+    )
+    @ApiResponses(value = [
+        ApiResponse(
+            responseCode = "200",
+            description = """
+                임시 비밀번호 발급 성공
+                - 8자리 임시 비밀번호가 생성되어 사용자 이메일로 발송되었습니다
+                - 사용자의 isPasswordReset 플래그가 true로 설정되었습니다
+                - 이메일 발송은 비동기로 처리되며 Kafka를 통해 email-service로 전달됩니다
+            """,
+            content = [Content(
+                mediaType = "application/json",
+                examples = [ExampleObject(
+                    name = "성공 응답",
+                    value = """{"message": "Temporary password has been sent to your email"}"""
+                )]
+            )]
+        ),
+        ApiResponse(
+            responseCode = "400",
+            description = """
+                잘못된 요청 - 유효하지 않은 이메일 형식
+                - 이메일 형식이 올바르지 않은 경우
+                - 필수 필드(email)가 누락된 경우
+            """,
+            content = [Content(
+                mediaType = "application/json",
+                schema = Schema(implementation = ErrorResponse::class),
+                examples = [ExampleObject(
+                    name = "이메일 형식 오류",
+                    value = """{"status": 400, "message": "Invalid email format", "timestamp": 1234567890}"""
+                ), ExampleObject(
+                    name = "필수 필드 누락",
+                    value = """{"status": 400, "message": "Email is required", "timestamp": 1234567890}"""
+                )]
+            )]
+        ),
+        ApiResponse(
+            responseCode = "404",
+            description = """
+                사용자를 찾을 수 없음
+                - 입력한 이메일 주소로 등록된 사용자가 없는 경우
+                - 보안상 이유로 이메일 존재 여부는 클라이언트에 명확히 알리지 않을 수 있습니다
+            """,
+            content = [Content(
+                mediaType = "application/json",
+                schema = Schema(implementation = ErrorResponse::class),
+                examples = [ExampleObject(
+                    name = "사용자 없음",
+                    value = """{"status": 404, "message": "User not found", "timestamp": 1234567890}"""
+                )]
+            )]
+        ),
+        ApiResponse(
+            responseCode = "500",
+            description = """
+                서버 내부 오류
+                - 임시 비밀번호 생성 중 오류 발생
+                - 데이터베이스 저장 실패
+                - 이메일 발송 요청 실패 (Kafka 연결 오류 등)
+            """,
+            content = [Content(
+                mediaType = "application/json",
+                schema = Schema(implementation = ErrorResponse::class),
+                examples = [ExampleObject(
+                    name = "서버 오류",
+                    value = """{"status": 500, "message": "Internal server error occurred", "timestamp": 1234567890}"""
+                )]
+            )]
+        )
+    ])
+    @PostMapping("/password/find")
+    fun findPassword(
+        @RequestBody @jakarta.validation.Valid request: FindPasswordRequest
+    ): ResponseEntity<Map<String, String>> {
+        authService.findPassword(request.email)
+        return ResponseEntity.ok(mapOf("message" to "Temporary password has been sent to your email"))
+    }
 }

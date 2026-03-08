@@ -25,7 +25,7 @@ public class MeetingEndedConsumer {
     public void onMessage(String message, Acknowledgment ack) {
         try {
             MeetingEndedEvent event = om.readValue(message, MeetingEndedEvent.class);
-            builder.finalizeMeeting(event.getMeetingId(), event.getEndedAtEpochMs());
+            builder.finalizeMeeting(event.getRoomId(), event.getHostUserId(), event.getEndedAt());
             ack.acknowledge();
         } catch (Exception e) {
             throw new RuntimeException(e);

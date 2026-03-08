@@ -1,6 +1,7 @@
 package com.onmeet.ai.config;
 
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -26,6 +27,14 @@ public class SecurityConfig {
     }
 
     @Bean
+    public FilterRegistrationBean<GatewayPreAuthFilter> gatewayPreAuthFilterRegistration(
+            GatewayPreAuthFilter filter) {
+        FilterRegistrationBean<GatewayPreAuthFilter> registration = new FilterRegistrationBean<>(filter);
+        registration.setEnabled(false);
+        return registration;
+    }
+
+    @Bean
     public SecurityFilterChain filterChain(HttpSecurity http, GatewayPreAuthFilter gatewayPreAuthFilter)
             throws Exception {
         http
@@ -41,3 +50,4 @@ public class SecurityConfig {
         return http.build();
     }
 }
+

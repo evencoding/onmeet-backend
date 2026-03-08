@@ -28,7 +28,7 @@ public class TranscriptRenderer {
             // 원하는 포맷으로 조정 가능
             if ("VOICE".equals(type)) {
                 sb.append("[").append(type).append("]")
-                        .append(" (").append(e.getStartMs()).append("~").append(e.getEndMs()).append(")")
+                        .append(" (").append(e.getSegmentStartMs()).append("~").append(e.getSegmentEndMs()).append(")")
                         .append(" ").append(actor).append(": ")
                         .append(e.getText().trim())
                         .append("\n");
@@ -51,8 +51,8 @@ public class TranscriptRenderer {
     }
 
     private long resolveAtMs(TranscriptDocument.Event e) {
-        if (e.getAtMs() != null) return e.getAtMs();
-        if (e.getStartMs() != null) return e.getStartMs();
+        if (e.getTimestamp() != null) return e.getTimestamp().toEpochMilli();
+        if (e.getSegmentStartMs() != null) return e.getSegmentStartMs();
         return 0L;
     }
 

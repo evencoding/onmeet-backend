@@ -57,6 +57,8 @@ gcloud compute instances create onmeet-backend \
 - **8080**: Gateway Service (API Gateway)
 - **22**: SSH
 - **9092**: Kafka (선택사항, 외부 연결 시)
+- **50000-50100 (UDP)**: LiveKit WebRTC 미디어 스트림 (영상/음성)
+- **7881 (TCP)**: LiveKit WebRTC TCP Fallback (선택사항)
 
 ```bash
 # HTTP/HTTPS 트래픽 허용
@@ -64,6 +66,16 @@ gcloud compute firewall-rules create allow-gateway \
   --allow tcp:8080 \
   --target-tags http-server \
   --description "Allow gateway access"
+
+# WebRTC UDP 포트 개방 (영상 데이터용)
+gcloud compute firewall-rules create allow-webrtc-udp \
+  --allow udp:50000-50100 \
+  --description "Allow WebRTC UDP media traffic"
+
+# WebRTC TCP 포트 개방 (Fallback용)
+gcloud compute firewall-rules create allow-webrtc-tcp \
+  --allow tcp:7881 \
+  --description "Allow WebRTC TCP fallback"
 ```
 
 ### 2.3 SSH 접속
@@ -176,6 +188,11 @@ SPRING_MAIL_PASSWORD=your_smtp_password
 # Kafka
 KAFKA_BOOTSTRAP_SERVERS=kafka:29092
 KAFKA_BROKERS=kafka:29092
+
+# LiveKit (WebRTC)
+LIVEKIT_EXTERNAL_IP=your_gcp_instance_external_ip
+LIVEKIT_API_KEY=devkey
+LIVEKIT_API_SECRET=devsecret
 ```
 
 ### 4.2 Docker 이미지 빌드
@@ -236,11 +253,10 @@ curl http://localhost:8080/actuator/health
 | auth-service | 512M | 256M |
 | ai-service | 768M | 256M |
 | video-service | 512M | 256M |
-| chat-service | 512M | 256M |
 | notification-service | 512M | 256M |
 | file-service | 512M | 256M |
 | email-service | 512M | 256M |
-| **소계** | **4480M (~4.4GB)** | **2048M (~2GB)** |
+| **소계** | **3840M (~3.8GB)** | **1792M (~1.8GB)** |
 
 #### 인프라 컨테이너 (Database, Messaging)
 | Service | Memory Limit | Reservation |
@@ -248,20 +264,19 @@ curl http://localhost:8080/actuator/health
 | mysql-auth | 256M | 128M |
 | mysql-ai | 256M | 128M |
 | mysql-video | 256M | 128M |
-| mysql-chat | 256M | 128M |
 | mysql-notification | 256M | 128M |
 | postgres-file | 256M | 128M |
 | redis-auth | 128M | 64M |
 | kafka | 1024M (1G) | 512M |
 | zookeeper | 256M | 128M |
-| **소계** | **2688M (~2.6GB)** | **1472M (~1.4GB)** |
+| **소계** | **2688M (~2.6GB)** | **1344M (~1.3GB)** |
 
 #### 총 메모리 할당
-- **Total Limits**: ~7.0GB
-- **Total Reservations**: ~3.4GB
+- **Total Limits**: ~6.4GB
+- **Total Reservations**: ~3.1GB
 - **Physical RAM**: 8GB
 - **Swap**: 8GB
-- **여유 메모리**: ~1GB (시스템 프로세스용)
+- **여유 메모리**: ~1.6GB (시스템 프로세스용)
 
 ### 5.2 Spring Boot JVM 메모리 자동 조정
 

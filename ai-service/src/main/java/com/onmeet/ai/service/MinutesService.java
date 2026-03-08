@@ -11,6 +11,7 @@ import com.onmeet.ai.pipeline.storage.StorageKeyFactory;
 import com.onmeet.ai.pipeline.transcript.TranscriptDocument;
 import com.onmeet.ai.pipeline.transcript.TranscriptRenderer;
 import com.onmeet.ai.repository.MinutesRepository;
+import com.onmeet.common.exception.EntityNotFoundException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -38,22 +39,14 @@ public class MinutesService {
     }
 
     @Transactional(readOnly = true)
-    public MinutesResponse get(String meetingId) {
-        Minutes m = minutesRepository.findById(meetingId)
-                .orElseThrow(() -> new IllegalArgumentException("minutes not found: " + meetingId));
+    public MinutesResponse get(Long roomId) {
+        Minutes m = findMinutesOrThrow(roomId);
         return MinutesResponse.from(m);
     }
 
-    /**
-     * ✅ 동기 재요약 (테스트 우선)
-     * - minutes에 저장된 transcriptS3Key로 transcript 로드
-     * - 요약 생성
-     * - summary는 S3 + DB에 반영
-     */
     @Transactional
-    public MinutesResponse regenerate(String meetingId, MinutesRegenerateRequest req) {
-        Minutes m = minutesRepository.findById(meetingId)
-                .orElseThrow(() -> new IllegalArgumentException("minutes not found: " + meetingId));
+    public MinutesResponse regenerate(Long roomId, MinutesRegenerateRequest req) {
+        Minutes m = findMinutesOrThrow(roomId);
 
         try {
             String transcriptJson = storageClient.readText(m.getTranscriptS3Key());
@@ -61,7 +54,7 @@ public class MinutesService {
 
             String plain = renderer.toPlainText(doc);
             if (plain == null || plain.isBlank()) {
-                throw new IllegalStateException("empty transcript");
+                throw new IllegalArgumentException("Transcript is empty, cannot regenerate minutes");
             }
 
             String language = (req != null && req.getLanguage() != null) ? req.getLanguage() : "ko";
@@ -70,8 +63,7 @@ public class MinutesService {
 
             String summaryJson = summarizerClient.summarize(plain, language, style, model);
 
-            // ✅ transcriptId 기준으로 summaryKey 생성( Job 없음 )
-            String summaryKey = StorageKeyFactory.summaryKey(meetingId, m.getTranscriptId());
+            String summaryKey = StorageKeyFactory.summaryKey(roomId, m.getTranscriptId());
             storageClient.writeText(summaryKey, summaryJson, "application/json");
 
             m.applyGenerated(m.getTranscriptId(), m.getTranscriptS3Key(), summaryKey, summaryJson);
@@ -79,6 +71,8 @@ public class MinutesService {
 
             return MinutesResponse.from(m);
 
+        } catch (EntityNotFoundException | IllegalArgumentException e) {
+            throw e;
         } catch (Exception e) {
             m.markFailed(e.getMessage());
             minutesRepository.save(m);
@@ -86,17 +80,10 @@ public class MinutesService {
         }
     }
 
-    /**
-     * ✅ 수정(공개범위/사용자 편집본)
-     */
     @Transactional
-    public MinutesResponse patch(String meetingId, MinutesPatchRequest req) {
-        Minutes m = minutesRepository.findById(meetingId)
-                .orElseThrow(() -> new IllegalArgumentException("minutes not found: " + meetingId));
+    public MinutesResponse patch(Long roomId, MinutesPatchRequest req) {
+        Minutes m = findMinutesOrThrow(roomId);
 
-        if (req.getAccessScope() != null) {
-            m.updateAccessScope(req.getAccessScope());
-        }
         if (req.getUserEditedSummaryJson() != null) {
             m.applyUserEdit(req.getUserEditedSummaryJson());
         }
@@ -105,13 +92,14 @@ public class MinutesService {
         return MinutesResponse.from(m);
     }
 
-    /**
-     * 선택: transcript 원문(JSON) 확인용
-     */
     @Transactional(readOnly = true)
-    public String getTranscriptRawJson(String meetingId) {
-        Minutes m = minutesRepository.findById(meetingId)
-                .orElseThrow(() -> new IllegalArgumentException("minutes not found: " + meetingId));
+    public String getTranscriptRawJson(Long roomId) {
+        Minutes m = findMinutesOrThrow(roomId);
         return storageClient.readText(m.getTranscriptS3Key());
+    }
+
+    private Minutes findMinutesOrThrow(Long roomId) {
+        return minutesRepository.findByRoomId(roomId)
+                .orElseThrow(() -> new EntityNotFoundException("Minutes not found for room: " + roomId));
     }
 }

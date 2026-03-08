@@ -6,6 +6,8 @@ import com.onmeet.video.common.util.ClockProvider;
 import com.onmeet.video.infra.auth.AuthServiceClient;
 import com.onmeet.video.infra.livekit.LiveKitClient;
 import com.onmeet.video.infra.livekit.LiveKitClient.TokenGrants;
+import com.onmeet.video.infra.livekit.LiveKitProperties;
+import com.onmeet.video.meeting.service.waiting.WaitingRoomSseService;
 import com.onmeet.video.meeting.dto.participant.ParticipantRoleUpdateRequest;
 import com.onmeet.video.meeting.dto.participant.RoomParticipantResponse;
 import com.onmeet.video.meeting.entity.room.MeetingRoom;
@@ -13,6 +15,8 @@ import com.onmeet.video.meeting.entity.participant.ParticipantRole;
 import com.onmeet.video.meeting.entity.participant.ParticipantStatus;
 import com.onmeet.video.meeting.entity.participant.RoomParticipant;
 import com.onmeet.video.meeting.event.MeetingEventPublisher;
+import com.onmeet.video.meeting.event.NotificationEventPublisher;
+import com.onmeet.common.dto.NotificationRequestDto;
 import com.onmeet.video.meeting.event.participant.ParticipantEvent;
 import com.onmeet.video.meeting.repository.room.MeetingRoomRepository;
 import com.onmeet.video.meeting.repository.participant.RoomParticipantRepository;
@@ -29,22 +33,31 @@ public class RoomParticipantService {
     private final RoomParticipantRepository participantRepository;
     private final MeetingRoomRepository roomRepository;
     private final LiveKitClient liveKitClient;
+    private final LiveKitProperties liveKitProperties;
     private final MeetingEventPublisher eventPublisher;
     private final ClockProvider clockProvider;
     private final AuthServiceClient authServiceClient;
+    private final WaitingRoomSseService waitingRoomSseService;
+    private final NotificationEventPublisher notificationEventPublisher;
 
     public RoomParticipantService(RoomParticipantRepository participantRepository,
             MeetingRoomRepository roomRepository,
             LiveKitClient liveKitClient,
+            LiveKitProperties liveKitProperties,
             MeetingEventPublisher eventPublisher,
             ClockProvider clockProvider,
-            AuthServiceClient authServiceClient) {
+            AuthServiceClient authServiceClient,
+            WaitingRoomSseService waitingRoomSseService,
+            NotificationEventPublisher notificationEventPublisher) {
         this.participantRepository = participantRepository;
         this.roomRepository = roomRepository;
         this.liveKitClient = liveKitClient;
+        this.liveKitProperties = liveKitProperties;
         this.eventPublisher = eventPublisher;
         this.clockProvider = clockProvider;
         this.authServiceClient = authServiceClient;
+        this.waitingRoomSseService = waitingRoomSseService;
+        this.notificationEventPublisher = notificationEventPublisher;
     }
 
     @Transactional(readOnly = true)
@@ -99,7 +112,6 @@ public class RoomParticipantService {
 
         liveKitClient.removeParticipant(room.getLivekitRoomName(), String.valueOf(targetUserId));
 
-        // TODO: [Notification Service] Kafka 알림 이벤트 추가 - PARTICIPANT_KICKED
         eventPublisher.publishParticipantLeft(
                 new ParticipantEvent("PARTICIPANT_LEFT", roomId, targetUserId, now));
     }
@@ -217,9 +229,20 @@ public class RoomParticipantService {
                 participantName,
                 TokenGrants.forParticipant());
 
-        // TODO: [Notification Service] Kafka 알림 이벤트 추가 - WAITING_ROOM_ADMITTED
+        waitingRoomSseService.sendAdmittedEvent(roomId, targetUserId, token,
+                liveKitProperties.getUrl(), room.getLivekitRoomName());
+
         eventPublisher.publishParticipantJoined(
                 new ParticipantEvent("PARTICIPANT_JOINED", roomId, targetUserId, now));
+
+        // 대기실 수락 알림 (Kafka 비동기)
+        notificationEventPublisher.publishNotification(
+            new NotificationRequestDto(
+                targetUserId, "WAITING_ROOM_ADMITTED", "회의실 입장 수락",
+                "'" + room.getTitle() + "' 회의실 입장이 수락되었습니다.",
+                "/meeting/" + roomId, "MEETING", String.valueOf(roomId), requesterId
+            )
+        );
     }
 
     @Transactional
@@ -233,7 +256,17 @@ public class RoomParticipantService {
 
         Instant now = clockProvider.now();
         participant.kick(now);
-        // TODO: [Notification Service] Kafka 알림 이벤트 추가 - WAITING_ROOM_REJECTED
+
+        waitingRoomSseService.sendRejectedEvent(roomId, targetUserId);
+
+        // 대기실 거절 알림 (Kafka 비동기)
+        notificationEventPublisher.publishNotification(
+            new NotificationRequestDto(
+                targetUserId, "WAITING_ROOM_REJECTED", "회의실 입장 거절",
+                "'" + room.getTitle() + "' 회의실 입장이 거절되었습니다.",
+                null, "MEETING", String.valueOf(roomId), requesterId
+            )
+        );
     }
 
     @Transactional
@@ -276,13 +309,27 @@ public class RoomParticipantService {
 
             String participantName = userNameMap.getOrDefault(p.getUserId(), "user-" + p.getUserId());
 
-            liveKitClient.generateToken(
+            String token = liveKitClient.generateToken(
                     room.getLivekitRoomName(),
                     String.valueOf(p.getUserId()),
                     participantName,
                     TokenGrants.forParticipant());
+
+            waitingRoomSseService.sendAdmittedEvent(roomId, p.getUserId(), token,
+                    liveKitProperties.getUrl(), room.getLivekitRoomName());
+
             eventPublisher.publishParticipantJoined(
                     new ParticipantEvent("PARTICIPANT_JOINED", roomId, p.getUserId(), now));
+
+            // 대기실 일괄 수락 알림 (Kafka 비동기)
+            notificationEventPublisher.publishNotification(
+                new NotificationRequestDto(
+                    p.getUserId(), "WAITING_ROOM_ADMITTED", "회의실 입장 수락",
+                    "'" + room.getTitle() + "' 회의실 입장이 수락되었습니다.",
+                    "/meeting/" + roomId, "MEETING", String.valueOf(roomId), requesterId
+                )
+            );
+            
             admitted++;
         }
     }

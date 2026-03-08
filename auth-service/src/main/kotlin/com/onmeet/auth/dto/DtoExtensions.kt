@@ -16,7 +16,8 @@ fun User.toResponseDto() = UserResponseDto(
     company = this.company.toInfoDto(),
     jobTitle = this.jobTitle?.toResponseDto(),
     teams = this.getTeams().map { it.toInfoDto() },
-    profileImageId = this.profileImageId
+    profileImageId = this.profileImageId,
+    isPasswordReset = this.isPasswordReset
 )
 
 fun Company.toInfoDto() = CompanyInfoDto(

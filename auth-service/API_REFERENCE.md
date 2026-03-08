@@ -1,7 +1,7 @@
 # Auth Service API Reference
 
 **Version**: v0.1.0
-**Last Updated**: 2026-03-02
+**Last Updated**: 2026-03-08
 **Status**: Production
 
 ## 개요 (Overview)
@@ -207,9 +207,282 @@ Refresh Token을 사용하여 새로운 Access Token을 발급받습니다.
 
 ---
 
-## 기타 (Users)
+### 9. 비밀번호 찾기 (Find Password)
+이메일로 임시 비밀번호를 발송합니다.
 
-### 9. 초대 검증 (Validate Invitation)
+- **URL**: `/password/find`
+- **Method**: `POST`
+- **Auth**: None
+
+#### Request Body (`FindPasswordRequest`)
+| Field | Type | Required | Description |
+|---|---|---|---|
+| `email` | String | Yes | 가입된 이메일 주소 |
+
+```json
+{
+  "email": "user@example.com"
+}
+```
+
+#### Response
+- **Status**: `200 OK`
+- **Body**:
+```json
+{
+  "message": "Temporary password has been sent to your email"
+}
+```
+
+---
+
+## 회원 관리 (Member Management)
+
+### 10. 내 정보 조회 (Get My Info)
+현재 로그인한 사용자의 상세 정보를 조회합니다.
+
+- **URL**: `/v1/member/me`
+- **Method**: `GET`
+- **Auth**: Required
+
+#### Response
+- **Status**: `200 OK`
+- **Body** (`UserResponseDto`):
+```json
+{
+  "id": 1,
+  "email": "user@example.com",
+  "name": "John Doe",
+  "role": "USER",
+  "companyId": 1,
+  "companyName": "Tech Corp",
+  "teamId": 10,
+  "teamName": "Dev Team",
+  "profileImageUrl": "https://cdn.example.com/profile.jpg",
+  "jobTitle": "Senior Developer"
+}
+```
+
+---
+
+### 11. 내 프로필 수정 (Update My Profile)
+현재 로그인한 사용자의 프로필 정보와 이미지를 수정합니다.
+
+- **URL**: `/v1/member/me`
+- **Method**: `PATCH`
+- **Auth**: Required
+- **Content-Type**: `multipart/form-data`
+
+#### Request (Multipart)
+| Part | Type | Required | Description |
+|---|---|---|---|
+| `request` | JSON | Yes | 프로필 정보 (UserProfileUpdateRequest) |
+| `profileImage` | File | No | 프로필 이미지 파일 |
+
+**UserProfileUpdateRequest**:
+```json
+{
+  "name": "John Updated",
+  "phone": "010-1234-5678",
+  "jobTitleId": 5
+}
+```
+
+#### Response
+- **Status**: `200 OK`
+- **Body**: `UserResponseDto` (업데이트된 사용자 정보)
+
+---
+
+### 12. 비밀번호 변경 (Change Password)
+기존 비밀번호 확인 후 새 비밀번호로 변경합니다.
+
+- **URL**: `/v1/member/me/password`
+- **Method**: `PUT`
+- **Auth**: Required
+
+#### Request Body (`ChangePasswordRequest`)
+| Field | Type | Required | Description |
+|---|---|---|---|
+| `currentPassword` | String | Yes | 현재 비밀번호 |
+| `newPassword` | String | Yes | 새 비밀번호 |
+
+```json
+{
+  "currentPassword": "oldPassword123!",
+  "newPassword": "newPassword456!"
+}
+```
+
+#### Response
+- **Status**: `200 OK`
+
+---
+
+### 13. 프로필 이미지 삭제 (Delete Profile Image)
+현재 로그인한 사용자의 프로필 이미지를 삭제하고 기본 이미지로 변경합니다.
+
+- **URL**: `/v1/member/me/profile-image`
+- **Method**: `DELETE`
+- **Auth**: Required
+
+#### Response
+- **Status**: `200 OK`
+- **Body**: `UserResponseDto` (업데이트된 사용자 정보)
+
+---
+
+### 14. 회원 탈퇴 (Withdraw)
+비밀번호 검증 후 회원을 탈퇴 처리합니다.
+
+- **URL**: `/v1/member/me`
+- **Method**: `DELETE`
+- **Auth**: Required
+
+#### Request Body (`WithdrawRequest`)
+| Field | Type | Required | Description |
+|---|---|---|---|
+| `password` | String | Yes | 본인 확인을 위한 비밀번호 |
+
+```json
+{
+  "password": "myPassword123!"
+}
+```
+
+#### Response
+- **Status**: `204 No Content`
+
+---
+
+### 15. 회원 정보 조회 (Get Member Info)
+특정 회원의 공개 프로필을 조회합니다.
+
+- **URL**: `/v1/member/{memberId}`
+- **Method**: `GET`
+- **Auth**: Required
+
+#### Path Parameters
+| Param | Type | Required | Description |
+|---|---|---|---|
+| `memberId` | Long | Yes | 조회할 회원 ID |
+
+#### Response
+- **Status**: `200 OK`
+- **Body**: `UserResponseDto`
+
+---
+
+## 팀 관리 (Team Management)
+
+### 16. 팀 생성 요청 (Create Team)
+팀 생성을 요청합니다. 일반 직원은 승인 대기 상태, 매니저는 즉시 생성됩니다.
+
+- **URL**: `/v1/member/teams`
+- **Method**: `POST`
+- **Auth**: Required
+
+#### Request Body (`TeamRequest`)
+| Field | Type | Required | Description |
+|---|---|---|---|
+| `name` | String | Yes | 팀 이름 |
+| `description` | String | No | 팀 설명 |
+
+```json
+{
+  "name": "Frontend Team",
+  "description": "Frontend development team"
+}
+```
+
+#### Response
+- **Status**: `200 OK`
+- **Body**: `Long` (생성된 팀 ID)
+
+---
+
+### 17. 팀장 위임 (Delegate Leader)
+팀장직을 다른 팀원에게 위임합니다. (현 팀장 또는 매니저만 가능)
+
+- **URL**: `/v1/member/teams/{teamId}/delegate/{userId}`
+- **Method**: `POST`
+- **Auth**: Required (MANAGER 또는 팀장)
+
+#### Path Parameters
+| Param | Type | Required | Description |
+|---|---|---|---|
+| `teamId` | Long | Yes | 대상 팀 ID |
+| `userId` | Long | Yes | 새 팀장으로 지정할 사용자 ID |
+
+#### Response
+- **Status**: `200 OK`
+
+---
+
+### 18. 팀 해체 (Dissolve Team)
+팀을 삭제합니다. (팀장 또는 매니저만 가능)
+
+- **URL**: `/v1/member/teams/{teamId}`
+- **Method**: `DELETE`
+- **Auth**: Required (MANAGER 또는 팀장)
+
+#### Path Parameters
+| Param | Type | Required | Description |
+|---|---|---|---|
+| `teamId` | Long | Yes | 삭제할 팀 ID |
+
+#### Response
+- **Status**: `200 OK`
+
+---
+
+### 19. 팀 생성 요청 취소 (Cancel Team Request)
+자신이 요청한 팀 생성을 취소합니다. (승인 대기 상태에서만 가능)
+
+- **URL**: `/v1/member/teams/{teamId}/cancel`
+- **Method**: `DELETE`
+- **Auth**: Required
+
+#### Path Parameters
+| Param | Type | Required | Description |
+|---|---|---|---|
+| `teamId` | Long | Yes | 취소할 팀 ID |
+
+#### Response
+- **Status**: `200 OK`
+
+---
+
+### 20. 직급 목록 조회 (Get Job Titles)
+현재 소속된 회사의 모든 직급 목록을 조회합니다.
+
+- **URL**: `/v1/member/job-titles`
+- **Method**: `GET`
+- **Auth**: Required
+
+#### Response
+- **Status**: `200 OK`
+- **Body**: `List<JobTitleResponse>`
+```json
+[
+  {
+    "id": 1,
+    "name": "사원",
+    "rank": 1
+  },
+  {
+    "id": 2,
+    "name": "대리",
+    "rank": 2
+  }
+]
+```
+
+---
+
+## 기타 (Invitations)
+
+### 21. 초대 검증 (Validate Invitation)
 초대 코드의 유효성을 확인하고 초대된 정보를 반환합니다.
 
 - **URL**: `/invitations/validate`

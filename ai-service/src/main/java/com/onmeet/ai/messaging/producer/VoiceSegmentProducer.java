@@ -26,7 +26,7 @@ public class VoiceSegmentProducer {
     public void publish(VoiceSegmentCreatedEvent event) {
         try {
             String json = om.writeValueAsString(event);
-            kafkaTemplate.send(topic, event.getMeetingId(), json);
+            kafkaTemplate.send(topic, String.valueOf(event.getRoomId()), json);
         } catch (Exception e) {
             throw new IllegalStateException("failed to publish voice.segment.created", e);
         }

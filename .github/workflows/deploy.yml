@@ -319,6 +319,14 @@ jobs:
             echo "LIVEKIT_API_SECRET=${{ secrets.LIVEKIT_API_SECRET }}" >> .env
             echo "Injected LIVEKIT_API_SECRET from GitHub Secret"
 
+            sed -i '/^LIVEKIT_EXTERNAL_IP=/d' .env 2>/dev/null || true
+            echo "LIVEKIT_EXTERNAL_IP=${{ secrets.LIVEKIT_EXTERNAL_IP }}" >> .env
+            echo "Injected LIVEKIT_EXTERNAL_IP from GitHub Secret"
+
+            sed -i '/^LIVEKIT_URL=/d' .env 2>/dev/null || true
+            echo "LIVEKIT_URL=${{ secrets.LIVEKIT_URL }}" >> .env
+            echo "Injected LIVEKIT_URL from GitHub Secret"
+
             # Docker Hub 로그인
             export DOCKER_API_VERSION=1.41
             export DOCKER_REGISTRY=${{ secrets.DOCKER_USERNAME }}
@@ -326,11 +334,11 @@ jobs:
 
             # 변경된 서비스만 추출
             TARGETS=""
-            if [ "${{ needs.detect-changes.outputs.auth }}" == "true" ]; then TARGETS="$TARGETS auth-service"; fi
+            if [ "${{ needs.detect-changes.outputs.auth }}" == "true" ]; then TARGETS="$TARGETS auth-service mysql-auth redis-auth"; fi
             if [ "${{ needs.detect-changes.outputs.gateway }}" == "true" ]; then TARGETS="$TARGETS gateway-service"; fi
-            if [ "${{ needs.detect-changes.outputs.ai }}" == "true" ]; then TARGETS="$TARGETS ai-service"; fi
-            if [ "${{ needs.detect-changes.outputs.video }}" == "true" ]; then TARGETS="$TARGETS video-service"; fi
-            if [ "${{ needs.detect-changes.outputs.notification }}" == "true" ]; then TARGETS="$TARGETS notification-service"; fi
+            if [ "${{ needs.detect-changes.outputs.ai }}" == "true" ]; then TARGETS="$TARGETS ai-service mysql-ai redis localstack"; fi
+            if [ "${{ needs.detect-changes.outputs.video }}" == "true" ]; then TARGETS="$TARGETS video-service livekit mysql-video"; fi
+            if [ "${{ needs.detect-changes.outputs.notification }}" == "true" ]; then TARGETS="$TARGETS notification-service mysql-notification"; fi
             if [ "${{ needs.detect-changes.outputs.email }}" == "true" ]; then TARGETS="$TARGETS email-service"; fi
             if [ "${{ needs.detect-changes.outputs.file }}" == "true" ]; then TARGETS="$TARGETS file-service"; fi
             if [ "${{ needs.detect-changes.outputs.kafka }}" == "true" ]; then TARGETS="$TARGETS kafka zookeeper"; fi

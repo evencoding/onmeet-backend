@@ -5,15 +5,16 @@ B2B 화상 회의 + AI 요약 + 알림 서비스 (MSA w/ Spring Boot 3 & Kotlin)
 ## 🏗 기술 스택 (Tech Stack)
 
 ### Core
-- **Language**: Kotlin (JDK 21)
-- **Framework**: Spring Boot 3.3.5, Spring Cloud 2023.x
-- **Build Tool**: Gradle (Kotlin DSL)
+- **Language**: Kotlin (Auth/Gateway), Java (AI/Video/Notification/Email), Go (File)
+- **Framework**: Spring Boot 3.3.5, Spring Cloud 2023.x, Gin (Go)
+- **Build Tool**: Gradle (Kotlin DSL), Go Modules
+- **Shared Libraries**: `onmeet-common`, `common-security` (Kotlin)
 
 ### 아키텍처 및 통신 (Architecture & Communication)
 - **Architecture**: 마이크로서비스 아키텍처 (MSA)
-- **Gateway**: Spring Cloud Gateway
-- **Communication**: REST API, gRPC (내부 통신), Kafka (이벤트 기반)
-- **Database**: MySQL 9.0 (서비스별 DB 분리)
+- **Gateway**: Spring Cloud Gateway (WebFlux)
+- **Communication**: REST API, Kafka (이벤트 기반)
+- **Database**: MySQL 9.0 (대부분), PostgreSQL 16 (File Service), Redis (인증/캐싱)
 
 ## ⚡ 성능 최적화 (Performance Optimization)
 
@@ -41,26 +42,36 @@ B2B 화상 회의 + AI 요약 + 알림 서비스 (MSA w/ Spring Boot 3 & Kotlin)
 
 ## 🚀 서비스 목록 (Services)
 
-| 서비스 (Service) | 포트 (Port) | 설명 (Description) | DB |
-|---|---|---|---|
-| **Gateway Service** | `8080` | 진입점, 라우팅, 필터 (인증 체크) | - |
-| **Auth Service** | `8081` | 사용자 인증, 토큰 관리, 팀/기업 관리 | `auth_db`, Redis |
-| **AI Service** | `8082` | AI 요약 생성 (STT/LLM) | `ai_db` |
-| **Video Service** | `8083` | 화상 회의 관리, WebRTC 시그널링 | `video_db` |
-| **Chat Service** | `8084` | 실시간 채팅 (WebSocket/RSocket) | `chat_db` |
-| **Notification** | `8085` | 실시간 알림 (SSE) | `notification_db` |
-| **File Service** | `8086` | 파일 업로드/다운로드 관리 | `file_db` |
-| **Email Service** | `8087` | 이메일 발송 (AWS SES / SMTP) | - |
+| 서비스 (Service) | 포트 (Port) | 언어 (Language) | 설명 (Description) | DB |
+|---|---|---|---|---|
+| **Gateway Service** | `8080` | Kotlin | API 진입점, 라우팅, JWT 검증 | - |
+| **Auth Service** | `8081` | Kotlin | 사용자 인증, 토큰 관리, 팀/기업 관리 | MySQL, Redis |
+| **AI Service** | `8082` | Java | AI 요약 생성 (STT/LLM) | MySQL |
+| **Video Service** | `8083` | Java | 화상 회의 관리, WebRTC 시그널링 | MySQL |
+| **Notification Service** | `8085` | Java | 실시간 알림 (SSE) | MySQL |
+| **File Service** | `8086` | Go | 파일 업로드/다운로드, S3, 프로필 이미지 | PostgreSQL |
+| **Email Service** | `8087` | Java | 이메일 발송 (AWS SES) | - |
 
-> **참고**: Gateway 설정 등에서 언급되는 `Image Service`는 `File Service` (8086)와 동일합니다.
+> **참고**: File Service는 성능 최적화를 위해 Kotlin에서 Go로 전환되었으며, **약 100배 이상 빠른 API 응답 속도**를 달성했습니다.
 
 ---
 
 ## 📚 문서 (Documentation)
 
-- **[Auth Service API 명세서](auth-service/API_REFERENCE.md)**: 상세 API 명세
+### 서비스별 API 명세서
+- **[Auth Service API](auth-service/API_REFERENCE.md)**: 인증, 사용자, 팀, 기업 관리 API
+- **[AI Service API](ai-service/API_REFERENCE.md)**: AI 요약 생성 API
+- **[Video Service API](video-service/API_REFERENCE.md)**: 화상 회의 관리 API
+- **[Notification Service API](notification-service/API_REFERENCE.md)**: 실시간 알림 API
+- **[File Service API](file-service/API_REFERENCE.md)**: 파일 업로드/다운로드 API
+- **[Email Service API](email-service/API_REFERENCE.md)**: 이메일 발송 API
+
+### 가이드 문서
 - **[로그인 & 테스트 가이드](auth-service/LOGIN_GUIDE.md)**: 로컬 인증 테스트 방법
-- **[공통 모듈(`onmeet-common`) 가이드](onmeet-common/ONMEET_COMMON_GUIDE.md)**: 공통 클라이언트 및 예외 처리 사용법
+- **[File Service 사용 가이드](file-service/USAGE_GUIDE.md)**: 파일 업로드/다운로드 사용법
+- **[공통 모듈 가이드](onmeet-common/ONMEET_COMMON_GUIDE.md)**: `onmeet-common` 사용법
+- **[Gateway 라우팅 설정](gateway-service/GATEWAY_ROUTES.md)**: API Gateway 라우팅 규칙
+- **[Git 워크플로우](GIT_WORKFLOW.md)**: 브랜치 전략 및 배포 프로세스
 
 ---
 
@@ -92,7 +103,7 @@ docker compose logs -f auth-service gateway-service
 ./gradlew :auth-service:jibDockerBuild
 
 # 2. 필요한 서비스 실행 (의존성 포함 자동 실행)
-docker compose up -d gateway-service auth-service chat-service
+docker compose up -d gateway-service auth-service
 ```
 
 ### 로컬에서 실행 (Local / IntelliJ)
@@ -101,7 +112,7 @@ IntelliJ에서 개발할 때는 **인프라만 Docker로 띄우고, 서비스는
 **1. 기반 인프라 실행**
 데이터베이스, Kafka, Redis 등 필수 인프라를 실행합니다.
 ```bash
-docker compose up -d mysql-auth redis-auth kafka zookeeper mysql-ai mysql-video mysql-chat mysql-notification postgres-file
+docker compose up -d mysql-auth redis-auth kafka zookeeper mysql-ai mysql-video mysql-notification postgres-file
 ```
 
 **2. 서비스 실행 (IntelliJ)**
@@ -153,7 +164,6 @@ AWS_SECRET_ACCESS_KEY=...
 | **Auth** | `/auth/**` | [API_REFERENCE.md](auth-service/API_REFERENCE.md) | [Link](http://localhost:8081/auth/swagger-ui.html) |
 | **AI** | `/ai/**` | [API_REFERENCE.md](ai-service/API_REFERENCE.md) | [Link](http://localhost:8082/swagger-ui.html) |
 | **Video** | `/video/**` | [API_REFERENCE.md](video-service/API_REFERENCE.md) | [Link](http://localhost:8083/swagger-ui.html) |
-| **Chat** | `/chat/**` | [API_REFERENCE.md](chat-service/API_REFERENCE.md) | [Link](http://localhost:8084/swagger-ui.html) |
 | **Notification** | `/notification/**` | [API_REFERENCE.md](notification-service/API_REFERENCE.md) | [Link](http://localhost:8085/swagger-ui.html) |
 | **File** | `/file/**` | [API_REFERENCE.md](file-service/API_REFERENCE.md) | [Link](http://localhost:8086/swagger-ui.html) |
 | **Email** | - | [API_REFERENCE.md](email-service/API_REFERENCE.md) | [Link](http://localhost:8087/swagger-ui.html) |

@@ -3,13 +3,14 @@ package com.onmeet.video.meeting.service.invitation;
 import com.onmeet.video.common.exception.BizException;
 import com.onmeet.video.common.exception.ErrorCode;
 import com.onmeet.video.infra.auth.AuthServiceClient;
-import com.onmeet.video.infra.notification.NotificationServiceClient;
 import com.onmeet.video.meeting.dto.invitation.InvitationResponse;
 import com.onmeet.video.meeting.entity.invitation.InvitationStatus;
 import com.onmeet.video.meeting.entity.room.MeetingRoom;
 import com.onmeet.video.meeting.entity.invitation.RoomInvitation;
 import com.onmeet.video.meeting.repository.room.MeetingRoomRepository;
 import com.onmeet.video.meeting.repository.invitation.RoomInvitationRepository;
+import com.onmeet.video.meeting.event.NotificationEventPublisher;
+import com.onmeet.common.dto.NotificationRequestDto;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -23,16 +24,16 @@ public class RoomInvitationService {
     private final RoomInvitationRepository invitationRepository;
     private final MeetingRoomRepository roomRepository;
     private final AuthServiceClient authServiceClient;
-    private final NotificationServiceClient notificationClient;
+    private final NotificationEventPublisher notificationEventPublisher;
 
     public RoomInvitationService(RoomInvitationRepository invitationRepository,
             MeetingRoomRepository roomRepository,
             AuthServiceClient authServiceClient,
-            NotificationServiceClient notificationClient) {
+            NotificationEventPublisher notificationEventPublisher) {
         this.invitationRepository = invitationRepository;
         this.roomRepository = roomRepository;
         this.authServiceClient = authServiceClient;
-        this.notificationClient = notificationClient;
+        this.notificationEventPublisher = notificationEventPublisher;
     }
 
     @Transactional
@@ -60,14 +61,14 @@ public class RoomInvitationService {
         RoomInvitation invitation = new RoomInvitation(room, inviterUserId, inviteeUserId);
         InvitationResponse response = toResponse(invitationRepository.save(invitation));
 
-        // TODO: [Notification Service] Kafka 알림 이벤트 추가 - MEETING_INVITATION
-        // 초대받은 사용자에게 초대 알림 (기존 REST API 호출 로직은 추후 제거)
-        notificationClient.sendNotification(
-                inviteeUserId, "MEETING_INVITATION",
-                "회의 초대",
+        // 초대받은 사용자에게 초대 알림 (Kafka 비동기)
+        notificationEventPublisher.publishNotification(
+            new NotificationRequestDto(
+                inviteeUserId, "MEETING_INVITATION", "회의 초대",
                 room.getTitle() + " 회의에 초대되었습니다.",
-                "/meeting/" + roomId,
-                inviterUserId, "MEETING", String.valueOf(roomId));
+                "/meeting/" + roomId, "MEETING", String.valueOf(roomId), inviterUserId
+            )
+        );
 
         return response;
     }
@@ -104,14 +105,15 @@ public class RoomInvitationService {
             results.add(toResponse(invitationRepository.save(invitation)));
         }
 
-        // 초대받은 사용자들에게 초대 알림 일괄 발송
+        // 초대받은 사용자들에게 초대 알림 일괄 발송 (Kafka 비동기)
         for (InvitationResponse result : results) {
-            notificationClient.sendNotification(
-                    result.inviteeUserId(), "MEETING_INVITATION",
-                    "회의 초대",
+            notificationEventPublisher.publishNotification(
+                new NotificationRequestDto(
+                    result.inviteeUserId(), "MEETING_INVITATION", "회의 초대",
                     room.getTitle() + " 회의에 초대되었습니다.",
-                    "/meeting/" + roomId,
-                    inviterUserId, "MEETING", String.valueOf(roomId));
+                    "/meeting/" + roomId, "MEETING", String.valueOf(roomId), inviterUserId
+                )
+            );
         }
 
         return results;
@@ -136,14 +138,16 @@ public class RoomInvitationService {
 
         invitation.accept();
 
-        // TODO: [Notification Service] Kafka 알림 이벤트 추가 - INVITATION_ACCEPTED
         // 호스트에게 초대 수락 알림
-        notificationClient.sendNotification(
+        notificationEventPublisher.publishNotification(
+            new NotificationRequestDto(
                 invitation.getInviterUserId(), "INVITATION_ACCEPTED",
                 "초대 수락",
                 "사용자가 회의 초대를 수락했습니다.",
                 "/meeting/" + invitation.getRoom().getId(),
-                userId, "MEETING", String.valueOf(invitation.getRoom().getId()));
+                "MEETING", String.valueOf(invitation.getRoom().getId()), userId
+            )
+        );
 
         return toResponse(invitation);
     }
@@ -159,14 +163,15 @@ public class RoomInvitationService {
 
         invitation.decline();
 
-        // TODO: [Notification Service] Kafka 알림 이벤트 추가 - INVITATION_DECLINED
-        // 호스트에게 초대 거절 알림
-        notificationClient.sendNotification(
-                invitation.getInviterUserId(), "INVITATION_DECLINED",
-                "초대 거절",
+        // 호스트에게 초대 거절 알림 (Kafka 비동기)
+        notificationEventPublisher.publishNotification(
+            new NotificationRequestDto(
+                invitation.getInviterUserId(), "INVITATION_DECLINED", "초대 거절",
                 "사용자가 회의 초대를 거절했습니다.",
                 "/meeting/" + invitation.getRoom().getId(),
-                userId, "MEETING", String.valueOf(invitation.getRoom().getId()));
+                "MEETING", String.valueOf(invitation.getRoom().getId()), userId
+            )
+        );
 
         return toResponse(invitation);
     }
@@ -188,15 +193,17 @@ public class RoomInvitationService {
 
         invitation.cancel();
 
-        // TODO: [Notification Service] Kafka 알림 이벤트 추가 - INVITATION_CANCELLED // title
         // 포함)
         // 초대 취소된 사용자에게 취소 알림
-        notificationClient.sendNotification(
+        notificationEventPublisher.publishNotification(
+            new NotificationRequestDto(
                 inviteeUserId, "INVITATION_CANCELLED",
                 "초대 취소",
                 "회의 초대가 취소되었습니다.",
                 "/meeting/" + roomId,
-                requesterId, "MEETING", String.valueOf(roomId));
+                "MEETING", String.valueOf(roomId), requesterId
+            )
+        );
     }
 
     private MeetingRoom findRoom(Long roomId) {
