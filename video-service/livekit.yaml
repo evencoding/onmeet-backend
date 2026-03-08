@@ -8,5 +8,13 @@ rtc:
 # API keys and Webhook are passed via environment variables in docker-compose.yml
 keys: {}
 
+  # API keys are passed via LIVEKIT_KEYS environment variable in docker-compose.yml
+keys: {}
+
+webhook:
+  api_key: "devkey"
+  urls:
+    - "http://video-service:8083/video/webhook/livekit"
+
 logging:
   level: info
