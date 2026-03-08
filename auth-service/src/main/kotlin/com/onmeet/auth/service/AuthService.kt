@@ -137,7 +137,7 @@ class AuthService(
 
         // Save FCM device token if provided
         request.deviceToken?.let { token ->
-            userRepository.findByEmail(request.email)?.let { user ->
+            userRepository.findByEmail(request.email).ifPresent { user ->
                 user.fcmDeviceToken = token
                 userRepository.save(user)
                 log.info("FCM device token updated for user: ${request.email}")
