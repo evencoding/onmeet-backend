@@ -57,7 +57,7 @@ class AuthServiceTest {
     fun `changePassword should update password if old password matches`() {
         // given
         val user = User(
-            id = 1L, email = "test@example.com", passwordHash = "hashed_old", name = "Name", 
+            id = 1L, email = "test@example.com", passwordHash = "hashed_old", name = "Name",
             roles = mutableSetOf(User.Role.USER), company = Company(1L, "Test"), status = User.UserStatus.ACTIVE
         )
         val request = ChangePasswordRequest(oldPassword = "old", newPassword = "new")
@@ -72,6 +72,30 @@ class AuthServiceTest {
 
         // then
         assertEquals("hashed_new", user.passwordHash)
+        assertEquals(false, user.isPasswordReset)
+        verify { userRepository.save(user) }
+    }
+
+    @Test
+    fun `changePassword should reset isPasswordReset flag when changing from temporary password`() {
+        // given
+        val user = User(
+            id = 1L, email = "test@example.com", passwordHash = "hashed_temp", name = "Name",
+            roles = mutableSetOf(User.Role.USER), company = Company(1L, "Test"), status = User.UserStatus.ACTIVE
+        ).apply { isPasswordReset = true }
+        val request = ChangePasswordRequest(oldPassword = "temp", newPassword = "new")
+
+        every { userRepository.findByEmail("test@example.com") } returns java.util.Optional.of(user)
+        every { passwordEncoder.matches("temp", "hashed_temp") } returns true
+        every { passwordEncoder.encode("new") } returns "hashed_new"
+        every { userRepository.save(any()) } returns user
+
+        // when
+        authService.changePassword("test@example.com", request)
+
+        // then
+        assertEquals("hashed_new", user.passwordHash)
+        assertEquals(false, user.isPasswordReset)
         verify { userRepository.save(user) }
     }
 
@@ -135,6 +159,9 @@ class AuthServiceTest {
 
     @MockK
     private lateinit var fileClient: com.onmeet.auth.client.FileClient
+
+    @MockK
+    private lateinit var emailService: EmailService
 
     @InjectMockKs
     private lateinit var authService: AuthService
@@ -306,6 +333,51 @@ class AuthServiceTest {
         assertEquals("access_token", response.accessToken)
         assertEquals("refresh_token", response.refreshToken)
         verify { tokenService.issueTokens(authentication, "test@example.com") }
+    }
+
+    @Test
+    fun `login should save FCM device token when provided`() {
+        // given
+        val company = Company(id = 1L, name = "TestCompany")
+        val user = User(
+            id = 1L, email = "test@example.com", passwordHash = "hashed", name = "User",
+            roles = mutableSetOf(User.Role.USER), company = company, status = User.UserStatus.ACTIVE
+        )
+        val request = LoginRequest("test@example.com", "password", deviceToken = "fcm-token-123")
+        val authentication = io.mockk.mockk<org.springframework.security.core.Authentication>()
+        val tokenResponse = TokenResponse("access_token", "refresh_token")
+
+        every { authenticationManager.authenticate(any()) } returns authentication
+        every { userRepository.findByEmail("test@example.com") } returns java.util.Optional.of(user)
+        every { userRepository.save(any()) } returns user
+        every { tokenService.issueTokens(authentication, "test@example.com") } returns tokenResponse
+
+        // when
+        val response = authService.login(request)
+
+        // then
+        assertEquals("fcm-token-123", user.fcmDeviceToken)
+        assertEquals("access_token", response.accessToken)
+        verify { userRepository.save(match { it.fcmDeviceToken == "fcm-token-123" }) }
+    }
+
+    @Test
+    fun `login should not save FCM device token when not provided`() {
+        // given
+        val request = LoginRequest("test@example.com", "password", deviceToken = null)
+        val authentication = io.mockk.mockk<org.springframework.security.core.Authentication>()
+        val tokenResponse = TokenResponse("access_token", "refresh_token")
+
+        every { authenticationManager.authenticate(any()) } returns authentication
+        every { tokenService.issueTokens(authentication, "test@example.com") } returns tokenResponse
+
+        // when
+        val response = authService.login(request)
+
+        // then
+        assertEquals("access_token", response.accessToken)
+        verify(exactly = 0) { userRepository.findByEmail(any()) }
+        verify(exactly = 0) { userRepository.save(any()) }
     }
 
     @Test
@@ -534,5 +606,64 @@ class AuthServiceTest {
         verify(exactly = 0) { fileClient.deleteMyProfileImage() }
         verify { fileClient.generateDefaultProfileImage("Manager") }
         verify { userRepository.save(any()) }
+    }
+
+    @Test
+    fun `findPassword should generate temporary password, set isPasswordReset flag, and send email`() {
+        // given
+        val company = Company(id = 1L, name = "TestCompany")
+        val user = User(
+            id = 1L, email = "test@example.com", passwordHash = "old_hashed", name = "User Name",
+            roles = mutableSetOf(User.Role.USER), company = company, status = User.UserStatus.ACTIVE
+        )
+
+        every { userRepository.findByEmail("test@example.com") } returns java.util.Optional.of(user)
+        every { passwordEncoder.encode(any()) } returns "hashed_temp_password"
+        every { userRepository.save(any()) } returns user
+        every { emailService.sendTemporaryPassword(any(), any(), any()) } returns Unit
+
+        // when
+        authService.findPassword("test@example.com")
+
+        // then
+        assertEquals(true, user.isPasswordReset)
+        assertEquals("hashed_temp_password", user.passwordHash)
+        verify { userRepository.save(match { it.isPasswordReset == true }) }
+        verify { emailService.sendTemporaryPassword(eq("test@example.com"), any(), eq("User Name")) }
+    }
+
+    @Test
+    fun `findPassword should throw UserNotFoundException when user does not exist`() {
+        // given
+        every { userRepository.findByEmail("nonexistent@example.com") } returns java.util.Optional.empty()
+
+        // when & then
+        assertThrows(UserNotFoundException::class.java) {
+            authService.findPassword("nonexistent@example.com")
+        }
+        verify(exactly = 0) { emailService.sendTemporaryPassword(any(), any(), any()) }
+    }
+
+    @Test
+    fun `findPassword should generate 8-character temporary password`() {
+        // given
+        val company = Company(id = 1L, name = "TestCompany")
+        val user = User(
+            id = 1L, email = "test@example.com", passwordHash = "old_hashed", name = "User Name",
+            roles = mutableSetOf(User.Role.USER), company = company, status = User.UserStatus.ACTIVE
+        )
+        var capturedPassword = ""
+
+        every { userRepository.findByEmail("test@example.com") } returns java.util.Optional.of(user)
+        every { passwordEncoder.encode(any()) } returns "hashed_temp_password"
+        every { userRepository.save(any()) } returns user
+        every { emailService.sendTemporaryPassword(any(), capture(io.mockk.slot<String> { capturedPassword = it }), any()) } returns Unit
+
+        // when
+        authService.findPassword("test@example.com")
+
+        // then
+        assertEquals(8, capturedPassword.length)
+        assertTrue(capturedPassword.matches(Regex("^[A-Za-z0-9!@#\$%^&*]+$")))
     }
 }
