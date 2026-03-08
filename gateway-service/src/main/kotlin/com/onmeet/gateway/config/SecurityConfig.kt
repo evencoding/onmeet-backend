@@ -42,7 +42,8 @@ class SecurityConfig(
                     "/auth/v1/check",
                     "/auth/v1/refresh",
                     "/auth/v1/logout",
-                    "/.well-known/**"
+                    "/.well-known/**",
+                    "/ws-chat/**"
                 ).permitAll()
 
                 // Public endpoints - Infrastructure (Actuator: only health and info)
