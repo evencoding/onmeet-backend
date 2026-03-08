@@ -323,6 +323,10 @@ jobs:
             echo "LIVEKIT_EXTERNAL_IP=${{ secrets.LIVEKIT_EXTERNAL_IP }}" >> .env
             echo "Injected LIVEKIT_EXTERNAL_IP from GitHub Secret"
 
+            sed -i '/^LIVEKIT_URL=/d' .env 2>/dev/null || true
+            echo "LIVEKIT_URL=${{ secrets.LIVEKIT_URL }}" >> .env
+            echo "Injected LIVEKIT_URL from GitHub Secret"
+
             # Docker Hub 로그인
             export DOCKER_API_VERSION=1.41
             export DOCKER_REGISTRY=${{ secrets.DOCKER_USERNAME }}

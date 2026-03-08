@@ -7,9 +7,9 @@ import org.springframework.stereotype.Component;
 @ConfigurationProperties(prefix = "livekit")
 public class LiveKitProperties {
 
-    private String url = "ws://localhost:7880";
-    private String apiKey = "devkey";
-    private String apiSecret = "devsecret";
+    private String url;
+    private String apiKey;
+    private String apiSecret;
 
     public String getUrl() {
         return url;
