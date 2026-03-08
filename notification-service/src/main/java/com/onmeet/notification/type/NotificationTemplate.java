@@ -48,7 +48,26 @@ public enum NotificationTemplate {
             "{body}"),
     EVENT(
             "이벤트",
-            "{body}");
+            "{body}"),
+
+    // ── 회의 초대 상세 ──
+    INVITATION_ACCEPTED(
+            "초대 수락",
+            "{senderName}님이 회의 초대를 수락했습니다."),
+    INVITATION_DECLINED(
+            "초대 거절",
+            "{senderName}님이 회의 초대를 거절했습니다."),
+    INVITATION_CANCELLED(
+            "초대 취소",
+            "{title} 회의 초대가 취소되었습니다."),
+
+    // ── AI 요약 ──
+    AI_SUMMARY_PROGRESS(
+            "AI 요약 진행 중",
+            "{title} 회의의 AI 요약이 진행 중입니다."),
+    AI_SUMMARY_COMPLETED(
+            "AI 요약 완료",
+            "{title} 회의의 AI 요약이 완료되었습니다.");
 
     private final String defaultTitle;
     private final String bodyTemplate;

@@ -165,4 +165,6 @@ class InternalUserController(
         val users = existsMap.map { (userId, exists) -> UserExistsResponse(userId, exists) }
         return ResponseEntity.ok(BatchUserExistsResponse(users))
     }
+
+    // TODO: [auth-service] targetUserIds에 해당하는 멤버들의 활성화된 FCM Device Token 리스트(List<String>) 일괄 조회 (동기 통신)
 }
