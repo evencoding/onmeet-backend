@@ -29,12 +29,17 @@ public class AuthServiceClient {
         this.gatewaySharedSecret = gatewaySharedSecret;
     }
 
-    /**
-     * 사용자 이름을 조회합니다. 실패 시 "알 수 없는 사용자"를 반환합니다.
-     */
     public String getUserName(Long userId) {
+        UserInfoResponse userInfo = getUserInfo(userId);
+        return userInfo != null && userInfo.name() != null ? userInfo.name() : "사용자 " + userId;
+    }
+
+    /**
+     * 사용자 정보를 상세히 조회합니다.
+     */
+    public UserInfoResponse getUserInfo(Long userId) {
         if (userId == null) {
-            return "알 수 없는 사용자";
+            return null;
         }
 
         String url = authServiceProperties.getInternalUrl() + "/auth/internal/users/" + userId;
@@ -47,17 +52,16 @@ public class AuthServiceClient {
             ResponseEntity<UserInfoResponse> response = restTemplate.exchange(
                     url, HttpMethod.GET, entity, UserInfoResponse.class);
 
-            UserInfoResponse body = response.getBody();
-            return body != null && body.name() != null ? body.name() : "사용자 " + userId;
+            return response.getBody();
         } catch (Exception e) {
-            log.warn("Failed to fetch user name for userId={}: {}", userId, e.getMessage());
-            return "사용자 " + userId;
+            log.warn("Failed to fetch user info for userId={}: {}", userId, e.getMessage());
+            return null;
         }
     }
 
     /**
      * auth-service UserInfoDto 응답 매핑
      */
-    public record UserInfoResponse(Long userId, String name, String email, Long profileImageId) {
+    public record UserInfoResponse(Long userId, String name, String email, Long profileImageId, String fcmDeviceToken) {
     }
 }

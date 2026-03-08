@@ -257,7 +257,6 @@ public class MeetingRoomService {
                 participantName,
                 grants);
 
-        // TODO: [video-service] Kafka 알림 이벤트 추가 - PARTICIPANT_JOINED_NOTIFY
         eventPublisher.publishParticipantJoined(
                 new ParticipantEvent("PARTICIPANT_JOINED", roomId, userId, now));
 
@@ -299,7 +298,6 @@ public class MeetingRoomService {
         room.start(now);
 
         int participantCount = participantRepository.countActiveParticipants(roomId);
-        // TODO: [video-service] Kafka 알림 이벤트 추가 - MEETING_STARTED
         eventPublisher.publishMeetingStarted(
                 new MeetingEvent("MEETING_STARTED", roomId, userId, participantCount, now, null));
 
@@ -474,7 +472,6 @@ public class MeetingRoomService {
         MeetingRoom saved = roomRepository.save(room);
         settingsRepository.save(RoomSettings.createDefault(saved));
 
-        // TODO: [video-service] Kafka 알림 이벤트 추가 - SCHEDULE_CREATED
 
         return toResponse(saved);
     }
@@ -505,7 +502,6 @@ public class MeetingRoomService {
         validateNoScheduleConflict(room.getHostUserId(), scheduledAt, roomId);
 
         room.updateSchedule(scheduledAt);
-        // TODO: [video-service] Kafka 알림 이벤트 추가 - SCHEDULE_CHANGED
         return toResponse(room);
     }
 
@@ -519,7 +515,6 @@ public class MeetingRoomService {
         }
 
         room.cancel();
-        // TODO: [video-service] Kafka 알림 이벤트 추가 - SCHEDULE_CANCELLED
     }
 
     @Transactional(readOnly = true)
@@ -644,7 +639,6 @@ public class MeetingRoomService {
             throw new BizException(ErrorCode.INVALID_REQUEST, "Cannot send reminder for an ended room");
         }
 
-        // TODO: [video-service] 초대된 참가자들에게 예약 회의 리마인더 알림 (Kafka 이벤트 발행)
         eventPublisher.publishMeetingStarted(
                 new MeetingEvent("MEETING_REMINDER", roomId, userId, 0, null, null));
     }

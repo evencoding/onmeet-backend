@@ -90,10 +90,56 @@ public class NotificationService {
 
     @Transactional
     public void send(NotificationRequestDto dto) {
+        if (dto.getUserIds() != null && !dto.getUserIds().isEmpty()) {
+            // 다수 수신자 처리
+            for (Long userId : dto.getUserIds()) {
+                NotificationRequestDto singleDto = copyForSingleUser(dto, userId);
+                sendSingle(singleDto);
+            }
+        } else if (dto.getUserId() != null) {
+            // 단일 수신자 처리
+            sendSingle(dto);
+        }
+    }
+
+    private NotificationRequestDto copyForSingleUser(NotificationRequestDto bulkDto, Long userId) {
+        return NotificationRequestDto.builder()
+                .userId(userId)
+                .type(bulkDto.getType())
+                .title(bulkDto.getTitle())
+                .body(bulkDto.getBody())
+                .deeplink(bulkDto.getDeeplink())
+                .scheduledAt(bulkDto.getScheduledAt())
+                .resourceType(bulkDto.getResourceType())
+                .dedupeKey(bulkDto.getDedupeKey() != null ? bulkDto.getDedupeKey() + "_" + userId : null)
+                .resourceId(bulkDto.getResourceId())
+                .actorUserId(bulkDto.getActorUserId())
+                .build();
+    }
+
+    private void sendSingle(NotificationRequestDto dto) {
         boolean isScheduled = dto.getScheduledAt() != null;
 
+        // 타입 파싱
+        com.onmeet.notification.type.NotificationType type;
+        try {
+            type = com.onmeet.notification.type.NotificationType.valueOf(dto.getType());
+        } catch (Exception ex) {
+            log.warn("Invalid notification type: {}", dto.getType());
+            return;
+        }
+
+        com.onmeet.notification.type.ResourceType resType = com.onmeet.notification.type.ResourceType.SYSTEM;
+        if (dto.getResourceType() != null) {
+            try {
+                resType = com.onmeet.notification.type.ResourceType.valueOf(dto.getResourceType());
+            } catch (Exception ex) {
+                log.warn("Invalid resource type: {}", dto.getResourceType());
+            }
+        }
+
         // 템플릿 기반 메시지 렌더링
-        NotificationTemplate template = NotificationTemplate.fromType(dto.getType());
+        NotificationTemplate template = NotificationTemplate.fromType(type);
         Map<String, String> params = buildTemplateParams(dto);
 
         String renderedTitle = template.getDefaultTitle();
@@ -103,13 +149,19 @@ public class NotificationService {
         String finalTitle = (dto.getTitle() != null && !dto.getTitle().isBlank()) ? dto.getTitle() : renderedTitle;
         String finalBody = (dto.getBody() != null && !dto.getBody().isBlank()) ? dto.getBody() : renderedBody;
 
+        // dedupeKey 중복 체크
+        if (dto.getDedupeKey() != null && notificationRepository.existsByDedupeKey(dto.getDedupeKey())) {
+            log.info("Duplicate notification detected via dedupeKey: {}. Skipping.", dto.getDedupeKey());
+            return;
+        }
+
         Notification notification = Notification.builder()
-                .type(dto.getType())
+                .type(type)
                 .title(finalTitle)
                 .body(finalBody)
                 .deeplink(dto.getDeeplink())
                 .scheduledAt(dto.getScheduledAt())
-                .resourceType(dto.getResourceType())
+                .resourceType(resType)
                 .dedupeKey(dto.getDedupeKey())
                 .resourceId(dto.getResourceId())
                 .actorUserId(dto.getActorUserId())
@@ -137,8 +189,15 @@ public class NotificationService {
                 recipient.markAsSent();
             }
 
-            // FCM 푸시도 함께 전송 (SSE 성공 여부와 무관, 실패해도 API 응답에 영향 없음)
+            // auth-service에서 디바이스 토큰 동기 조회 및 푸시 발송
             try {
+                AuthServiceClient.UserInfoResponse userInfo = authServiceClient.getUserInfo(dto.getUserId());
+                if (userInfo != null && userInfo.fcmDeviceToken() != null && !userInfo.fcmDeviceToken().isBlank()) {
+                    fcmService.sendPushToToken(userInfo.fcmDeviceToken(), notification.getTitle(),
+                            notification.getBody(), notification.getDeeplink());
+                }
+                
+                // notification-service 로컬 DB에 저장된 토큰들로도 발송 (기존 로직 유지)
                 fcmService.sendPush(dto.getUserId(), notification.getTitle(),
                         notification.getBody(), notification.getDeeplink());
             } catch (Exception e) {
