@@ -166,11 +166,26 @@
 
 ## 5. API 명세
 
-### SSE 구독
+### SSE 구독 (Server-Sent Events)
 
 | Method | Endpoint | 설명 |
 |--------|----------|------|
 | `GET` | `/notification/v1/sse/subscribe` | SSE 실시간 알림 구독 |
+
+#### 💡 SSE 인증 및 연결 방식
+- **일반 REST API**와 달리 브라우저의 `EventSource`는 기본적으로 추가 HTTP Header(Authorization 등)를 지원하지 않기 때문에, API Gateway를 거치는 구조에서는 보통 클라이언트가 **Query Parameter**로 토큰을 전달하거나, API Gateway 자체 설정에 따라 쿠키 세션을 사용하도록 구성합니다.
+- 프론트엔드 연결 예시:
+  ```javascript
+  const token = 'Bearer ...'; 
+  const eventSource = new EventSource(`/notification/v1/sse/subscribe?token=${token}`);
+  ```
+- **수신 이벤트 포맷**:
+  클라이언트가 연결하면 아래 포맷으로 데이터가 수신됩니다. (이벤트명: `notification`)
+  ```http
+  event: notification
+  id: 42
+  data: {"id":42,"type":"MEETING_INVITATION","title":"회의 초대","body":"홍길동님이 주간회의 회의에 초대했습니다.","deeplink":"/meeting/abc123","createdAt":"2026-03-07T11:00:00","scheduledAt":null,"resourceType":"MEETING","dedupeKey":"invite_abc123_1","resourceId":"abc123","actorUserId":5,"isRead":false}
+  ```
 
 ### 알림 조회/관리
 
@@ -190,12 +205,56 @@
 | `POST` | `/notification/v1/fcm/token` | FCM 토큰 등록 |
 | `DELETE` | `/notification/v1/fcm/token` | FCM 토큰 해제 |
 
+#### 💡 요청 DTO (FCM 토큰 등록 시)
+```json
+{
+  "token": "fMcR3gT...(Firebase에서 발급한 토큰)",
+  "deviceId": "550e8400-e29b-41d4-a716-446655440000",
+  "deviceType": "WEB" // "WEB", "ANDROID", "IOS" 중 택1
+}
+```
+- **deviceId**: 한 사용자가 여러 기기에서 로그인할 수 있으므로, 디바이스를 식별하는 고유값(Web의 경우 브라우저 핑거프린트나 별도 UUID 등)을 함께 보내어 디바이스별 토큰 관리가 가능하도록 해야 합니다.
+
 ### 알림 설정 관리
 
 | Method | Endpoint | 설명 |
 |--------|----------|------|
 | `GET` | `/notification/v1/settings/{userId}` | 알림 설정 조회 |
 | `POST` | `/notification/v1/settings/{userId}` | 알림 설정 업데이트 |
+
+---
+
+## 5-1. 공통 응답 및 에러 포맷 (참고사항)
+
+### 알림 DTO 공통 스펙 (`NotificationResponseDto`)
+알림 목록 조회(`GET /v1/notifications`) 및 SSE `data` 필드에 포함되는 DTO 스펙은 다음과 같습니다.
+```json
+{
+  "id": 42,
+  "type": "MEETING_INVITATION",
+  "title": "회의 초대",
+  "body": "홍길동님이 주간회의 회의에 초대했습니다.",
+  "deeplink": "/meeting/abc123",
+  "createdAt": "2026-03-07T11:00:00",
+  "scheduledAt": null,
+  "resourceType": "MEETING",
+  "dedupeKey": "invite_abc123_1",
+  "resourceId": "abc123",
+  "actorUserId": 5,
+  "isRead": false
+}
+```
+> 목록 조회 시 Spring Data JPA `Page` 객체 형식으로 래핑되어 내려갑니다 (`content`, `totalPages`, `totalElements` 등 포함).
+
+### 전역 에러 포맷 (`ExceptionResponse`)
+성공(200 OK) 이외에 400(잘못된 요청), 401(인증 실패), 500(서버 에러) 발생 시 공통 포맷으로 응답합니다. 프론트엔드에서는 `code`와 `message`를 확인해 적절하게 예외 처리를 수행할 수 있습니다.
+```json
+{
+  "code": "COMMON-ERR-XXX", // 내부 에러 코드 (ex: TOKEN-INVALID)
+  "message": "권한이 없습니다.", // 사용자 정의 에러 메시지
+  "status": 401             // HTTP 상태 코드
+}
+```
 
 ---
 
@@ -241,7 +300,7 @@
 - 다른 마이크로서비스와의 **동기 REST 호출 제거** → Cascading Failure 방지
 - notification-service가 다운되더라도 Kafka에 메시지가 보관되어 **복구 후 자동 처리**
 
-> ⚠️ **미구현 항목 (TODO)**: 실패 로깅(`NotificationFailureLog`), 30일 자동 정리(`NotificationCleanupScheduler`), `@EnableRetry`는 현재 미구현 상태입니다.
+> **참고**: 알림 재처리(`@EnableRetry`) 및 30일 경과 알림 자동 정리(`NotificationCleanupScheduler`)가 백엔드에 기본 구현되어 안정성을 보장합니다.
 
 ---
 
