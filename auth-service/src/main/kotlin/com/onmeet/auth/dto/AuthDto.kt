@@ -24,7 +24,9 @@ data class LoginRequest(
     @Schema(description = "이메일", example = "user@example.com")
     val email: String,
     @Schema(description = "비밀번호", example = "password")
-    val password: String
+    val password: String,
+    @Schema(description = "FCM 디바이스 토큰 (Optional)", example = "fcm-token-xxx")
+    val deviceToken: String? = null
 )
 
 @Schema(description = "토큰 응답")
@@ -116,7 +118,9 @@ data class UserResponseDto(
     @Schema(description = "소속 팀 목록")
     val teams: List<TeamInfoDto>,
     @Schema(description = "프로필 이미지 ID")
-    val profileImageId: Long?
+    val profileImageId: Long?,
+    @Schema(description = "비밀번호 초기화 여부 (임시 비밀번호 발급 시 true)")
+    val isPasswordReset: Boolean = false
 )
 
 @Schema(description = "회사 정보 요약")
@@ -153,6 +157,14 @@ data class UserPermissionResponse(
 data class RefreshRequest(
     @Schema(description = "Refresh Token (Optional if cookie is present)")
     val refreshToken: String
+)
+
+@Schema(description = "비밀번호 찾기 요청")
+data class FindPasswordRequest(
+    @Schema(description = "이메일", example = "user@example.com")
+    @field:jakarta.validation.constraints.Email(message = "Invalid email format")
+    @field:jakarta.validation.constraints.NotBlank(message = "Email is required")
+    val email: String
 )
 
 data class EmailMessage(
