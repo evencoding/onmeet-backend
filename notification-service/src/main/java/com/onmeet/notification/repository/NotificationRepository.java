@@ -13,6 +13,8 @@ import java.util.List;
 
 public interface NotificationRepository extends JpaRepository<Notification, Long> {
 
+        boolean existsByDedupeKey(String dedupeKey);
+
         /**
          * 예약 시간이 지났고 아직 PENDING 상태인 알림을 페이징으로 조회합니다.
          * Pageable로 한 번에 처리할 건수를 제한하여 메모리 폭발을 방지합니다.

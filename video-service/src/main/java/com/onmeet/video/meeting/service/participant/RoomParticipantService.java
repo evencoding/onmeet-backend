@@ -15,6 +15,8 @@ import com.onmeet.video.meeting.entity.participant.ParticipantRole;
 import com.onmeet.video.meeting.entity.participant.ParticipantStatus;
 import com.onmeet.video.meeting.entity.participant.RoomParticipant;
 import com.onmeet.video.meeting.event.MeetingEventPublisher;
+import com.onmeet.video.meeting.event.NotificationEventPublisher;
+import com.onmeet.common.dto.NotificationRequestDto;
 import com.onmeet.video.meeting.event.participant.ParticipantEvent;
 import com.onmeet.video.meeting.repository.room.MeetingRoomRepository;
 import com.onmeet.video.meeting.repository.participant.RoomParticipantRepository;
@@ -36,6 +38,7 @@ public class RoomParticipantService {
     private final ClockProvider clockProvider;
     private final AuthServiceClient authServiceClient;
     private final WaitingRoomSseService waitingRoomSseService;
+    private final NotificationEventPublisher notificationEventPublisher;
 
     public RoomParticipantService(RoomParticipantRepository participantRepository,
             MeetingRoomRepository roomRepository,
@@ -44,7 +47,8 @@ public class RoomParticipantService {
             MeetingEventPublisher eventPublisher,
             ClockProvider clockProvider,
             AuthServiceClient authServiceClient,
-            WaitingRoomSseService waitingRoomSseService) {
+            WaitingRoomSseService waitingRoomSseService,
+            NotificationEventPublisher notificationEventPublisher) {
         this.participantRepository = participantRepository;
         this.roomRepository = roomRepository;
         this.liveKitClient = liveKitClient;
@@ -53,6 +57,7 @@ public class RoomParticipantService {
         this.clockProvider = clockProvider;
         this.authServiceClient = authServiceClient;
         this.waitingRoomSseService = waitingRoomSseService;
+        this.notificationEventPublisher = notificationEventPublisher;
     }
 
     @Transactional(readOnly = true)
@@ -224,14 +229,20 @@ public class RoomParticipantService {
                 participantName,
                 TokenGrants.forParticipant());
 
-<<<<<<< HEAD
-=======
         waitingRoomSseService.sendAdmittedEvent(roomId, targetUserId, token,
                 liveKitProperties.getUrl(), room.getLivekitRoomName());
 
->>>>>>> origin/develop
         eventPublisher.publishParticipantJoined(
                 new ParticipantEvent("PARTICIPANT_JOINED", roomId, targetUserId, now));
+
+        // 대기실 수락 알림 (Kafka 비동기)
+        notificationEventPublisher.publishNotification(
+            new NotificationRequestDto(
+                targetUserId, "WAITING_ROOM_ADMITTED", "회의실 입장 수락",
+                "'" + room.getTitle() + "' 회의실 입장이 수락되었습니다.",
+                "/meeting/" + roomId, "MEETING", String.valueOf(roomId), requesterId
+            )
+        );
     }
 
     @Transactional
@@ -245,11 +256,17 @@ public class RoomParticipantService {
 
         Instant now = clockProvider.now();
         participant.kick(now);
-<<<<<<< HEAD
-=======
 
         waitingRoomSseService.sendRejectedEvent(roomId, targetUserId);
->>>>>>> origin/develop
+
+        // 대기실 거절 알림 (Kafka 비동기)
+        notificationEventPublisher.publishNotification(
+            new NotificationRequestDto(
+                targetUserId, "WAITING_ROOM_REJECTED", "회의실 입장 거절",
+                "'" + room.getTitle() + "' 회의실 입장이 거절되었습니다.",
+                null, "MEETING", String.valueOf(roomId), requesterId
+            )
+        );
     }
 
     @Transactional
@@ -303,6 +320,16 @@ public class RoomParticipantService {
 
             eventPublisher.publishParticipantJoined(
                     new ParticipantEvent("PARTICIPANT_JOINED", roomId, p.getUserId(), now));
+
+            // 대기실 일괄 수락 알림 (Kafka 비동기)
+            notificationEventPublisher.publishNotification(
+                new NotificationRequestDto(
+                    p.getUserId(), "WAITING_ROOM_ADMITTED", "회의실 입장 수락",
+                    "'" + room.getTitle() + "' 회의실 입장이 수락되었습니다.",
+                    "/meeting/" + roomId, "MEETING", String.valueOf(roomId), requesterId
+                )
+            );
+            
             admitted++;
         }
     }

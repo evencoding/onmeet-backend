@@ -27,7 +27,8 @@ class AuthService(
     private val tokenService: TokenService,
     private val fileClient: com.onmeet.auth.client.FileClient,
     private val withdrawnUserRepository: WithdrawnUserRepository,
-    private val emailService: EmailService
+    private val emailService: EmailService,
+    private val notificationEventPublisher: NotificationEventPublisher
 ) {
     companion object {
         private val log = LoggerFactory.getLogger(AuthService::class.java)
@@ -141,7 +142,15 @@ class AuthService(
                 user.fcmDeviceToken = token
                 userRepository.save(user)
                 log.info("FCM device token updated for user: ${request.email}")
-                //TODO [notification-service][비동기][user, token] 새로운 기기 로그인 보안 알림 전송
+                // 새로운 기기 로그인 보안 알림 전송
+                notificationEventPublisher.publishNotification(
+                    com.onmeet.common.dto.NotificationRequestDto(
+                        userId = user.id,
+                        type = "SYSTEM",
+                        title = "새로운 기기 로그인",
+                        body = "새로운 기기에서 로그인 시도가 감지되었습니다."
+                    )
+                )
             }
         }
 
@@ -198,7 +207,16 @@ class AuthService(
         fileClient.generateDefaultProfileImage(targetUser.name)?.let {
             targetUser.profileImageId = it.id
             val updatedUser = userRepository.save(targetUser)
-            //TODO [notification-service][비동기][updatedUser, requester] 매니저에 의한 프로필 이미지 초기화 알림 전송
+            // 매니저에 의한 프로필 이미지 초기화 알림 전송
+            notificationEventPublisher.publishNotification(
+                com.onmeet.common.dto.NotificationRequestDto(
+                    userId = targetUser.id,
+                    type = "SYSTEM",
+                    title = "프로필 초기화",
+                    body = "관리자에 의해 프로필 이미지가 초기화되었습니다.",
+                    actorUserId = requester.id
+                )
+            )
         }
     }
 
@@ -256,7 +274,15 @@ class AuthService(
         user.isPasswordReset = false  // Reset password reset flag
         val updatedUser = userRepository.save(user)
         log.info("Password changed successfully for user: $email, isPasswordReset flag reset to false")
-        //TODO [notification-service][비동기][updatedUser] 비밀번호 변경 완료 보안 알림 전송
+        // 비밀번호 변경 완료 보안 알림 전송
+        notificationEventPublisher.publishNotification(
+            com.onmeet.common.dto.NotificationRequestDto(
+                userId = updatedUser.id,
+                type = "SYSTEM",
+                title = "비밀번호 변경 완료",
+                body = "비밀번호가 성공적으로 변경되었습니다. 본인이 아닐 경우 관리자에게 문의하세요."
+            )
+        )
     }
 
     @Transactional

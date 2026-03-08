@@ -18,5 +18,10 @@ public enum NotificationType {
 
     // AI 요약 관련
     AI_SUMMARY_PROGRESS,
-    AI_SUMMARY_COMPLETED
+    AI_SUMMARY_COMPLETED,
+
+    // 회의 초대 상세
+    INVITATION_ACCEPTED,
+    INVITATION_DECLINED,
+    INVITATION_CANCELLED
 }

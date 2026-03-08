@@ -103,15 +103,21 @@ public class NotificationService {
         String finalTitle = (dto.getTitle() != null && !dto.getTitle().isBlank()) ? dto.getTitle() : renderedTitle;
         String finalBody = (dto.getBody() != null && !dto.getBody().isBlank()) ? dto.getBody() : renderedBody;
 
+        // dedupeKey 중복 체크
+        if (dto.getDedupeKey() != null && notificationRepository.existsByDedupeKey(dto.getDedupeKey())) {
+            log.info("Duplicate notification detected via dedupeKey: {}. Skipping.", dto.getDedupeKey());
+            return;
+        }
+
         Notification notification = Notification.builder()
                 .type(dto.getType())
                 .title(finalTitle)
                 .body(finalBody)
                 .deeplink(dto.getDeeplink())
                 .scheduledAt(dto.getScheduledAt())
-                .resourceType(dto.getResourceType())
+                .resourceType(dto.getResourceType() != null ? dto.getResourceType() : ResourceType.SYSTEM)
                 .dedupeKey(dto.getDedupeKey())
-                .resourceId(dto.getResourceId())
+                .resourceId(dto.getResourceId() != null ? dto.getResourceId() : "0")
                 .actorUserId(dto.getActorUserId())
                 .status(isScheduled ? NotificationStatus.PENDING : NotificationStatus.SENT)
                 .build();
@@ -137,9 +143,15 @@ public class NotificationService {
                 recipient.markAsSent();
             }
 
-            // TODO: [Auth Service] targetUserIds에 해당하는 멤버들의 활성화된 FCM Device Token 리스트(List<String>) 일괄 조회 (1인 다중 기기 토큰 모두 포함)
-            // FCM 푸시도 함께 전송 (SSE 성공 여부와 무관, 실패해도 API 응답에 영향 없음)
+            // auth-service에서 디바이스 토큰 동기 조회 및 푸시 발송
             try {
+                AuthServiceClient.UserInfoResponse userInfo = authServiceClient.getUserInfo(dto.getUserId());
+                if (userInfo != null && userInfo.fcmDeviceToken() != null && !userInfo.fcmDeviceToken().isBlank()) {
+                    fcmService.sendPushToToken(userInfo.fcmDeviceToken(), notification.getTitle(),
+                            notification.getBody(), notification.getDeeplink());
+                }
+                
+                // notification-service 로컬 DB에 저장된 토큰들로도 발송 (기존 로직 유지)
                 fcmService.sendPush(dto.getUserId(), notification.getTitle(),
                         notification.getBody(), notification.getDeeplink());
             } catch (Exception e) {

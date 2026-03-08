@@ -20,7 +20,8 @@ import org.springframework.web.multipart.MultipartFile
 class UserServiceImpl(
     private val userRepository: UserRepository,
     private val jobTitleRepository: JobTitleRepository,
-    private val fileClient: com.onmeet.auth.client.FileClient
+    private val fileClient: com.onmeet.auth.client.FileClient,
+    private val notificationEventPublisher: NotificationEventPublisher
 ) : UserService {
 
     @Transactional
@@ -129,7 +130,16 @@ class UserServiceImpl(
         validateManagerPermission(manager, user)
         user.deactivate()
         val deactivatedUser = userRepository.save(user)
-        //TODO [notification-service][비동기][deactivatedUser] 계정 비활성화 알림 전송
+        // 계정 비활성화 알림 전송
+        notificationEventPublisher.publishNotification(
+            com.onmeet.common.dto.NotificationRequestDto(
+                userId = deactivatedUser.id,
+                type = "SYSTEM",
+                title = "계정 비활성화",
+                body = "관리자에 의해 계정이 비활성화되었습니다.",
+                actorUserId = manager.id
+            )
+        )
         return deactivatedUser.toResponseDto()
     }
 
@@ -142,7 +152,16 @@ class UserServiceImpl(
         validateManagerPermission(manager, user)
         user.activate()
         val activatedUser = userRepository.save(user)
-        //TODO [notification-service][비동기][activatedUser] 계정 활성화 알림 전송
+        // 계정 활성화 알림 전송
+        notificationEventPublisher.publishNotification(
+            com.onmeet.common.dto.NotificationRequestDto(
+                userId = activatedUser.id,
+                type = "SYSTEM",
+                title = "계정 활성화",
+                body = "관리자에 의해 계정이 활성화되었습니다.",
+                actorUserId = manager.id
+            )
+        )
         return activatedUser.toResponseDto()
     }
 
