@@ -33,6 +33,7 @@ services:
       - "127.0.0.1:7881:7881"
       - "50000-50100:50000-50100/udp"
     environment:
+      - LIVEKIT_KEYS=${LIVEKIT_API_KEY:-devkey}: ${LIVEKIT_API_SECRET:-devsecret}
       - LIVEKIT_EXTERNAL_IP=${LIVEKIT_EXTERNAL_IP}
     volumes:
       - ./livekit.yaml:/etc/livekit.yaml
