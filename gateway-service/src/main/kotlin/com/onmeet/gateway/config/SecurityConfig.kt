@@ -43,6 +43,7 @@ class SecurityConfig(
                     "/auth/v1/refresh",
                     "/auth/v1/logout",
                     "/.well-known/**",
+                    "/ws-chat",
                     "/ws-chat/**"
                 ).permitAll()
 
