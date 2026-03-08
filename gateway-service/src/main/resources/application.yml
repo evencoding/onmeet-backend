@@ -106,8 +106,6 @@ springdoc:
         url: /ai/v1/v3/api-docs
       - name: video-service
         url: /video/v1/v3/api-docs
-      - name: chat-service
-        url: /chat/v1/v3/api-docs
       - name: notification-service
         url: /notification/v1/v3/api-docs
       - name: email-service
