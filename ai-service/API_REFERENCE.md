@@ -1,14 +1,17 @@
 # AI Service API Reference
 
 **Version**: v0.1.0
-**Last Updated**: 2026-03-02
-**Status**: Production
+**Last Updated**: 2026-03-08
+**Status**: Development
 
-AI 관련 기능(회의록 요약, 분석 등)을 제공하는 서비스입니다.
+AI 관련 기능(STT, 회의록 요약, 분석 등)을 제공하는 서비스입니다.
+
+**Tech Stack**: Java (Spring Boot 3.3.5), MySQL 9.0, Lombok, MapStruct
 
 ## 기본 정보 (Base Info)
 - **Base URL**: `/ai` (Gateway 경유 시)
 - **Port**: `8082`
+- **Database**: MySQL 9.0
 
 ## Endpoints
 
