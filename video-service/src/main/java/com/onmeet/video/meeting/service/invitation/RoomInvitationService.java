@@ -105,11 +105,15 @@ public class RoomInvitationService {
             results.add(toResponse(invitationRepository.save(invitation)));
         }
 
-        // 초대받은 사용자들에게 초대 알림 일괄 발송 (Kafka 비동기)
-        for (InvitationResponse result : results) {
+        // 초대받은 사용자들에게 초대 알림 일괄 발송 (벌크)
+        List<Long> inviteeIds = results.stream()
+                .map(InvitationResponse::inviteeUserId)
+                .collect(Collectors.toList());
+        
+        if (!inviteeIds.isEmpty()) {
             notificationEventPublisher.publishNotification(
                 new NotificationRequestDto(
-                    result.inviteeUserId(), "MEETING_INVITATION", "회의 초대",
+                    null, inviteeIds, "MEETING_INVITATION", "회의 초대",
                     room.getTitle() + " 회의에 초대되었습니다.",
                     "/meeting/" + roomId, "MEETING", String.valueOf(roomId), inviterUserId
                 )

@@ -87,11 +87,12 @@ class TeamServiceImpl(
                 teamMemberRepository.save(teamMember)
             }
 
-            // 팀원들에게 팀 초대 알림 전송 (매니저가 팀 생성 시)
-            members.filter { it.id != request.leaderId }.forEach { member ->
+            // 팀원들에게 팀 초대 알림 전송 (벌크)
+            val targetUserIds = members.filter { it.id != request.leaderId }.mapNotNull { it.id }
+            if (targetUserIds.isNotEmpty()) {
                 notificationEventPublisher.publishNotification(
                     com.onmeet.common.dto.NotificationRequestDto(
-                        userId = member.id,
+                        userIds = targetUserIds,
                         type = "TEAM_MEMBER_ADDED",
                         title = savedTeam.name,
                         body = "새로운 팀에 초대되었습니다.",
@@ -116,12 +117,12 @@ class TeamServiceImpl(
 
         val savedTeam = teamRepository.save(team)
         
-        // 같은 회사 내 매니저 권한을 가진 사람들에게 팀 생성 요청 알림 전송
-        val managers = userRepository.findByCompanyIdAndRole(company.requireId(), User.Role.MANAGER)
-        managers.forEach { manager ->
+        // 같은 회사 내 매니저 권한을 가진 사람들에게 팀 생성 요청 알림 전송 (벌크)
+        val managerIds = userRepository.findByCompanyIdAndRole(company.requireId(), User.Role.MANAGER).mapNotNull { it.id }
+        if (managerIds.isNotEmpty()) {
             notificationEventPublisher.publishNotification(
                 com.onmeet.common.dto.NotificationRequestDto(
-                    userId = manager.id,
+                    userIds = managerIds,
                     type = "SYSTEM",
                     title = "팀 생성 요청",
                     body = "${user.name}님이 '${savedTeam.name}' 팀 생성을 요청했습니다.",
@@ -363,11 +364,12 @@ class TeamServiceImpl(
         teamMemberRepository.deleteAllByTeamId(teamId)
 
         teamRepository.delete(team)
-        // 팀 해체 알림 전송
-        teamMembers.forEach { member ->
+        // 팀 해체 알림 전송 (벌크)
+        val memberIds = teamMembers.mapNotNull { it.user.id }
+        if (memberIds.isNotEmpty()) {
             notificationEventPublisher.publishNotification(
                 com.onmeet.common.dto.NotificationRequestDto(
-                    userId = member.user.id,
+                    userIds = memberIds,
                     type = "SYSTEM",
                     title = "팀 해체",
                     body = "'${team.name}' 팀이 해체되었습니다.",

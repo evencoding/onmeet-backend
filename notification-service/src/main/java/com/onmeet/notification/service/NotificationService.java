@@ -90,15 +90,21 @@ public class NotificationService {
 
     @Transactional
     public void send(NotificationRequestDto dto) {
+        // 공통 파라미터 미리 조회 (N+1 방지)
+        String actorName = "알 수 없는 사용자";
+        if (dto.getActorUserId() != null) {
+            actorName = authServiceClient.getUserName(dto.getActorUserId());
+        }
+
         if (dto.getUserIds() != null && !dto.getUserIds().isEmpty()) {
             // 다수 수신자 처리
             for (Long userId : dto.getUserIds()) {
                 NotificationRequestDto singleDto = copyForSingleUser(dto, userId);
-                sendSingle(singleDto);
+                sendSingle(singleDto, actorName);
             }
         } else if (dto.getUserId() != null) {
             // 단일 수신자 처리
-            sendSingle(dto);
+            sendSingle(dto, actorName);
         }
     }
 
@@ -117,15 +123,20 @@ public class NotificationService {
                 .build();
     }
 
-    private void sendSingle(NotificationRequestDto dto) {
+    private void sendSingle(NotificationRequestDto dto, String actorName) {
         boolean isScheduled = dto.getScheduledAt() != null;
 
-        // 타입 파싱
+        // 타입 파싱 (DoS 방지)
+        if (dto.getType() == null) {
+            log.warn("Notification type is null. Skipping.");
+            return;
+        }
+
         com.onmeet.notification.type.NotificationType type;
         try {
             type = com.onmeet.notification.type.NotificationType.valueOf(dto.getType());
-        } catch (Exception ex) {
-            log.warn("Invalid notification type: {}", dto.getType());
+        } catch (IllegalArgumentException ex) {
+            log.warn("Invalid notification type: {}. Skipping.", dto.getType());
             return;
         }
 
@@ -133,14 +144,14 @@ public class NotificationService {
         if (dto.getResourceType() != null) {
             try {
                 resType = com.onmeet.notification.type.ResourceType.valueOf(dto.getResourceType());
-            } catch (Exception ex) {
-                log.warn("Invalid resource type: {}", dto.getResourceType());
+            } catch (IllegalArgumentException ex) {
+                log.warn("Invalid resource type: {}. Using SYSTEM.", dto.getResourceType());
             }
         }
 
         // 템플릿 기반 메시지 렌더링
         NotificationTemplate template = NotificationTemplate.fromType(type);
-        Map<String, String> params = buildTemplateParams(dto);
+        Map<String, String> params = buildTemplateParams(dto, actorName);
 
         String renderedTitle = template.getDefaultTitle();
         String renderedBody = template.renderBody(params);
@@ -303,22 +314,15 @@ public class NotificationService {
      * 템플릿 렌더링에 필요한 파라미터를 구성합니다.
      * actorUserId → senderName, userId → receiverName, title → title
      */
-    private Map<String, String> buildTemplateParams(NotificationRequestDto dto) {
+    private Map<String, String> buildTemplateParams(NotificationRequestDto dto, String actorName) {
         Map<String, String> params = new HashMap<>();
 
-        // 발신자 이름 조회
-        if (dto.getActorUserId() != null) {
-            params.put("senderName", authServiceClient.getUserName(dto.getActorUserId()));
-        } else {
-            params.put("senderName", "알 수 없는 사용자");
-        }
+        // 발신자 이름 (이미 조회됨)
+        params.put("senderName", actorName);
 
-        // 수신자 이름 조회
-        if (dto.getUserId() != null) {
-            params.put("receiverName", authServiceClient.getUserName(dto.getUserId()));
-        } else {
-            params.put("receiverName", "알 수 없는 사용자");
-        }
+        // 수신자 이름 조회 (N+1 방지를 위해 필요한 템플릿인 경우에만 조회하거나 기본값 사용 권장)
+        // 현재는 receiverName이 필수인 템플릿이 적으므로 기본값 처리 또는 필요시 조회
+        params.put("receiverName", "사용자");
 
         // Kafka Producer(예: video-service)에서 이벤트 발행 시 title 값을 DTO에 담아서 보내도록 스펙 정의됨
         // -> 알림 서비스에서 동기적으로 외부 API를 찔러 방 제목을 조회하는 것은 지양(결합도 및 병목 방지)

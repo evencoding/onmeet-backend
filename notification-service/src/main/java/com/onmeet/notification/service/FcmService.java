@@ -79,7 +79,7 @@ public class FcmService {
                 log.info("FCM push sent to token: messageId={}", response);
             }
         } catch (FirebaseMessagingException e) {
-            log.error("FCM push failed for token: {}, error={}", token, e.getMessage());
+            log.error("FCM push failed for token, error={}", e.getMessage());
             // 유효하지 않은 토큰일 때의 추가 처리는 필요 시 구현 (여기서는 개별 발송이므로 로깅 후 종료)
         }
     }
@@ -107,8 +107,8 @@ public class FcmService {
                     log.info("FCM push sent: userId={}, messageId={}", userId, response);
                 }
             } catch (FirebaseMessagingException e) {
-                log.error("FCM push failed: userId={}, token={}, error={}",
-                        userId, fcmToken.getToken(), e.getMessage());
+                log.error("FCM push failed for userId={}, error={}",
+                        userId, e.getMessage());
 
                 // 유효하지 않은 토큰이면 삭제
                 if ("UNREGISTERED".equals(e.getMessagingErrorCode().name()) ||
