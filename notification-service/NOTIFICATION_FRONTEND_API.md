@@ -1,4 +1,4 @@
-ㅡ# 📡 OnMeet 알림 API 명세서 (프론트엔드용)
+# 📡 OnMeet 알림 API 명세서 (프론트엔드용)
 
 > notification-service의 **SSE 실시간 알림** 및 **알림 관련 REST API** 명세입니다.  
 > 프론트엔드에서 `EventSource`를 사용하여 실시간 알림을 구현할 때 참고하세요.

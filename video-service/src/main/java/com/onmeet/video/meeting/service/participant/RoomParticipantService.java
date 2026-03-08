@@ -321,16 +321,18 @@ public class RoomParticipantService {
             eventPublisher.publishParticipantJoined(
                     new ParticipantEvent("PARTICIPANT_JOINED", roomId, p.getUserId(), now));
 
-            // 대기실 일괄 수락 알림 (Kafka 비동기)
+            admitted++;
+        }
+
+        // 대기실 일괄 수락 알림 (벌크)
+        if (!userIds.isEmpty()) {
             notificationEventPublisher.publishNotification(
                 new NotificationRequestDto(
-                    p.getUserId(), "WAITING_ROOM_ADMITTED", "회의실 입장 수락",
+                    null, userIds, "WAITING_ROOM_ADMITTED", "회의실 입장 수락",
                     "'" + room.getTitle() + "' 회의실 입장이 수락되었습니다.",
                     "/meeting/" + roomId, "MEETING", String.valueOf(roomId), requesterId
                 )
             );
-            
-            admitted++;
         }
     }
 
