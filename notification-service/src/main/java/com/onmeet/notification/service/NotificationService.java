@@ -90,10 +90,44 @@ public class NotificationService {
 
     @Transactional
     public void send(NotificationRequestDto dto) {
+        if (dto.getUserIds() != null && !dto.getUserIds().isEmpty()) {
+            // 다수 수신자 처리
+            for (Long userId : dto.getUserIds()) {
+                NotificationRequestDto singleDto = copyForSingleUser(dto, userId);
+                sendSingle(singleDto);
+            }
+        } else if (dto.getUserId() != null) {
+            // 단일 수신자 처리
+            sendSingle(dto);
+        }
+    }
+
+    private NotificationRequestDto copyForSingleUser(NotificationRequestDto bulkDto, Long userId) {
+        return NotificationRequestDto.builder()
+                .userId(userId)
+                .type(bulkDto.getType())
+                .title(bulkDto.getTitle())
+                .body(bulkDto.getBody())
+                .deeplink(bulkDto.getDeeplink())
+                .scheduledAt(bulkDto.getScheduledAt())
+                .resourceType(bulkDto.getResourceType())
+                .dedupeKey(bulkDto.getDedupeKey() != null ? bulkDto.getDedupeKey() + "_" + userId : null)
+                .resourceId(bulkDto.getResourceId())
+                .actorUserId(bulkDto.getActorUserId())
+                .build();
+    }
+
+    private void sendSingle(NotificationRequestDto dto) {
         boolean isScheduled = dto.getScheduledAt() != null;
 
+        // 타입 파싱
+        com.onmeet.notification.type.NotificationType type = 
+            com.onmeet.notification.type.NotificationType.valueOf(dto.getType());
+        com.onmeet.notification.type.ResourceType resType = 
+            dto.getResourceType() != null ? com.onmeet.notification.type.ResourceType.valueOf(dto.getResourceType()) : com.onmeet.notification.type.ResourceType.SYSTEM;
+
         // 템플릿 기반 메시지 렌더링
-        NotificationTemplate template = NotificationTemplate.fromType(dto.getType());
+        NotificationTemplate template = NotificationTemplate.fromType(type);
         Map<String, String> params = buildTemplateParams(dto);
 
         String renderedTitle = template.getDefaultTitle();
@@ -110,12 +144,12 @@ public class NotificationService {
         }
 
         Notification notification = Notification.builder()
-                .type(dto.getType())
+                .type(type)
                 .title(finalTitle)
                 .body(finalBody)
                 .deeplink(dto.getDeeplink())
                 .scheduledAt(dto.getScheduledAt())
-                .resourceType(dto.getResourceType() != null ? dto.getResourceType() : ResourceType.SYSTEM)
+                .resourceType(resType)
                 .dedupeKey(dto.getDedupeKey())
                 .resourceId(dto.getResourceId() != null ? dto.getResourceId() : "0")
                 .actorUserId(dto.getActorUserId())

@@ -9,6 +9,11 @@ data class NotificationRequestDto(
      * 알림을 받을 사용자 ID
      */
     val userId: Long? = null,
+    
+    /**
+     * 알림을 받을 다수 사용자 ID 목록 (벌크 전송 시 사용)
+     */
+    val userIds: List<Long>? = null,
 
     /**
      * 알림 타입 (NotificationType Enum의 name() 값)
