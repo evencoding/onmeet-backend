@@ -47,7 +47,6 @@ B2B 화상 회의 + AI 요약 + 알림 서비스 (MSA w/ Spring Boot 3 & Kotlin)
 | **Auth Service** | `8081` | 사용자 인증, 토큰 관리, 팀/기업 관리 | `auth_db`, Redis |
 | **AI Service** | `8082` | AI 요약 생성 (STT/LLM) | `ai_db` |
 | **Video Service** | `8083` | 화상 회의 관리, WebRTC 시그널링 | `video_db` |
-| **Chat Service** | `8084` | 실시간 채팅 (WebSocket/RSocket) | `chat_db` |
 | **Notification** | `8085` | 실시간 알림 (SSE) | `notification_db` |
 | **File Service** | `8086` | 파일 업로드/다운로드 관리 | `file_db` |
 | **Email Service** | `8087` | 이메일 발송 (AWS SES / SMTP) | - |
@@ -92,7 +91,7 @@ docker compose logs -f auth-service gateway-service
 ./gradlew :auth-service:jibDockerBuild
 
 # 2. 필요한 서비스 실행 (의존성 포함 자동 실행)
-docker compose up -d gateway-service auth-service chat-service
+docker compose up -d gateway-service auth-service
 ```
 
 ### 로컬에서 실행 (Local / IntelliJ)
@@ -101,7 +100,7 @@ IntelliJ에서 개발할 때는 **인프라만 Docker로 띄우고, 서비스는
 **1. 기반 인프라 실행**
 데이터베이스, Kafka, Redis 등 필수 인프라를 실행합니다.
 ```bash
-docker compose up -d mysql-auth redis-auth kafka zookeeper mysql-ai mysql-video mysql-chat mysql-notification postgres-file
+docker compose up -d mysql-auth redis-auth kafka zookeeper mysql-ai mysql-video mysql-notification postgres-file
 ```
 
 **2. 서비스 실행 (IntelliJ)**
@@ -153,7 +152,6 @@ AWS_SECRET_ACCESS_KEY=...
 | **Auth** | `/auth/**` | [API_REFERENCE.md](auth-service/API_REFERENCE.md) | [Link](http://localhost:8081/auth/swagger-ui.html) |
 | **AI** | `/ai/**` | [API_REFERENCE.md](ai-service/API_REFERENCE.md) | [Link](http://localhost:8082/swagger-ui.html) |
 | **Video** | `/video/**` | [API_REFERENCE.md](video-service/API_REFERENCE.md) | [Link](http://localhost:8083/swagger-ui.html) |
-| **Chat** | `/chat/**` | [API_REFERENCE.md](chat-service/API_REFERENCE.md) | [Link](http://localhost:8084/swagger-ui.html) |
 | **Notification** | `/notification/**` | [API_REFERENCE.md](notification-service/API_REFERENCE.md) | [Link](http://localhost:8085/swagger-ui.html) |
 | **File** | `/file/**` | [API_REFERENCE.md](file-service/API_REFERENCE.md) | [Link](http://localhost:8086/swagger-ui.html) |
 | **Email** | - | [API_REFERENCE.md](email-service/API_REFERENCE.md) | [Link](http://localhost:8087/swagger-ui.html) |

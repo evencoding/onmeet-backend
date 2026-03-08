@@ -89,8 +89,8 @@ services:
 
 networks:
   onmeet-network:
+    external: true
     name: onmeet-network
-    driver: bridge
 
 volumes:
   mysql-ai-data:
