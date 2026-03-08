@@ -141,6 +141,7 @@ class AuthService(
                 user.fcmDeviceToken = token
                 userRepository.save(user)
                 log.info("FCM device token updated for user: ${request.email}")
+                //TODO [notification-service][비동기][user, token] 새로운 기기 로그인 보안 알림 전송
             }
         }
 
@@ -196,7 +197,8 @@ class AuthService(
         // 기본 이미지 생성 및 할당
         fileClient.generateDefaultProfileImage(targetUser.name)?.let {
             targetUser.profileImageId = it.id
-            userRepository.save(targetUser)
+            val updatedUser = userRepository.save(targetUser)
+            //TODO [notification-service][비동기][updatedUser, requester] 매니저에 의한 프로필 이미지 초기화 알림 전송
         }
     }
 
@@ -252,8 +254,9 @@ class AuthService(
 
         user.passwordHash = passwordEncoder.encode(request.newPassword)
         user.isPasswordReset = false  // Reset password reset flag
-        userRepository.save(user)
+        val updatedUser = userRepository.save(user)
         log.info("Password changed successfully for user: $email, isPasswordReset flag reset to false")
+        //TODO [notification-service][비동기][updatedUser] 비밀번호 변경 완료 보안 알림 전송
     }
 
     @Transactional
