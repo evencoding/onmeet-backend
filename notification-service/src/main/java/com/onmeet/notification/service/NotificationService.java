@@ -137,6 +137,7 @@ public class NotificationService {
                 recipient.markAsSent();
             }
 
+            // TODO: [Auth Service] targetUserIds에 해당하는 멤버들의 활성화된 FCM Device Token 리스트(List<String>) 일괄 조회 (1인 다중 기기 토큰 모두 포함)
             // FCM 푸시도 함께 전송 (SSE 성공 여부와 무관, 실패해도 API 응답에 영향 없음)
             try {
                 fcmService.sendPush(dto.getUserId(), notification.getTitle(),

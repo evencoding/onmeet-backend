@@ -17,29 +17,7 @@ public enum NotificationTemplate {
     MEETING_INVITATION(
             "회의 초대",
             "{senderName}님이 {title} 회의에 초대했습니다."),
-    INVITATION_ACCEPTED(
-            "초대 수락",
-            "{senderName}님이 회의 초대를 수락했습니다."),
-    INVITATION_DECLINED(
-            "초대 거절",
-            "{senderName}님이 회의 초대를 거절했습니다."),
-    INVITATION_CANCELLED(
-            "초대 취소",
-            "{title} 회의 초대가 취소되었습니다."),
 
-    // ── 참가자 관리 관련 ──
-    PARTICIPANT_JOINED_NOTIFY(
-            "참가자 입장",
-            "{senderName}님이 {title} 회의에 참가했습니다."),
-    PARTICIPANT_KICKED(
-            "회의 퇴장",
-            "{title} 회의에서 퇴장되었습니다."),
-    WAITING_ROOM_ADMITTED(
-            "입장 허용",
-            "{title} 회의 대기실에서 입장이 허용되었습니다."),
-    WAITING_ROOM_REJECTED(
-            "입장 거절",
-            "{title} 회의 대기실에서 입장이 거절되었습니다."),
 
     // ── 회의 진행 관련 ──
     MEETING_STARTED(
@@ -56,12 +34,9 @@ public enum NotificationTemplate {
             "{title} 회의가 취소되었습니다."),
     MEETING_REMINDER(
             "회의 리마인더",
-            "{title} 회의가 곧 시작됩니다."),
+            "{title} 회의 시작 30분 전입니다."),
 
     // ── 기타 ──
-    MEETING_CREATED(
-            "회의 생성",
-            "{senderName}님이 {title} 회의를 생성했습니다."),
     MEETING_TODAY(
             "오늘의 회의",
             "{title} 회의가 오늘 예정되어 있습니다."),
