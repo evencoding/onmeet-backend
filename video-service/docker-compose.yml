@@ -36,7 +36,7 @@ services:
       - LIVEKIT_EXTERNAL_IP=${LIVEKIT_EXTERNAL_IP}
     volumes:
       - ./livekit.yaml:/etc/livekit.yaml
-    command: --config /etc/livekit.yaml --dev
+    command: --config /etc/livekit.yaml --node-ip ${LIVEKIT_EXTERNAL_IP} --webhook-url http://video-service:8083/video/webhook/livekit --webhook-api-key ${LIVEKIT_API_KEY:-devkey}
     healthcheck:
       test: [ "CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:7880" ]
       interval: 10s

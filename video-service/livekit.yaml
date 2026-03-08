@@ -4,7 +4,9 @@ rtc:
   port_range_end: 50100
   tcp_port: 7881
   use_external_ip: true
-  external_ip: ${LIVEKIT_EXTERNAL_IP}
+
+# API keys and Webhook are passed via environment variables in docker-compose.yml
+keys: {}
 
 logging:
   level: info
