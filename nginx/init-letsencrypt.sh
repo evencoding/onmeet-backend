@@ -40,8 +40,10 @@ path="/etc/letsencrypt/live/$domain_path_name"
 # 컨테이너 내에서 certbot이 파일을 생성할 경로이므로, 호스트에서 직접 mkdir를 실행하면 
 # 권한 문제(sudo가 아닐 경우)가 발생할 수 있습니다. 그래서 호스트 디렉토리 생성 명령어를 제거하거나 
 # 컨테이너 실행 명령에 폴더 생성 로직을 추가합니다.
+echo "### Cleaning up old certbot directories to prevent 0001 folders ..."
 DOCKER_API_VERSION=1.41 docker compose -f docker-compose.yml run --rm --entrypoint "\
-  sh -c 'mkdir -p /etc/letsencrypt/live/$domain_path_name && \
+  sh -c 'rm -rf /etc/letsencrypt/live/* /etc/letsencrypt/archive/* /etc/letsencrypt/renewal/* && \
+  mkdir -p /etc/letsencrypt/live/$domain_path_name && \
   openssl req -x509 -nodes -newkey rsa:$rsa_key_size -days 1\
     -keyout \"/etc/letsencrypt/live/$domain_path_name/privkey.pem\" \
     -out \"/etc/letsencrypt/live/$domain_path_name/fullchain.pem\" \
