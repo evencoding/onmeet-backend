@@ -26,10 +26,13 @@ class AuthService(
     private val jobTitleService: JobTitleService,
     private val tokenService: TokenService,
     private val fileClient: com.onmeet.auth.client.FileClient,
-    private val withdrawnUserRepository: WithdrawnUserRepository
+    private val withdrawnUserRepository: WithdrawnUserRepository,
+    private val emailService: EmailService
 ) {
     companion object {
         private val log = LoggerFactory.getLogger(AuthService::class.java)
+        private const val TEMP_PASSWORD_LENGTH = 8
+        private const val TEMP_PASSWORD_CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*"
     }
 
     @Transactional
@@ -131,6 +134,17 @@ class AuthService(
         val authentication = authenticationManager.authenticate(
             UsernamePasswordAuthenticationToken(request.email, request.password)
         )
+
+        // Save FCM device token if provided
+        request.deviceToken?.let { token ->
+            userRepository.findByEmail(request.email).ifPresent { user ->
+                user.fcmDeviceToken = token
+                userRepository.save(user)
+                log.info("FCM device token updated for user: ${request.email}")
+                //TODO [notification-service][비동기][user, token] 새로운 기기 로그인 보안 알림 전송
+            }
+        }
+
         return tokenService.issueTokens(authentication, request.email)
     }
 
@@ -183,7 +197,8 @@ class AuthService(
         // 기본 이미지 생성 및 할당
         fileClient.generateDefaultProfileImage(targetUser.name)?.let {
             targetUser.profileImageId = it.id
-            userRepository.save(targetUser)
+            val updatedUser = userRepository.save(targetUser)
+            //TODO [notification-service][비동기][updatedUser, requester] 매니저에 의한 프로필 이미지 초기화 알림 전송
         }
     }
 
@@ -238,6 +253,35 @@ class AuthService(
         }
 
         user.passwordHash = passwordEncoder.encode(request.newPassword)
+        user.isPasswordReset = false  // Reset password reset flag
+        val updatedUser = userRepository.save(user)
+        log.info("Password changed successfully for user: $email, isPasswordReset flag reset to false")
+        //TODO [notification-service][비동기][updatedUser] 비밀번호 변경 완료 보안 알림 전송
+    }
+
+    @Transactional
+    fun findPassword(email: String) {
+        val user = userRepository.findByEmail(email)
+            .orElseThrow { UserNotFoundException("User not found: $email") }
+
+        // Generate 8-character temporary password
+        val temporaryPassword = generateTemporaryPassword()
+
+        // Encode and save temporary password
+        user.passwordHash = passwordEncoder.encode(temporaryPassword)
+        user.isPasswordReset = true
         userRepository.save(user)
+
+        // Send temporary password via email
+        emailService.sendTemporaryPassword(email, temporaryPassword, user.name)
+
+        log.info("Temporary password generated and sent for user: $email")
+    }
+
+    private fun generateTemporaryPassword(): String {
+        val random = java.security.SecureRandom()
+        return (1..TEMP_PASSWORD_LENGTH)
+            .map { TEMP_PASSWORD_CHARS[random.nextInt(TEMP_PASSWORD_CHARS.length)] }
+            .joinToString("")
     }
 }

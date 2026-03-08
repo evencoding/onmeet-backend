@@ -86,6 +86,7 @@ class TeamServiceImpl(
                 teamMemberRepository.save(teamMember)
             }
 
+            //TODO [notification-service][비동기][members, savedTeam] 팀원들에게 팀 초대 알림 전송 (매니저가 팀 생성 시)
             return savedTeam
         }
 
@@ -99,7 +100,9 @@ class TeamServiceImpl(
             status = initialStatus
         )
 
-        return teamRepository.save(team)
+        val savedTeam = teamRepository.save(team)
+        //TODO [notification-service][비동기][savedTeam, company] 같은 회사 내 매니저 권한을 가진 사람들에게 팀 생성 요청 알림 전송
+        return savedTeam
     }
 
     @Transactional
@@ -156,7 +159,8 @@ class TeamServiceImpl(
             teamMemberRepository.save(teamMember)
         }
 
-        teamRepository.save(team)
+        val approvedTeam = teamRepository.save(team)
+        //TODO [notification-service][비동기][approvedTeam, team.leader] 팀 생성 요청자(팀장)에게 승인 알림 전송
     }
 
     @Transactional
@@ -182,7 +186,8 @@ class TeamServiceImpl(
         team.status = Team.TeamStatus.REJECTED
         team.rejectionReason = reason
 
-        teamRepository.save(team)
+        val rejectedTeam = teamRepository.save(team)
+        //TODO [notification-service][비동기][rejectedTeam, reason] 팀 생성 요청자에게 반려 알림 전송
     }
 
     @Transactional
@@ -220,7 +225,8 @@ class TeamServiceImpl(
             teamMemberRepository.save(teamMember)
         }
 
-        teamRepository.save(team)
+        val updatedTeam = teamRepository.save(team)
+        //TODO [notification-service][비동기][newLeader, updatedTeam] 팀장 위임 알림 전송
     }
 
     @Transactional
@@ -258,7 +264,8 @@ class TeamServiceImpl(
             teamMemberRepository.save(teamMember)
         }
 
-        teamRepository.save(team)
+        val updatedTeam = teamRepository.save(team)
+        //TODO [notification-service][비동기][newLeader, updatedTeam] 팀장 위임 알림 전송
     }
 
     @Transactional
@@ -271,11 +278,15 @@ class TeamServiceImpl(
             throw CompanyMismatchException("Cannot dissolve teams in another company")
         }
 
+        // 팀 해체 알림을 위해 팀원 목록 미리 조회
+        val teamMembers = teamMemberRepository.findAllByTeamId(teamId)
+
         // Explicitly delete all TeamMember associations before deleting the team
         // (defense in depth even though cascade should handle it)
         teamMemberRepository.deleteAllByTeamId(teamId)
 
         teamRepository.delete(team)
+        //TODO [notification-service][비동기][teamMembers, team] 팀 해체 알림 전송
     }
 
     @Transactional
