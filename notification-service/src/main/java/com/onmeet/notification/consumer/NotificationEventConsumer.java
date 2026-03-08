@@ -13,8 +13,7 @@ import org.springframework.stereotype.Component;
 /**
  * Kafka로부터 알림 이벤트를 수신하는 Consumer.
  * <p>
- * 토픽: notification.send
- * 발행 주체: video-service, auth-service, chat-service 등 각 마이크로서비스
+ * 토픽: notification.send 발행 주체: video-service, auth-service 등 각 마이크로서비스
  */
 @Slf4j
 @Component
