@@ -121,10 +121,22 @@ public class NotificationService {
         boolean isScheduled = dto.getScheduledAt() != null;
 
         // 타입 파싱
-        com.onmeet.notification.type.NotificationType type = 
-            com.onmeet.notification.type.NotificationType.valueOf(dto.getType());
-        com.onmeet.notification.type.ResourceType resType = 
-            dto.getResourceType() != null ? com.onmeet.notification.type.ResourceType.valueOf(dto.getResourceType()) : com.onmeet.notification.type.ResourceType.SYSTEM;
+        com.onmeet.notification.type.NotificationType type;
+        try {
+            type = com.onmeet.notification.type.NotificationType.valueOf(dto.getType());
+        } catch (Exception ex) {
+            log.warn("Invalid notification type: {}", dto.getType());
+            return;
+        }
+
+        com.onmeet.notification.type.ResourceType resType = com.onmeet.notification.type.ResourceType.SYSTEM;
+        if (dto.getResourceType() != null) {
+            try {
+                resType = com.onmeet.notification.type.ResourceType.valueOf(dto.getResourceType());
+            } catch (Exception ex) {
+                log.warn("Invalid resource type: {}", dto.getResourceType());
+            }
+        }
 
         // 템플릿 기반 메시지 렌더링
         NotificationTemplate template = NotificationTemplate.fromType(type);
@@ -151,7 +163,7 @@ public class NotificationService {
                 .scheduledAt(dto.getScheduledAt())
                 .resourceType(resType)
                 .dedupeKey(dto.getDedupeKey())
-                .resourceId(dto.getResourceId() != null ? dto.getResourceId() : "0")
+                .resourceId(dto.getResourceId())
                 .actorUserId(dto.getActorUserId())
                 .status(isScheduled ? NotificationStatus.PENDING : NotificationStatus.SENT)
                 .build();
