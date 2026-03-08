@@ -33,10 +33,11 @@ services:
       - "127.0.0.1:7881:7881"
       - "50000-50100:50000-50100/udp"
     environment:
-      - LIVEKIT_EXTERNAL_IP=${LIVEKIT_EXTERNAL_IP}
+      LIVEKIT_KEYS: "${LIVEKIT_API_KEY:-devkey}: ${LIVEKIT_API_SECRET:-devsecret}"
+      LIVEKIT_EXTERNAL_IP: ${LIVEKIT_EXTERNAL_IP}
     volumes:
       - ./livekit.yaml:/etc/livekit.yaml
-    command: --config /etc/livekit.yaml --dev
+    command: --config /etc/livekit.yaml --node-ip ${LIVEKIT_EXTERNAL_IP}
     healthcheck:
       test: [ "CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:7880" ]
       interval: 10s
@@ -66,7 +67,7 @@ services:
       - SPRING_DATASOURCE_PASSWORD=${DB_ROOT_PASSWORD}
       - GATEWAY_SHARED_SECRET=${GATEWAY_SHARED_SECRET}
       - SERVER_PORT=${VIDEO_SERVICE_PORT:-8083}
-      - LIVEKIT_URL=ws://livekit:7880
+      - LIVEKIT_URL=${LIVEKIT_URL:-ws://livekit:7880}
       - LIVEKIT_API_KEY=${LIVEKIT_API_KEY:-devkey}
       - LIVEKIT_API_SECRET=${LIVEKIT_API_SECRET:-devsecret}
       - MANAGEMENT_ENDPOINT_HEALTH_PROBES_ENABLED=true
