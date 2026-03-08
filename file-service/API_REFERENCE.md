@@ -1,15 +1,19 @@
 # File Service API Reference
 
 **Version**: v0.1.0
-**Last Updated**: 2026-03-02
+**Last Updated**: 2026-03-08
 **Status**: Production
 
 File Service는 파일의 업로드, 조회, 삭제 및 CDN(CloudFront) 연동을 관리하는 마이크로서비스입니다.
 
+**Tech Stack**: Go (Gin Framework), PostgreSQL 16, AWS S3/CloudFront
+
 ## 기본 정보
-- **Base URL**: `/api/v1/files`
-- **Default Port**: `8083` (Docker Compose 기준)
-- **CDN**: `${CLOUDFRONT_DOMAIN}`
+- **Base URL**: `/file` (Gateway 경유 시)
+- **Port**: `8086`
+- **Database**: PostgreSQL 16 (JSONB 메타데이터 지원)
+- **Storage**: AWS S3 + CloudFront CDN
+- **Region**: ap-northeast-2 (Seoul)
 
 ## 1. 파일 업로드 (동기)
 여러 파일을 한 번에 업로드하고 저장된 정보를 반환받습니다.
