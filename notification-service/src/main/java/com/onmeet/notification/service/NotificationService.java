@@ -163,7 +163,7 @@ public class NotificationService {
                 .scheduledAt(dto.getScheduledAt())
                 .resourceType(resType)
                 .dedupeKey(dto.getDedupeKey())
-                .resourceId(dto.getResourceId() != null ? dto.getResourceId() : "0")
+                .resourceId(dto.getResourceId())
                 .actorUserId(dto.getActorUserId())
                 .status(isScheduled ? NotificationStatus.PENDING : NotificationStatus.SENT)
                 .build();
