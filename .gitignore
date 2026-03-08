@@ -54,3 +54,8 @@ out/
 /src/main/resources/application-local.yml
 /src/main/resources/application-test.yml
 /src/main/resources/application.yml
+
+# Agent/AI Tool directories
+.agent/
+.claude/
+# .gemini included as requested
