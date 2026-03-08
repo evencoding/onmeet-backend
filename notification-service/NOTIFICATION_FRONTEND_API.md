@@ -1,4 +1,4 @@
-# 📡 OnMeet 알림 API 명세서 (프론트엔드용)
+ㅡ# 📡 OnMeet 알림 API 명세서 (프론트엔드용)
 
 > notification-service의 **SSE 실시간 알림** 및 **알림 관련 REST API** 명세입니다.  
 > 프론트엔드에서 `EventSource`를 사용하여 실시간 알림을 구현할 때 참고하세요.
@@ -193,15 +193,9 @@ GET /notification/v1/settings/{userId}
 **Response:**
 ```json
 {
-  "isPushEnabled": true,
-  "isMeetingInviteNotification": true,
-  "isMeetingStartNotification": true,
-  "isMeetingRemindNotification": true,
+  "isMeetingNotification": true,
   "isMinutesCompletedNotification": true,
-  "isSystemNoticeNotification": true,
-  "isDoNotDisturbEnabled": false,
-  "doNotDisturbStartTime": "22:00",
-  "doNotDisturbEndTime": "08:00"
+  "isTeamNotification": true
 }
 ```
 
@@ -214,15 +208,9 @@ POST /notification/v1/settings/{userId}
 **Request Body:**
 ```json
 {
-  "isPushEnabled": true,
-  "isMeetingInviteNotification": true,
-  "isMeetingStartNotification": false,
-  "isMeetingRemindNotification": true,
-  "isMinutesCompletedNotification": true,
-  "isSystemNoticeNotification": true,
-  "isDoNotDisturbEnabled": true,
-  "doNotDisturbStartTime": "22:00",
-  "doNotDisturbEndTime": "08:00"
+  "isMeetingNotification": true,
+  "isMinutesCompletedNotification": false,
+  "isTeamNotification": true
 }
 ```
 
@@ -230,15 +218,9 @@ POST /notification/v1/settings/{userId}
 
 | 필드 | 타입 | 설명 |
 |------|------|------|
-| `isPushEnabled` | `boolean` | 전체 푸시 알림 ON/OFF |
-| `isMeetingInviteNotification` | `boolean` | 회의 초대 알림 |
-| `isMeetingStartNotification` | `boolean` | 회의 시작 알림 |
-| `isMeetingRemindNotification` | `boolean` | 회의 리마인더 알림 |
+| `isMeetingNotification` | `boolean` | 회의 알림 (초대 및 변경사항) |
 | `isMinutesCompletedNotification` | `boolean` | 회의록 완성 알림 |
-| `isSystemNoticeNotification` | `boolean` | 시스템 공지 알림 |
-| `isDoNotDisturbEnabled` | `boolean` | 방해 금지 모드 |
-| `doNotDisturbStartTime` | `string (HH:mm)` | 방해 금지 시작 시간 |
-| `doNotDisturbEndTime` | `string (HH:mm)` | 방해 금지 종료 시간 |
+| `isTeamNotification` | `boolean` | 팀 알림 (멤버 추가, 팀 설정 변경) |
 
 ---
 
@@ -284,9 +266,6 @@ DELETE /notification/v1/fcm/token?token=fMcR3gT...
 | type | 카테고리 | 설명 | 예시 메시지 |
 |------|----------|------|-------------|
 | `MEETING_INVITATION` | 초대 | 회의 초대 | `{이름}님이 {회의} 회의에 초대했습니다.` |
-| `INVITATION_ACCEPTED` | 초대 | 초대 수락 | `{이름}님이 회의 초대를 수락했습니다.` |
-| `INVITATION_DECLINED` | 초대 | 초대 거절 | `{이름}님이 회의 초대를 거절했습니다.` |
-| `INVITATION_CANCELLED` | 초대 | 초대 취소 | `{회의} 회의 초대가 취소되었습니다.` |
 | `PARTICIPANT_JOINED_NOTIFY` | 참가 | 참가자 입장 | `{이름}님이 {회의} 회의에 참가했습니다.` |
 | `PARTICIPANT_KICKED` | 참가 | 회의 퇴장 | `{회의} 회의에서 퇴장되었습니다.` |
 | `WAITING_ROOM_ADMITTED` | 참가 | 입장 허용 | `{회의} 대기실에서 입장이 허용되었습니다.` |
@@ -352,8 +331,6 @@ eventSource.onerror = (error) => {
 function getNotificationIcon(type) {
   const icons = {
     MEETING_INVITATION: '📩',
-    INVITATION_ACCEPTED: '✅',
-    INVITATION_DECLINED: '❌',
     PARTICIPANT_JOINED_NOTIFY: '👋',
     MEETING_STARTED: '🎬',
     MEETING_REMINDER: '⏰',

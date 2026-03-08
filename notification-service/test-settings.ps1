@@ -10,15 +10,9 @@ Invoke-RestMethod -Uri "$BaseUrl/$UserId" -Method Get -Headers @{ "X-Gateway-Sec
 
 Write-Host "`n2. Updating Settings for User $UserId (Disable Push, Set DND)..."
 $Body = @{
-    isPushEnabled = $false
-    isMeetingInviteNotification = $true
-    isMeetingStartNotification = $true
-    isMeetingRemindNotification = $false
-    isMinutesCompletedNotification = $true
-    isSystemNoticeNotification = $false
-    isDoNotDisturbEnabled = $true
-    doNotDisturbStartTime = "23:00"
-    doNotDisturbEndTime = "07:00"
+    isMeetingNotification = $true
+    isMinutesCompletedNotification = $false
+    isTeamNotification = $true
 } | ConvertTo-Json
 
 Invoke-RestMethod -Uri "$BaseUrl/$UserId" -Method Post -Body $Body -ContentType "application/json" -Headers @{ "X-Gateway-Secret" = $GatewaySecret; "X-User-Id" = "$UserId" }

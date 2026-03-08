@@ -33,8 +33,6 @@ gateway:
 onmeet:
   auth:
     internal-url: ${AUTH_INTERNAL_URL:http://auth-service:8081}
-  notification:
-    internal-url: ${NOTIFICATION_INTERNAL_URL:http://notification-service:8085}
 cors:
   allowed-origins: "http://localhost:3000,http://localhost:8080"
 
