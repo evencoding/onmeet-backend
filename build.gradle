@@ -1,3 +1,12 @@
+buildscript {
+    ext.kotlin_version = '2.2.0'
+    repositories {
+        mavenCentral()
+    }
+    dependencies {
+        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
+    }
+}
 plugins {
     id 'org.springframework.boot' version '3.3.5' apply false
     id 'io.spring.dependency-management' version '1.1.6' apply false
@@ -8,6 +17,7 @@ plugins {
     id 'com.google.cloud.tools.jib' version '3.4.3' apply false
     id 'jacoco'
 }
+apply plugin: 'kotlin'
 
 repositories {
     mavenCentral()
@@ -135,4 +145,10 @@ tasks.register('jacocoRootReport', JacocoReport) {
         xml.required = true
         csv.required = true
     }
+}
+dependencies {
+    implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
+}
+kotlin {
+    jvmToolchain(8)
 }
