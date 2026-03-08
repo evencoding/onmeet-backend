@@ -12,7 +12,6 @@
 flowchart LR
     subgraph 외부 서비스
         VS["video-service"]
-        CS["chat-service"]
         NS["notification-service"]
     end
 
@@ -39,7 +38,7 @@ flowchart LR
 
     VS -->|audio.chunk.ready| K --> AC --> STT
     STT -->|voice.segment.created| K --> VC --> TB
-    CS -->|chat.events| K --> CC --> TB
+    VS -->|chat.events| K --> CC --> TB
     VS -->|meeting.ended| K --> MC --> TB
     TB -->|transcript.finalized| K --> TC --> SW
     SW -->|minutes.generated| K --> NS
@@ -64,7 +63,7 @@ flowchart LR
 | 토픽명 | 설정 키 | 발행 서비스 | Consumer 클래스 | Consumer Group | 설명 |
 |---|---|---|---|---|---|
 | `audio.chunk.ready` | `app.kafka.topics.audio-chunk-ready` | **video-service** | `AudioChunkConsumer` | `ai-stt-worker` | 오디오 청크가 S3에 업로드 완료됨 |
-| `chat.events` | `app.kafka.topics.chat-events` | **chat-service** | `ChatEventsConsumer` | `ai-transcript-builder` | 채팅 메시지 발생 |
+| `chat.events` | `app.kafka.topics.chat-events` | **video-service** | `ChatEventsConsumer` | `ai-transcript-builder` | 채팅 메시지 발생 |
 | `voice.segment.created` | `app.kafka.topics.voice-segment-created` | **ai-service (자체)** | `VoiceSegmentConsumer` | `ai-transcript-builder` | STT 결과(음성 세그먼트) 생성됨 |
 | `meeting.ended` | `app.kafka.topics.meeting-ended` | **video-service** | `MeetingEndedConsumer` | `ai-transcript-builder` | 회의 종료 |
 | `transcript.finalized` | `app.kafka.topics.transcript-finalized` | **ai-service (자체)** | `TranscriptFinalizedConsumer` | `ai-summary-worker` | 트랜스크립트 확정 |
@@ -97,7 +96,7 @@ flowchart LR
 
 ---
 
-### 3.2 `ChatMessageEvent` — chat-service → ai-service
+### 3.2 `ChatMessageEvent` — video-service (채팅 기능) → ai-service
 
 | 필드 | 타입 | 설명 | 예시 |
 |---|---|---|---|
@@ -268,9 +267,9 @@ flowchart LR
 > [!IMPORTANT]
 > `audioFileKey`에 해당하는 오디오 파일이 **S3에 먼저 업로드된 후** 이벤트를 발행해야 합니다.
 
-### 7.2 chat-service → ai-service
+### 7.2 video-service (채팅) → ai-service
 
-> chat-service가 **발행해야 하는** 데이터
+> video-service가 **발행해야 하는** 채팅 데이터
 
 | 토픽 | 이벤트 | 필수 필드 |
 |---|---|---|
@@ -337,7 +336,7 @@ flowchart LR
    - voice.segment.created 이벤트 발행
 3. [ai-service] VoiceSegmentConsumer → TranscriptBuilderService
    - Redis에 음성 세그먼트 저장 (시간순 ZSet)
-4. [chat-service] → chat.events 이벤트 발행
+4. [video-service] (채팅) → chat.events 이벤트 발행
 5. [ai-service] ChatEventsConsumer → TranscriptBuilderService
    - Redis에 채팅 메시지 저장 (시간순 ZSet)
 6. [video-service] → meeting.ended 이벤트 발행
