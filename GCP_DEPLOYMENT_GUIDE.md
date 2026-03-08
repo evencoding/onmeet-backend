@@ -57,6 +57,8 @@ gcloud compute instances create onmeet-backend \
 - **8080**: Gateway Service (API Gateway)
 - **22**: SSH
 - **9092**: Kafka (선택사항, 외부 연결 시)
+- **50000-50100 (UDP)**: LiveKit WebRTC 미디어 스트림 (영상/음성)
+- **7881 (TCP)**: LiveKit WebRTC TCP Fallback (선택사항)
 
 ```bash
 # HTTP/HTTPS 트래픽 허용
@@ -64,6 +66,16 @@ gcloud compute firewall-rules create allow-gateway \
   --allow tcp:8080 \
   --target-tags http-server \
   --description "Allow gateway access"
+
+# WebRTC UDP 포트 개방 (영상 데이터용)
+gcloud compute firewall-rules create allow-webrtc-udp \
+  --allow udp:50000-50100 \
+  --description "Allow WebRTC UDP media traffic"
+
+# WebRTC TCP 포트 개방 (Fallback용)
+gcloud compute firewall-rules create allow-webrtc-tcp \
+  --allow tcp:7881 \
+  --description "Allow WebRTC TCP fallback"
 ```
 
 ### 2.3 SSH 접속
@@ -176,6 +188,11 @@ SPRING_MAIL_PASSWORD=your_smtp_password
 # Kafka
 KAFKA_BOOTSTRAP_SERVERS=kafka:29092
 KAFKA_BROKERS=kafka:29092
+
+# LiveKit (WebRTC)
+LIVEKIT_EXTERNAL_IP=your_gcp_instance_external_ip
+LIVEKIT_API_KEY=devkey
+LIVEKIT_API_SECRET=devsecret
 ```
 
 ### 4.2 Docker 이미지 빌드
