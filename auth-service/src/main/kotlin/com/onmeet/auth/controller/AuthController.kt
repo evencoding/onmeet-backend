@@ -557,7 +557,55 @@ class AuthController(
     ])
     @GetMapping("/internal/users/{userId}/company")
     fun getUserCompany(@PathVariable userId: Long): ResponseEntity<CompanyInfoDto> =
-        userService.getUserPermissions(userId).let { 
+        userService.getUserPermissions(userId).let {
             ResponseEntity.ok(CompanyInfoDto(id = it.companyId ?: 0L, name = "Company ${it.companyId}"))
         }
+
+    @Operation(summary = "비밀번호 찾기", description = "이메일로 임시 비밀번호를 발급받습니다.")
+    @ApiResponses(value = [
+        ApiResponse(
+            responseCode = "200",
+            description = "임시 비밀번호가 이메일로 발송되었습니다"
+        ),
+        ApiResponse(
+            responseCode = "400",
+            description = "잘못된 요청 - 유효하지 않은 이메일 형식",
+            content = [Content(
+                mediaType = "application/json",
+                schema = Schema(implementation = ErrorResponse::class),
+                examples = [ExampleObject(
+                    value = """{"status": 400, "message": "Invalid email format", "timestamp": 1234567890}"""
+                )]
+            )]
+        ),
+        ApiResponse(
+            responseCode = "404",
+            description = "사용자를 찾을 수 없음 - 등록되지 않은 이메일",
+            content = [Content(
+                mediaType = "application/json",
+                schema = Schema(implementation = ErrorResponse::class),
+                examples = [ExampleObject(
+                    value = """{"status": 404, "message": "User not found", "timestamp": 1234567890}"""
+                )]
+            )]
+        ),
+        ApiResponse(
+            responseCode = "500",
+            description = "서버 내부 오류",
+            content = [Content(
+                mediaType = "application/json",
+                schema = Schema(implementation = ErrorResponse::class),
+                examples = [ExampleObject(
+                    value = """{"status": 500, "message": "Internal server error occurred", "timestamp": 1234567890}"""
+                )]
+            )]
+        )
+    ])
+    @PostMapping("/password/find")
+    fun findPassword(
+        @RequestBody @jakarta.validation.Valid request: FindPasswordRequest
+    ): ResponseEntity<Map<String, String>> {
+        authService.findPassword(request.email)
+        return ResponseEntity.ok(mapOf("message" to "Temporary password has been sent to your email"))
+    }
 }
