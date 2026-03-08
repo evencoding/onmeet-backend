@@ -40,7 +40,7 @@ path="/etc/letsencrypt/live/$domain_path_name"
 # 컨테이너 내에서 certbot이 파일을 생성할 경로이므로, 호스트에서 직접 mkdir를 실행하면 
 # 권한 문제(sudo가 아닐 경우)가 발생할 수 있습니다. 그래서 호스트 디렉토리 생성 명령어를 제거하거나 
 # 컨테이너 실행 명령에 폴더 생성 로직을 추가합니다.
-DOCKER_API_VERSION=1.41 docker compose -f nginx/docker-compose.yml run --rm --entrypoint "\
+DOCKER_API_VERSION=1.41 docker compose -f docker-compose.yml run --rm --entrypoint "\
   sh -c 'mkdir -p /etc/letsencrypt/live/$domain_path_name && \
   openssl req -x509 -nodes -newkey rsa:$rsa_key_size -days 1\
     -keyout \"/etc/letsencrypt/live/$domain_path_name/privkey.pem\" \
@@ -52,12 +52,12 @@ echo
 echo "### Starting nginx ..."
 # 기존 컨테이너가 남아있을 경우 이름 충돌을 방지하기 위해 먼저 제거
 docker rm -f onmeet-nginx 2>/dev/null || true
-DOCKER_API_VERSION=1.41 docker compose -f nginx/docker-compose.yml up --force-recreate -d nginx
+DOCKER_API_VERSION=1.41 docker compose -f docker-compose.yml up --force-recreate -d nginx
 echo
 
 echo "### Deleting dummy certificate for $domains ..."
 domain_path_name="${domains[0]}"
-DOCKER_API_VERSION=1.41 docker compose -f nginx/docker-compose.yml run --rm --entrypoint "\
+DOCKER_API_VERSION=1.41 docker compose -f docker-compose.yml run --rm --entrypoint "\
   rm -Rf /etc/letsencrypt/live/$domain_path_name && \
   rm -Rf /etc/letsencrypt/archive/$domain_path_name && \
   rm -Rf /etc/letsencrypt/renewal/$domain_path_name.conf" certbot
@@ -79,7 +79,7 @@ esac
 # Enable staging mode if needed
 if [ $staging != "0" ]; then staging_arg="--staging"; fi
 
-DOCKER_API_VERSION=1.41 docker compose -f nginx/docker-compose.yml run --rm --entrypoint "\
+DOCKER_API_VERSION=1.41 docker compose -f docker-compose.yml run --rm --entrypoint "\
   certbot certonly --webroot -w /var/www/certbot \
     $staging_arg \
     $email_arg \
@@ -90,4 +90,4 @@ DOCKER_API_VERSION=1.41 docker compose -f nginx/docker-compose.yml run --rm --en
 echo
 
 echo "### Reloading nginx ..."
-DOCKER_API_VERSION=1.41 docker compose -f nginx/docker-compose.yml exec nginx nginx -s reload
+DOCKER_API_VERSION=1.41 docker compose -f docker-compose.yml exec nginx nginx -s reload
