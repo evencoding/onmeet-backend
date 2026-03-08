@@ -53,6 +53,12 @@ class User(
     @Column
     var profileImageId: Long? = null,
 
+    @Column(nullable = false)
+    var isPasswordReset: Boolean = false,
+
+    @Column
+    var fcmDeviceToken: String? = null,
+
     @CreatedDate
     @Column(nullable = false, updatable = false)
     var createdAt: LocalDateTime? = null,

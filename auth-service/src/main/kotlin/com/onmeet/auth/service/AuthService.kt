@@ -26,10 +26,13 @@ class AuthService(
     private val jobTitleService: JobTitleService,
     private val tokenService: TokenService,
     private val fileClient: com.onmeet.auth.client.FileClient,
-    private val withdrawnUserRepository: WithdrawnUserRepository
+    private val withdrawnUserRepository: WithdrawnUserRepository,
+    private val emailService: EmailService
 ) {
     companion object {
         private val log = LoggerFactory.getLogger(AuthService::class.java)
+        private const val TEMP_PASSWORD_LENGTH = 8
+        private const val TEMP_PASSWORD_CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*"
     }
 
     @Transactional
@@ -131,6 +134,16 @@ class AuthService(
         val authentication = authenticationManager.authenticate(
             UsernamePasswordAuthenticationToken(request.email, request.password)
         )
+
+        // Save FCM device token if provided
+        request.deviceToken?.let { token ->
+            userRepository.findByEmail(request.email).ifPresent { user ->
+                user.fcmDeviceToken = token
+                userRepository.save(user)
+                log.info("FCM device token updated for user: ${request.email}")
+            }
+        }
+
         return tokenService.issueTokens(authentication, request.email)
     }
 
@@ -238,6 +251,34 @@ class AuthService(
         }
 
         user.passwordHash = passwordEncoder.encode(request.newPassword)
+        user.isPasswordReset = false  // Reset password reset flag
         userRepository.save(user)
+        log.info("Password changed successfully for user: $email, isPasswordReset flag reset to false")
+    }
+
+    @Transactional
+    fun findPassword(email: String) {
+        val user = userRepository.findByEmail(email)
+            .orElseThrow { UserNotFoundException("User not found: $email") }
+
+        // Generate 8-character temporary password
+        val temporaryPassword = generateTemporaryPassword()
+
+        // Encode and save temporary password
+        user.passwordHash = passwordEncoder.encode(temporaryPassword)
+        user.isPasswordReset = true
+        userRepository.save(user)
+
+        // Send temporary password via email
+        emailService.sendTemporaryPassword(email, temporaryPassword, user.name)
+
+        log.info("Temporary password generated and sent for user: $email")
+    }
+
+    private fun generateTemporaryPassword(): String {
+        val random = java.security.SecureRandom()
+        return (1..TEMP_PASSWORD_LENGTH)
+            .map { TEMP_PASSWORD_CHARS[random.nextInt(TEMP_PASSWORD_CHARS.length)] }
+            .joinToString("")
     }
 }
