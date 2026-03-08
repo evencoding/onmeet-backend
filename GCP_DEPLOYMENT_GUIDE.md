@@ -239,7 +239,7 @@ curl http://localhost:8080/actuator/health
 | notification-service | 512M | 256M |
 | file-service | 512M | 256M |
 | email-service | 512M | 256M |
-| **소계** | **3968M (~3.9GB)** | **1792M (~1.8GB)** |
+| **소계** | **3840M (~3.8GB)** | **1792M (~1.8GB)** |
 
 #### 인프라 컨테이너 (Database, Messaging)
 | Service | Memory Limit | Reservation |
@@ -252,14 +252,14 @@ curl http://localhost:8080/actuator/health
 | redis-auth | 128M | 64M |
 | kafka | 1024M (1G) | 512M |
 | zookeeper | 256M | 128M |
-| **소계** | **2432M (~2.4GB)** | **1344M (~1.3GB)** |
+| **소계** | **2688M (~2.6GB)** | **1344M (~1.3GB)** |
 
 #### 총 메모리 할당
-- **Total Limits**: ~7.0GB
-- **Total Reservations**: ~3.4GB
+- **Total Limits**: ~6.4GB
+- **Total Reservations**: ~3.1GB
 - **Physical RAM**: 8GB
 - **Swap**: 8GB
-- **여유 메모리**: ~1GB (시스템 프로세스용)
+- **여유 메모리**: ~1.6GB (시스템 프로세스용)
 
 ### 5.2 Spring Boot JVM 메모리 자동 조정
 
