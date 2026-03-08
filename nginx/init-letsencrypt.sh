@@ -35,8 +35,9 @@ if [ ! -e "$data_path/conf/options-ssl-nginx.conf" ] || [ ! -e "$data_path/conf/
 fi
 
 echo "### Creating dummy certificate for $domains ..."
-path="/etc/letsencrypt/live/$domains"
-mkdir -p "$data_path/conf/live/$domains"
+domain_path_name="${domains[0]}"
+path="/etc/letsencrypt/live/$domain_path_name"
+mkdir -p "$data_path/conf/live/$domain_path_name"
 DOCKER_API_VERSION=1.41 docker compose -f nginx/docker-compose.yml run --rm --entrypoint "\
   openssl req -x509 -nodes -newkey rsa:$rsa_key_size -days 1\
     -keyout '$path/privkey.pem' \
@@ -52,10 +53,11 @@ DOCKER_API_VERSION=1.41 docker compose -f nginx/docker-compose.yml up --force-re
 echo
 
 echo "### Deleting dummy certificate for $domains ..."
+domain_path_name="${domains[0]}"
 DOCKER_API_VERSION=1.41 docker compose -f nginx/docker-compose.yml run --rm --entrypoint "\
-  rm -Rf /etc/letsencrypt/live/$domains && \
-  rm -Rf /etc/letsencrypt/archive/$domains && \
-  rm -Rf /etc/letsencrypt/renewal/$domains.conf" certbot
+  rm -Rf /etc/letsencrypt/live/$domain_path_name && \
+  rm -Rf /etc/letsencrypt/archive/$domain_path_name && \
+  rm -Rf /etc/letsencrypt/renewal/$domain_path_name.conf" certbot
 echo
 
 
