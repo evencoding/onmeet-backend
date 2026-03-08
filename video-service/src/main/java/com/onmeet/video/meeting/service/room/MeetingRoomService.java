@@ -7,6 +7,8 @@ import com.onmeet.video.infra.auth.AuthServiceClient;
 import com.onmeet.video.infra.livekit.LiveKitClient;
 import com.onmeet.video.infra.livekit.LiveKitClient.TokenGrants;
 import com.onmeet.video.infra.livekit.LiveKitProperties;
+import com.onmeet.video.meeting.dto.participant.RoomParticipantResponse;
+import com.onmeet.video.meeting.service.waiting.WaitingRoomSseService;
 import com.onmeet.video.meeting.dto.room.MeetingRoomDetailResponse;
 import com.onmeet.video.meeting.dto.room.MeetingRoomResponse;
 import com.onmeet.video.meeting.dto.room.MonthlyStatsResponse;
@@ -68,6 +70,7 @@ public class MeetingRoomService {
     private final MeetingEventPublisher eventPublisher;
     private final ClockProvider clockProvider;
     private final AuthServiceClient authServiceClient;
+    private final WaitingRoomSseService waitingRoomSseService;
 
     public MeetingRoomService(MeetingRoomRepository roomRepository,
             RoomSettingsRepository settingsRepository,
@@ -79,7 +82,8 @@ public class MeetingRoomService {
             LiveKitProperties liveKitProperties,
             MeetingEventPublisher eventPublisher,
             ClockProvider clockProvider,
-            AuthServiceClient authServiceClient) {
+            AuthServiceClient authServiceClient,
+            WaitingRoomSseService waitingRoomSseService) {
         this.roomRepository = roomRepository;
         this.settingsRepository = settingsRepository;
         this.participantRepository = participantRepository;
@@ -91,6 +95,7 @@ public class MeetingRoomService {
         this.eventPublisher = eventPublisher;
         this.clockProvider = clockProvider;
         this.authServiceClient = authServiceClient;
+        this.waitingRoomSseService = waitingRoomSseService;
     }
 
     @Transactional
@@ -237,6 +242,7 @@ public class MeetingRoomService {
         participantRepository.save(participant);
 
         if (isWaitingRoom) {
+            waitingRoomSseService.notifyHostNewWaiter(roomId, toParticipantResponse(participant));
             return new RoomJoinResponse(null, liveKitProperties.getUrl(), room.getLivekitRoomName(), true);
         }
 
@@ -251,7 +257,6 @@ public class MeetingRoomService {
                 participantName,
                 grants);
 
-        // TODO: [Notification Service] Kafka 알림 이벤트 추가 - PARTICIPANT_JOINED_NOTIFY
         eventPublisher.publishParticipantJoined(
                 new ParticipantEvent("PARTICIPANT_JOINED", roomId, userId, now));
 
@@ -266,8 +271,13 @@ public class MeetingRoomService {
                         List.of(ParticipantStatus.JOINED, ParticipantStatus.WAITING))
                 .orElseThrow(() -> new BizException(ErrorCode.NOT_FOUND, "Not a participant of this room"));
 
+        boolean wasWaiting = participant.isWaiting();
         Instant now = clockProvider.now();
         participant.leave(now);
+
+        if (wasWaiting) {
+            waitingRoomSseService.notifyHostWaiterLeft(roomId, userId);
+        }
 
         liveKitClient.removeParticipant(room.getLivekitRoomName(), String.valueOf(userId));
 
@@ -288,7 +298,6 @@ public class MeetingRoomService {
         room.start(now);
 
         int participantCount = participantRepository.countActiveParticipants(roomId);
-        // TODO: [Notification Service] Kafka 알림 이벤트 추가 - MEETING_STARTED
         eventPublisher.publishMeetingStarted(
                 new MeetingEvent("MEETING_STARTED", roomId, userId, participantCount, now, null));
 
@@ -319,6 +328,8 @@ public class MeetingRoomService {
         for (RoomParticipant p : waitingParticipants) {
             p.leave(now);
         }
+
+        waitingRoomSseService.cleanupRoom(roomId);
 
         // TODO: [Minutes Service] 회의 메타데이터(참가자, 시간, 녹음 등)를 회의록 서비스로 전달
         eventPublisher.publishMeetingEnded(
@@ -461,7 +472,6 @@ public class MeetingRoomService {
         MeetingRoom saved = roomRepository.save(room);
         settingsRepository.save(RoomSettings.createDefault(saved));
 
-        // TODO: [Notification Service] Kafka 알림 이벤트 추가 - SCHEDULE_CREATED
 
         return toResponse(saved);
     }
@@ -492,7 +502,6 @@ public class MeetingRoomService {
         validateNoScheduleConflict(room.getHostUserId(), scheduledAt, roomId);
 
         room.updateSchedule(scheduledAt);
-        // TODO: [Notification Service] Kafka 알림 이벤트 추가 - SCHEDULE_CHANGED
         return toResponse(room);
     }
 
@@ -506,7 +515,6 @@ public class MeetingRoomService {
         }
 
         room.cancel();
-        // TODO: [Notification Service] Kafka 알림 이벤트 추가 - SCHEDULE_CANCELLED
     }
 
     @Transactional(readOnly = true)
@@ -631,7 +639,6 @@ public class MeetingRoomService {
             throw new BizException(ErrorCode.INVALID_REQUEST, "Cannot send reminder for an ended room");
         }
 
-        // TODO: [Notification Service] 초대된 참가자들에게 예약 회의 리마인더 알림
         eventPublisher.publishMeetingStarted(
                 new MeetingEvent("MEETING_REMINDER", roomId, userId, 0, null, null));
     }
@@ -715,6 +722,19 @@ public class MeetingRoomService {
                 settings != null ? toSettingsResponse(settings) : null,
                 tags,
                 room.getCreatedAt());
+    }
+
+    private RoomParticipantResponse toParticipantResponse(RoomParticipant p) {
+        return new RoomParticipantResponse(
+                p.getId(),
+                p.getRoom().getId(),
+                p.getUserId(),
+                p.getRole(),
+                p.getStatus(),
+                p.getJoinedAt(),
+                p.getLeftAt(),
+                p.getDurationSeconds(),
+                p.getDeviceType());
     }
 
     private RoomSettingsResponse toSettingsResponse(RoomSettings settings) {

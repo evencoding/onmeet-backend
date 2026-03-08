@@ -26,12 +26,12 @@ spring:
             - Path=/video/v1/**
           filters:
             - UserHeaderFilter
-        - id: chat-service
-          uri: ${CHAT_SERVICE_URL:http://chat-service:8084}
+        - id: video-service-ws-chat
+          uri: ${VIDEO_SERVICE_WS_URL:ws://video-service:8083}
           predicates:
-            - Path=/chat/v1/**
+            - Path=/ws-chat/**
           filters:
-            - UserHeaderFilter
+            - PrefixPath=/video
         - id: notification-service
           uri: ${NOTIFICATION_SERVICE_URL:http://notification-service:8085}
           predicates:
@@ -106,8 +106,6 @@ springdoc:
         url: /ai/v1/v3/api-docs
       - name: video-service
         url: /video/v1/v3/api-docs
-      - name: chat-service
-        url: /chat/v1/v3/api-docs
       - name: notification-service
         url: /notification/v1/v3/api-docs
       - name: email-service

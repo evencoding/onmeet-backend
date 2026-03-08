@@ -8,6 +8,8 @@ import com.onmeet.auth.repository.jpa.UserRepository
 import com.onmeet.common.exception.CrossCompanyAccessException
 import com.onmeet.common.exception.EntityNotFoundException
 import com.onmeet.common.exception.InsufficientPermissionException
+import org.springframework.cache.annotation.CacheEvict
+import org.springframework.cache.annotation.Cacheable
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import org.springframework.data.domain.Pageable
@@ -18,10 +20,12 @@ import org.springframework.web.multipart.MultipartFile
 class UserServiceImpl(
     private val userRepository: UserRepository,
     private val jobTitleRepository: JobTitleRepository,
-    private val fileClient: com.onmeet.auth.client.FileClient
+    private val fileClient: com.onmeet.auth.client.FileClient,
+    private val notificationEventPublisher: NotificationEventPublisher
 ) : UserService {
 
     @Transactional
+    @CacheEvict(value = ["userInfo"], key = "#requester.id")
     override fun deleteMyProfileImage(requester: User): UserResponseDto {
         fileClient.deleteMyProfileImage()
         requester.profileImageId = null
@@ -29,6 +33,7 @@ class UserServiceImpl(
     }
 
     @Transactional
+    @CacheEvict(value = ["userInfo"], key = "#userId")
     override fun updateUserProfile(userId: Long, requester: User, request: UserProfileUpdateRequest, profileImage: MultipartFile?): UserResponseDto {
         val user = userRepository.findById(userId)
             .orElseThrow { UserNotFoundException("User not found: $userId") }
@@ -117,25 +122,50 @@ class UserServiceImpl(
     }
 
     @Transactional
+    @CacheEvict(value = ["userInfo"], key = "#userId")
     override fun deactivateUser(userId: Long, manager: User): UserResponseDto {
         val user = userRepository.findById(userId)
             .orElseThrow { UserNotFoundException("User not found: $userId") }
 
         validateManagerPermission(manager, user)
         user.deactivate()
-        return userRepository.save(user).toResponseDto()
+        val deactivatedUser = userRepository.save(user)
+        // 계정 비활성화 알림 전송
+        notificationEventPublisher.publishNotification(
+            com.onmeet.common.dto.NotificationRequestDto(
+                userId = deactivatedUser.id,
+                type = "SYSTEM",
+                title = "계정 비활성화",
+                body = "관리자에 의해 계정이 비활성화되었습니다.",
+                actorUserId = manager.id
+            )
+        )
+        return deactivatedUser.toResponseDto()
     }
 
     @Transactional
+    @CacheEvict(value = ["userInfo"], key = "#userId")
     override fun activateUser(userId: Long, manager: User): UserResponseDto {
         val user = userRepository.findById(userId)
             .orElseThrow { UserNotFoundException("User not found: $userId") }
 
         validateManagerPermission(manager, user)
         user.activate()
-        return userRepository.save(user).toResponseDto()
+        val activatedUser = userRepository.save(user)
+        // 계정 활성화 알림 전송
+        notificationEventPublisher.publishNotification(
+            com.onmeet.common.dto.NotificationRequestDto(
+                userId = activatedUser.id,
+                type = "SYSTEM",
+                title = "계정 활성화",
+                body = "관리자에 의해 계정이 활성화되었습니다.",
+                actorUserId = manager.id
+            )
+        )
+        return activatedUser.toResponseDto()
     }
 
+    @Cacheable(value = ["userInfo"], key = "#user.id")
     override fun getMyInfo(user: User): UserResponseDto {
         return user.toResponseDto()
     }

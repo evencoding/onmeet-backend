@@ -41,6 +41,13 @@ public interface MeetingRoomRepository extends JpaRepository<MeetingRoom, Long> 
 
     List<MeetingRoom> findByStatusIn(List<RoomStatus> statuses);
 
+    @Query("SELECT r FROM MeetingRoom r WHERE r.type = :type AND r.status = :status AND r.scheduledAt BETWEEN :start AND :end")
+    List<MeetingRoom> findUpcomingMeetings(
+        @Param("type") RoomType type,
+        @Param("status") RoomStatus status,
+        @Param("start") Instant start,
+        @Param("end") Instant end);
+
     @Query("SELECT COUNT(r) > 0 FROM MeetingRoom r WHERE r.hostUserId = :hostUserId "
         + "AND r.type = :type AND r.status = :status "
         + "AND r.scheduledAt BETWEEN :rangeStart AND :rangeEnd "

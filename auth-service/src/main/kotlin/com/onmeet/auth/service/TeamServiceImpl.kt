@@ -21,7 +21,8 @@ class TeamServiceImpl(
     private val userRepository: UserRepository,
     private val teamMemberRepository: TeamMemberRepository,
     private val companyRepository: com.onmeet.auth.repository.jpa.CompanyRepository,
-    private val teamProperties: TeamProperties
+    private val teamProperties: TeamProperties,
+    private val notificationEventPublisher: NotificationEventPublisher
 ) : TeamService {
 
     @Transactional
@@ -86,6 +87,20 @@ class TeamServiceImpl(
                 teamMemberRepository.save(teamMember)
             }
 
+            // 팀원들에게 팀 초대 알림 전송 (매니저가 팀 생성 시)
+            members.filter { it.id != request.leaderId }.forEach { member ->
+                notificationEventPublisher.publishNotification(
+                    com.onmeet.common.dto.NotificationRequestDto(
+                        userId = member.id,
+                        type = "TEAM_MEMBER_ADDED",
+                        title = savedTeam.name,
+                        body = "새로운 팀에 초대되었습니다.",
+                        resourceType = "TEAM",
+                        resourceId = savedTeam.id?.toString(),
+                        actorUserId = user.id
+                    )
+                )
+            }
             return savedTeam
         }
 
@@ -99,7 +114,24 @@ class TeamServiceImpl(
             status = initialStatus
         )
 
-        return teamRepository.save(team)
+        val savedTeam = teamRepository.save(team)
+        
+        // 같은 회사 내 매니저 권한을 가진 사람들에게 팀 생성 요청 알림 전송
+        val managers = userRepository.findByCompanyIdAndRole(company.requireId(), User.Role.MANAGER)
+        managers.forEach { manager ->
+            notificationEventPublisher.publishNotification(
+                com.onmeet.common.dto.NotificationRequestDto(
+                    userId = manager.id,
+                    type = "SYSTEM",
+                    title = "팀 생성 요청",
+                    body = "${user.name}님이 '${savedTeam.name}' 팀 생성을 요청했습니다.",
+                    resourceType = "TEAM",
+                    resourceId = savedTeam.id?.toString(),
+                    actorUserId = user.id
+                )
+            )
+        }
+        return savedTeam
     }
 
     @Transactional
@@ -156,7 +188,21 @@ class TeamServiceImpl(
             teamMemberRepository.save(teamMember)
         }
 
-        teamRepository.save(team)
+        val approvedTeam = teamRepository.save(team)
+        // 팀 생성 요청자(팀장)에게 승인 알림 전송
+        team.leader?.let { leader ->
+            notificationEventPublisher.publishNotification(
+                com.onmeet.common.dto.NotificationRequestDto(
+                    userId = leader.id,
+                    type = "SYSTEM",
+                    title = "팀 승인 완료",
+                    body = "요청하신 '${team.name}' 팀 생성이 승인되었습니다.",
+                    resourceType = "TEAM",
+                    resourceId = team.id?.toString(),
+                    actorUserId = approver.id
+                )
+            )
+        }
     }
 
     @Transactional
@@ -182,7 +228,21 @@ class TeamServiceImpl(
         team.status = Team.TeamStatus.REJECTED
         team.rejectionReason = reason
 
-        teamRepository.save(team)
+        val rejectedTeam = teamRepository.save(team)
+        // 팀 생성 요청자에게 반려 알림 전송
+        team.leader?.let { leader ->
+            notificationEventPublisher.publishNotification(
+                com.onmeet.common.dto.NotificationRequestDto(
+                    userId = leader.id,
+                    type = "SYSTEM",
+                    title = "팀 생성 반려",
+                    body = "요청하신 '${team.name}' 팀 생성이 반려되었습니다. 사유: ${reason ?: "없음"}",
+                    resourceType = "TEAM",
+                    resourceId = team.id?.toString(),
+                    actorUserId = approver.id
+                )
+            )
+        }
     }
 
     @Transactional
@@ -220,7 +280,19 @@ class TeamServiceImpl(
             teamMemberRepository.save(teamMember)
         }
 
-        teamRepository.save(team)
+        val updatedTeam = teamRepository.save(team)
+        // 팀장 위임 알림 전송
+        notificationEventPublisher.publishNotification(
+            com.onmeet.common.dto.NotificationRequestDto(
+                userId = newLeader.id,
+                type = "SYSTEM",
+                title = "팀 리더 위임",
+                body = "'${team.name}' 팀의 새로운 리더로 지정되었습니다.",
+                resourceType = "TEAM",
+                resourceId = team.id?.toString(),
+                actorUserId = manager.id
+            )
+        )
     }
 
     @Transactional
@@ -258,7 +330,19 @@ class TeamServiceImpl(
             teamMemberRepository.save(teamMember)
         }
 
-        teamRepository.save(team)
+        val updatedTeam = teamRepository.save(team)
+        // 팀장 위임 알림 전송
+        notificationEventPublisher.publishNotification(
+            com.onmeet.common.dto.NotificationRequestDto(
+                userId = newLeader.id,
+                type = "SYSTEM",
+                title = "팀 리더 위임",
+                body = "이전 리더에 의해 '${team.name}' 팀의 새로운 리더로 지정되었습니다.",
+                resourceType = "TEAM",
+                resourceId = team.id?.toString(),
+                actorUserId = currentLeader.id
+            )
+        )
     }
 
     @Transactional
@@ -271,11 +355,26 @@ class TeamServiceImpl(
             throw CompanyMismatchException("Cannot dissolve teams in another company")
         }
 
+        // 팀 해체 알림을 위해 팀원 목록 미리 조회
+        val teamMembers = teamMemberRepository.findAllByTeamId(teamId)
+
         // Explicitly delete all TeamMember associations before deleting the team
         // (defense in depth even though cascade should handle it)
         teamMemberRepository.deleteAllByTeamId(teamId)
 
         teamRepository.delete(team)
+        // 팀 해체 알림 전송
+        teamMembers.forEach { member ->
+            notificationEventPublisher.publishNotification(
+                com.onmeet.common.dto.NotificationRequestDto(
+                    userId = member.user.id,
+                    type = "SYSTEM",
+                    title = "팀 해체",
+                    body = "'${team.name}' 팀이 해체되었습니다.",
+                    actorUserId = requester.id
+                )
+            )
+        }
     }
 
     @Transactional

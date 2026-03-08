@@ -3,6 +3,7 @@ plugins {
     id 'org.springframework.boot' version '3.3.5'
     id 'io.spring.dependency-management' version '1.1.6'
     id 'com.google.cloud.tools.jib'
+    id 'org.jetbrains.kotlin.jvm'
 }
 
 group = 'com.onmeet'
@@ -76,6 +77,7 @@ dependencies {
     testImplementation 'org.testcontainers:mysql'
     testImplementation 'org.springframework.kafka:spring-kafka-test'
     testImplementation 'org.testcontainers:kafka'
+    implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8"
 }
 
 tasks.named('test') {

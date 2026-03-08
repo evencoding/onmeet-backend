@@ -43,7 +43,7 @@ public class TranscriptBuilderService {
         store.appendVoice(event);
     }
 
-    public void finalizeMeeting(Long roomId, Instant endedAt) {
+    public void finalizeMeeting(Long roomId, Long hostUserId, Instant endedAt) {
         List<RedisMeetingEventStore.StoredEvent> items = store.readAll(roomId);
 
         String transcriptId = UUID.randomUUID().toString();
@@ -94,6 +94,7 @@ public class TranscriptBuilderService {
 
         producer.publish(TranscriptFinalizedEvent.builder()
                 .roomId(roomId)
+                .hostUserId(hostUserId)
                 .transcriptId(transcriptId)
                 .transcriptS3Key(s3Key)
                 .version(version)

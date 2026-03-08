@@ -65,8 +65,27 @@ public class FcmService {
     // ──────────────────────────────────────────────
 
     /**
+     * 특정 디바이스 토큰으로 푸시 알림을 전송합니다.
+     */
+    public void sendPushToToken(String token, String title, String body, String deeplink) {
+        if (FirebaseApp.getApps().isEmpty()) {
+            log.debug("Firebase not initialized, skipping FCM push for token");
+            return;
+        }
+
+        try {
+            String response = fcmPushRetryService.sendToDevice(token, title, body, deeplink);
+            if (response != null) {
+                log.info("FCM push sent to token: messageId={}", response);
+            }
+        } catch (FirebaseMessagingException e) {
+            log.error("FCM push failed for token: {}, error={}", token, e.getMessage());
+            // 유효하지 않은 토큰일 때의 추가 처리는 필요 시 구현 (여기서는 개별 발송이므로 로깅 후 종료)
+        }
+    }
+
+    /**
      * 해당 유저의 모든 디바이스에 푸시 알림을 전송합니다.
-     * 각 디바이스로의 전송은 FcmPushRetryService를 통해 자동 재시도(최대 3회)됩니다.
      */
     public void sendPush(Long userId, String title, String body, String deeplink) {
         if (FirebaseApp.getApps().isEmpty()) {

@@ -14,7 +14,7 @@ spring:
     password: ${SPRING_DATASOURCE_PASSWORD:root}
     driver-class-name: com.mysql.cj.jdbc.Driver
     hikari:
-      max-lifetime: 600000
+      max-lifetime: 240000
       keepalive-time: 30000
       connection-timeout: 30000
       initialization-fail-timeout: -1
@@ -33,10 +33,13 @@ gateway:
 onmeet:
   auth:
     internal-url: ${AUTH_INTERNAL_URL:http://auth-service:8081}
-  notification:
-    internal-url: ${NOTIFICATION_INTERNAL_URL:http://notification-service:8085}
 cors:
   allowed-origins: "http://localhost:3000,http://localhost:8080"
+
+livekit:
+  url: ${LIVEKIT_URL:ws://localhost:7880}
+  api-key: ${LIVEKIT_API_KEY:devkey}
+  api-secret: ${LIVEKIT_API_SECRET:devsecret}
 
 management:
   endpoints:

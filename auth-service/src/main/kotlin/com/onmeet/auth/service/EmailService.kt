@@ -9,6 +9,7 @@ import com.onmeet.auth.dto.EmailMessage
 interface EmailService {
     fun sendInvitationEmail(to: String, code: String, companyName: String)
     fun sendGuestInvitationEmail(to: String, uuid: String, hostName: String, roomName: String)
+    fun sendTemporaryPassword(to: String, temporaryPassword: String, userName: String)
 }
 
 @Service
@@ -49,7 +50,7 @@ class EmailServiceImpl(
 
     override fun sendGuestInvitationEmail(to: String, uuid: String, hostName: String, roomName: String) {
         val joinLink = "$apiBaseUrl/auth/v1/guests/join/$uuid"
-        
+
         EmailMessage(
             to = to,
             subject = "You're invited to join a meeting - $roomName",
@@ -60,6 +61,19 @@ class EmailServiceImpl(
                 "joinLink" to joinLink
             )
         ).also { log.info("Sending guest invitation email event to Kafka topic: $TOPIC for $to") }
+            .let { kafkaTemplate.send(TOPIC, it) }
+    }
+
+    override fun sendTemporaryPassword(to: String, temporaryPassword: String, userName: String) {
+        EmailMessage(
+            to = to,
+            subject = "Onmeet - 임시 비밀번호 발급",
+            templateName = "temporary-password",
+            variables = mapOf(
+                "userName" to userName,
+                "temporaryPassword" to temporaryPassword
+            )
+        ).also { log.info("Sending temporary password email event to Kafka topic: $TOPIC for $to") }
             .let { kafkaTemplate.send(TOPIC, it) }
     }
 }
