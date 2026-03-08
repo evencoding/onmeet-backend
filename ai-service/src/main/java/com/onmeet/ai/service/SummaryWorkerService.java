@@ -11,6 +11,8 @@ import com.onmeet.ai.pipeline.storage.StorageKeyFactory;
 import com.onmeet.ai.pipeline.transcript.TranscriptDocument;
 import com.onmeet.ai.pipeline.transcript.TranscriptRenderer;
 import com.onmeet.ai.repository.MinutesRepository;
+import com.onmeet.ai.messaging.producer.NotificationEventPublisher;
+import com.onmeet.common.dto.NotificationRequestDto;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -25,6 +27,7 @@ public class SummaryWorkerService {
     private final SummarizerClient summarizerClient;
     private final MinutesRepository minutesRepository;
     private final MinutesEventsProducer producer;
+    private final NotificationEventPublisher notificationEventPublisher;
 
     public SummaryWorkerService(
             StorageClient storageClient,
@@ -32,7 +35,8 @@ public class SummaryWorkerService {
             TranscriptRenderer renderer,
             SummarizerClient summarizerClient,
             MinutesRepository minutesRepository,
-            MinutesEventsProducer producer
+            MinutesEventsProducer producer,
+            NotificationEventPublisher notificationEventPublisher
     ) {
         this.storageClient = storageClient;
         this.om = om;
@@ -40,9 +44,18 @@ public class SummaryWorkerService {
         this.summarizerClient = summarizerClient;
         this.minutesRepository = minutesRepository;
         this.producer = producer;
+        this.notificationEventPublisher = notificationEventPublisher;
     }
 
     public void handleTranscriptFinalized(TranscriptFinalizedEvent e) {
+        // AI 요약 진행 중 알림 (Kafka 비동기)
+        notificationEventPublisher.publishNotification(
+            new NotificationRequestDto(
+                e.getHostUserId(), "AI_SUMMARY_PROGRESS", "AI 요약 시작",
+                "회의록 AI 요약이 시작되었습니다.",
+                "/meeting/" + e.getRoomId() + "?tab=minutes", "MEETING", String.valueOf(e.getRoomId()), null
+            )
+        );
 
         String transcriptJson = storageClient.readText(e.getTranscriptS3Key());
 
@@ -77,6 +90,15 @@ public class SummaryWorkerService {
                 .transcriptS3Key(e.getTranscriptS3Key())
                 .generatedAt(Instant.now())
                 .build());
+
+        // AI 요약 완료 알림 (Kafka 비동기)
+        notificationEventPublisher.publishNotification(
+            new NotificationRequestDto(
+                e.getHostUserId(), "AI_SUMMARY_COMPLETED", "AI 요약 완료",
+                "회의록 AI 요약이 완료되었습니다.",
+                "/meeting/" + e.getRoomId() + "?tab=minutes", "MEETING", String.valueOf(e.getRoomId()), null
+            )
+        );
     }
 
     @Transactional

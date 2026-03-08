@@ -5,5 +5,6 @@ public enum ResourceType {
     MINUTES,
     TEAM,
     NOTICE,
-    EVENT
+    EVENT,
+    SYSTEM
 }
