@@ -63,19 +63,20 @@ public class MeetingNotificationScheduler {
             }
         }
 
-        for (Long userId : targetUserIds) {
-            NotificationRequestDto request = new NotificationRequestDto(
-                userId,
-                "MEETING_REMINDER",
-                "회의 시작 알림",
-                "'" + room.getTitle() + "' 회의 시작 30분 전입니다.",
-                "/meeting/" + room.getId(),
-                "MEETING",
-                String.valueOf(room.getId()),
-                null
-            );
-            notificationEventPublisher.publishNotification(request);
-        }
-        log.info("Sent meeting reminder for room ID: {} to {} users", room.getId(), targetUserIds.size());
+        // 벌크 알림 요청 생성 (userId 대신 userIds 사용)
+        NotificationRequestDto request = new NotificationRequestDto(
+            null, // userId
+            new java.util.ArrayList<>(targetUserIds), // userIds 리스트 전달
+            "MEETING_REMINDER",
+            "회의 시작 알림",
+            "'" + room.getTitle() + "' 회의 시작 30분 전입니다.",
+            "/meeting/" + room.getId(),
+            "MEETING",
+            String.valueOf(room.getId()),
+            null // actorUserId
+        );
+        notificationEventPublisher.publishNotification(request);
+
+        log.info("Sent bulk meeting reminder for room ID: {} to {} users", room.getId(), targetUserIds.size());
     }
 }
