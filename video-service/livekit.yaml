@@ -6,5 +6,13 @@ rtc:
   use_external_ip: true
   external_ip: ${LIVEKIT_EXTERNAL_IP}
 
+  # API keys are passed via LIVEKIT_KEYS environment variable in docker-compose.yml
+keys: {}
+
+webhook:
+  api_key: "devkey"
+  urls:
+    - "http://video-service:8083/video/webhook/livekit"
+
 logging:
   level: info
