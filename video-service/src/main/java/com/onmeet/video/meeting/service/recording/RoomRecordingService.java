@@ -15,6 +15,8 @@ import com.onmeet.video.meeting.entity.recording.RecordingType;
 import com.onmeet.video.meeting.entity.recording.RoomRecording;
 import com.onmeet.video.meeting.repository.room.MeetingRoomRepository;
 import com.onmeet.video.meeting.repository.participant.RoomParticipantRepository;
+import com.onmeet.video.meeting.event.recording.RecordingCompletedEvent;
+import com.onmeet.video.meeting.event.recording.RecordingEventProducer;
 import com.onmeet.video.meeting.repository.recording.RoomRecordingRepository;
 import com.onmeet.video.meeting.repository.room.RoomSettingsRepository;
 import java.time.Instant;
@@ -37,19 +39,22 @@ public class RoomRecordingService {
     private final RoomSettingsRepository settingsRepository;
     private final LiveKitClient liveKitClient;
     private final ClockProvider clockProvider;
+    private final RecordingEventProducer recordingEventProducer;
 
     public RoomRecordingService(RoomRecordingRepository recordingRepository,
                                 MeetingRoomRepository roomRepository,
                                 RoomParticipantRepository participantRepository,
                                 RoomSettingsRepository settingsRepository,
                                 LiveKitClient liveKitClient,
-                                ClockProvider clockProvider) {
+                                ClockProvider clockProvider,
+                                RecordingEventProducer recordingEventProducer) {
         this.recordingRepository = recordingRepository;
         this.roomRepository = roomRepository;
         this.participantRepository = participantRepository;
         this.settingsRepository = settingsRepository;
         this.liveKitClient = liveKitClient;
         this.clockProvider = clockProvider;
+        this.recordingEventProducer = recordingEventProducer;
     }
 
     @Transactional
@@ -183,6 +188,21 @@ public class RoomRecordingService {
         recordingRepository.findByEgressId(egressId).ifPresent(recording -> {
             Instant now = clockProvider.now();
             recording.markCompleted(s3Path, fileSizeBytes, now);
+
+            recordingEventProducer.publishRecordingCompleted(new RecordingCompletedEvent(
+                    recording.getRoom().getId(),
+                    recording.getId(),
+                    recording.getEgressId(),
+                    s3Path,
+                    fileSizeBytes,
+                    recording.getDurationSeconds(),
+                    recording.getParticipantIdentity(),
+                    recording.getTrackSid(),
+                    recording.getType().name(),
+                    recording.getStartedAt(),
+                    now,
+                    now
+            ));
         });
     }
 

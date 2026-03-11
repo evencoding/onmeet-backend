@@ -18,6 +18,11 @@ spring:
       keepalive-time: 30000
       connection-timeout: 30000
       initialization-fail-timeout: -1
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.apache.kafka.common.serialization.StringSerializer
   jpa:
     hibernate:
       ddl-auto: validate

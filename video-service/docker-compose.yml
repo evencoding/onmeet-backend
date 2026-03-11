@@ -70,6 +70,7 @@ services:
       - LIVEKIT_URL=${LIVEKIT_URL:-ws://livekit:7880}
       - LIVEKIT_API_KEY=${LIVEKIT_API_KEY:-devkey}
       - LIVEKIT_API_SECRET=${LIVEKIT_API_SECRET:-devsecret}
+      - KAFKA_BOOTSTRAP_SERVERS=${KAFKA_BOOTSTRAP_SERVERS:-kafka:9092}
       - MANAGEMENT_ENDPOINT_HEALTH_PROBES_ENABLED=true
     depends_on:
       mysql-video:
