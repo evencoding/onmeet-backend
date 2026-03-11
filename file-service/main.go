@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"log"
 
 	"com.onmeet.file/internal/client"
@@ -97,7 +98,11 @@ func main() {
 		protectedGroup.DELETE("/me/profile", h.DeleteMyProfile)
 	}
 
-	// 8. 서버 실행
+	// 8. Kafka Recording Consumer 시작
+	recordingConsumer := service.NewRecordingConsumer(cfg, repo, ep)
+	recordingConsumer.Start(context.Background())
+
+	// 9. 서버 실행
 	log.Printf("File Service (PostgreSQL) starting on port %s...", cfg.Port)
 	if err := r.Run(":" + cfg.Port); err != nil {
 		log.Fatal("Failed to run server:", err)
