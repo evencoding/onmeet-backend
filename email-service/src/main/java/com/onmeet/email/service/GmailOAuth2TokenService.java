@@ -1,5 +1,7 @@
 package com.onmeet.email.service;
 
+import com.onmeet.common.exception.BusinessException;
+import com.onmeet.common.exception.errorcode.EmailErrorCode;
 import com.onmeet.email.config.GmailOAuth2Config;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -32,7 +34,7 @@ public class GmailOAuth2TokenService {
     public String getAccessToken() {
         if (config.getClientId() == null || config.getClientId().isBlank()) {
             log.warn("GMAIL_CLIENT_ID is missing or blank. Token cannot be refreshed.");
-            throw new IllegalStateException("Missing Gmail OAuth credentials");
+            throw new BusinessException(EmailErrorCode.CREDENTIALS_MISSING);
         }
 
         HttpHeaders headers = new HttpHeaders();
@@ -52,14 +54,16 @@ public class GmailOAuth2TokenService {
             if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
                 String accessToken = (String) response.getBody().get("access_token");
                 if (accessToken == null) {
-                    throw new IllegalStateException("Gmail access token response does not contain 'access_token' field");
+                    throw new BusinessException(EmailErrorCode.TOKEN_RESPONSE_INVALID);
                 }
                 return accessToken;
             } else {
-                throw new IllegalStateException("Failed to refresh Gmail access token. Status: " + response.getStatusCode());
+                throw new BusinessException(EmailErrorCode.TOKEN_REFRESH_FAILED);
             }
+        } catch (BusinessException e) {
+            throw e;
         } catch (Exception e) {
-            throw new IllegalStateException("Error occurred while fetching Gmail access token", e);
+            throw new BusinessException(EmailErrorCode.TOKEN_NETWORK_ERROR);
         }
     }
 }
