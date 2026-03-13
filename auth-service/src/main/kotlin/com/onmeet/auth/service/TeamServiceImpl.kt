@@ -78,21 +78,16 @@ class TeamServiceImpl(
 
             val savedTeam = teamRepository.save(team)
 
-            // TeamMember 엔티티를 통해 팀원 추가 및 역할 지정
-            members.forEach { member ->
+            // TeamMember 엔티티를 통해 팀원 추가 및 역할 지정 (batch INSERT)
+            val teamMembers = members.map { member ->
                 val role = if (member.id == request.leaderId) {
                     TeamMember.TeamRole.LEADER
                 } else {
                     TeamMember.TeamRole.MEMBER
                 }
-
-                val teamMember = TeamMember(
-                    user = member,
-                    team = savedTeam,
-                    role = role
-                )
-                teamMemberRepository.save(teamMember)
+                TeamMember(user = member, team = savedTeam, role = role)
             }
+            teamMemberRepository.saveAll(teamMembers)
 
             // 팀원들에게 팀 초대 알림 전송 (벌크)
             val targetUserIds = members.filter { it.id != request.leaderId }.mapNotNull { it.id }
