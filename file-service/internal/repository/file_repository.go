@@ -32,8 +32,8 @@ func NewPostgresFileRepository(db *gorm.DB) FileRepository {
 // (r *postgresFileRepository) 구문은 이 함수가 postgresFileRepository의 메서드임을 정의합니다.
 // Java의 인스턴스 메서드(this)와 같으며, Go에서는 'Receiver'라고 부릅니다.
 func (r *postgresFileRepository) Save(metadata *model.FileMetadata) error {
-	// GORM의 Save를 호출하고 발생한 에러를 반환합니다.
-	return r.db.Save(metadata).Error
+	// Create는 신규 레코드 삽입 전용입니다. Save는 upsert이므로 새 레코드 삽입에는 Create가 정확합니다.
+	return r.db.Create(metadata).Error
 }
 
 func (r *postgresFileRepository) FindByID(id uint) (*model.FileMetadata, error) {
