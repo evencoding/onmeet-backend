@@ -13,13 +13,14 @@ spring:
             - Path=/auth/v1/**
           filters:
             - UserHeaderFilter
-            - AddRequestHeader=X-Gateway-Secret, ${GATEWAY_SHARED_SECRET}
         - id: ai-service
           uri: ${AI_SERVICE_URL:http://ai-service:8082}
           predicates:
             - Path=/ai/v1/**
           filters:
             - UserHeaderFilter
+          metadata:
+            response-timeout: 60000
         - id: video-service
           uri: ${VIDEO_SERVICE_URL:http://video-service:8083}
           predicates:
@@ -63,30 +64,9 @@ spring:
             "redis-rate-limiter.burstCapacity": 20
             "redis-rate-limiter.requestedTokens": 1
             key-resolver: "#{@ipKeyResolver}"
-      globalcors:
-        cors-configurations:
-          "[/**]":
-            allowedOriginPatterns:
-              - "http://localhost:8080"
-              - "http://localhost:[*]"
-              - "http://127.0.0.1:[*]"
-              - "https://onmeet.cloud"
-              - "https://api.onmeet.cloud"
-              - "https://*.onmeet.cloud"
-            allowedMethods:
-              - GET
-              - POST
-              - PUT
-              - DELETE
-              - OPTIONS
-              - PATCH
-              - HEAD
-            allowedHeaders:
-              - "*"
-            exposedHeaders:
-              - "Content-Disposition"
-            allowCredentials: true
-            maxAge: 3600
+      httpclient:
+        connect-timeout: 3000
+        response-timeout: 10s
 
   security:
     oauth2:
