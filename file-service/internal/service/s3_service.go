@@ -13,9 +13,9 @@ import (
 
 // S3Service는 AWS S3와의 통신을 담당하는 인터페이스입니다.
 type S3Service interface {
-	UploadFile(key string, content io.Reader, contentType string) error
-	DeleteFile(key string) error
-	GetFile(key string) (io.ReadCloser, string, error)
+	UploadFile(ctx context.Context, key string, content io.Reader, contentType string) error
+	DeleteFile(ctx context.Context, key string) error
+	GetFile(ctx context.Context, key string) (io.ReadCloser, string, error)
 }
 
 // s3Service 구조체는 인터페이스의 실질적인 구현체입니다.
@@ -77,10 +77,10 @@ func NewS3Service(cfg *config.Config) (S3Service, error) {
 
 // UploadFile은 S3 버킷에 파일을 업로드합니다.
 // io.Reader는 Java의 InputStream과 비슷한 개념으로, 데이터의 흐름을 나타냅니다.
-func (s *s3Service) UploadFile(key string, content io.Reader, contentType string) error {
+func (s *s3Service) UploadFile(ctx context.Context, key string, content io.Reader, contentType string) error {
 	// PutObjectInput 구조체에 필요한 정보들을 담아 AWS SDK 함수를 호출합니다.
 	// aws.String() 함수는 일반 string을 포인터(*string)로 변환해줍니다. (AWS SDK의 규칙)
-	_, err := s.client.PutObject(context.TODO(), &s3.PutObjectInput{
+	_, err := s.client.PutObject(ctx, &s3.PutObjectInput{
 		Bucket:      aws.String(s.bucket),
 		Key:         aws.String(key),
 		Body:        content,
@@ -90,16 +90,16 @@ func (s *s3Service) UploadFile(key string, content io.Reader, contentType string
 }
 
 // DeleteFile은 S3 버킷에서 파일을 삭제합니다.
-func (s *s3Service) DeleteFile(key string) error {
-	_, err := s.client.DeleteObject(context.TODO(), &s3.DeleteObjectInput{
+func (s *s3Service) DeleteFile(ctx context.Context, key string) error {
+	_, err := s.client.DeleteObject(ctx, &s3.DeleteObjectInput{
 		Bucket: aws.String(s.bucket),
 		Key:    aws.String(key),
 	})
 	return err
 }
 
-func (s *s3Service) GetFile(key string) (io.ReadCloser, string, error) {
-	resp, err := s.client.GetObject(context.TODO(), &s3.GetObjectInput{
+func (s *s3Service) GetFile(ctx context.Context, key string) (io.ReadCloser, string, error) {
+	resp, err := s.client.GetObject(ctx, &s3.GetObjectInput{
 		Bucket: aws.String(s.bucket),
 		Key:    aws.String(key),
 	})

@@ -2,6 +2,7 @@ package service
 
 import (
 	"bytes"
+	"context"
 	"io"
 	"mime/multipart"
 	"net/http"
@@ -58,17 +59,17 @@ type MockS3Service struct {
 	mock.Mock
 }
 
-func (m *MockS3Service) UploadFile(key string, content io.Reader, contentType string) error {
+func (m *MockS3Service) UploadFile(ctx context.Context, key string, content io.Reader, contentType string) error {
 	args := m.Called(key, content, contentType)
 	return args.Error(0)
 }
 
-func (m *MockS3Service) DeleteFile(key string) error {
+func (m *MockS3Service) DeleteFile(ctx context.Context, key string) error {
 	args := m.Called(key)
 	return args.Error(0)
 }
 
-func (m *MockS3Service) GetFile(key string) (io.ReadCloser, string, error) {
+func (m *MockS3Service) GetFile(ctx context.Context, key string) (io.ReadCloser, string, error) {
 	args := m.Called(key)
 	if rc, ok := args.Get(0).(io.ReadCloser); ok {
 		return rc, args.String(1), args.Error(2)
@@ -81,9 +82,13 @@ type MockEventProducer struct {
 	mock.Mock
 }
 
-func (m *MockEventProducer) SendFileUploadEvent(topic string, fileId uint, fileName, fileUrl string, uploaderId int64, correlationId string) error {
+func (m *MockEventProducer) SendFileUploadEvent(ctx context.Context, topic string, fileId uint, fileName, fileUrl string, uploaderId int64, correlationId string) error {
 	args := m.Called(topic, fileId, fileName, fileUrl, uploaderId, correlationId)
 	return args.Error(0)
+}
+
+func (m *MockEventProducer) Close() error {
+	return nil
 }
 
 // [Necessary Infrastructure / 인프라 필수] Mock 구조체 정의 및 초기화
@@ -108,7 +113,7 @@ func createMultipartFileHeader(filename string, content []byte) (*multipart.File
 		return nil, err
 	}
 	part.Write(content)
-	writer.Close() // Close을 해야 멀티파트 바운더리가 올바르게 닫힘
+	writer.Close()
 
 	req, _ := http.NewRequest("POST", "/", body)
 	req.Header.Add("Content-Type", writer.FormDataContentType())
@@ -132,7 +137,9 @@ func TestFileService_UploadFiles(t *testing.T) {
 
 		fs := NewFileService(repoMock, s3Mock, epMock, authMock, cfg)
 
-		header, err := createMultipartFileHeader("test.txt", []byte("hello world"))
+		// PNG 파일의 실제 magic bytes (8바이트 PNG 헤더)
+		pngContent := append([]byte{0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A}, make([]byte, 512)...)
+		header, err := createMultipartFileHeader("test.png", pngContent)
 		assert.NoError(t, err)
 
 		uploaderId := int64(123)
@@ -140,11 +147,11 @@ func TestFileService_UploadFiles(t *testing.T) {
 		s3Mock.On("UploadFile", mock.AnythingOfType("string"), mock.Anything, mock.AnythingOfType("string")).Return(nil)
 		repoMock.On("Save", mock.AnythingOfType("*model.FileMetadata")).Return(nil)
 
-		results, err := fs.UploadFiles([]*multipart.FileHeader{header}, "documents", &uploaderId, "USER", "123")
+		results, err := fs.UploadFiles(context.Background(), []*multipart.FileHeader{header}, "documents", &uploaderId, "USER", "123")
 
 		assert.NoError(t, err)
 		assert.Len(t, results, 1)
-		assert.Equal(t, "test.txt", results[0].OriginalFileName)
+		assert.Equal(t, "test.png", results[0].OriginalFileName)
 		assert.Equal(t, "documents", results[0].Category)
 		assert.Equal(t, &uploaderId, results[0].UploaderID)
 		assert.True(t, strings.HasPrefix(results[0].S3URL, "https://cdn.test.com/USER/123/documents/"))
@@ -162,7 +169,9 @@ func TestFileService_UploadFiles(t *testing.T) {
 
 		fs := NewFileService(repoMock, s3Mock, epMock, authMock, cfg)
 
-		header, err := createMultipartFileHeader("async_test.txt", []byte("async content"))
+		// PNG magic bytes
+		pngContent := append([]byte{0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A}, make([]byte, 512)...)
+		header, err := createMultipartFileHeader("async_test.png", pngContent)
 		assert.NoError(t, err)
 
 		uploaderId := int64(456)
@@ -172,7 +181,7 @@ func TestFileService_UploadFiles(t *testing.T) {
 		repoMock.On("Save", mock.AnythingOfType("*model.FileMetadata")).Return(nil)
 		epMock.On("SendFileUploadEvent", mock.AnythingOfType("string"), mock.AnythingOfType("uint"), mock.AnythingOfType("string"), mock.AnythingOfType("string"), uploaderId, correlationId).Return(nil)
 
-		fs.UploadFileAsync(header, "async_docs", &uploaderId, "USER", "456", "topic", correlationId)
+		fs.UploadFileAsync(context.Background(), header, "async_docs", &uploaderId, "USER", "456", "topic", correlationId)
 
 		// Wait briefly for goroutine to process
 		time.Sleep(100 * time.Millisecond)
@@ -184,7 +193,7 @@ func TestFileService_UploadFiles(t *testing.T) {
 }
 
 func TestFileService_GetFile(t *testing.T) {
-	// [Essential / 필수] 파일 메타데이터 조회 조회 로직 검증
+	// [Essential / 필수] 파일 메타데이터 조회 로직 검증
 	repoMock := new(mockFileRepository)
 	fs := NewFileService(repoMock, nil, nil, nil, nil)
 
@@ -225,7 +234,7 @@ func TestFileService_DeleteFile(t *testing.T) {
 		s3Mock.On("DeleteFile", "USER/123/docs/test.pdf").Return(nil)
 		repoMock.On("Delete", uint(1)).Return(nil)
 
-		err := fs.DeleteFile(1, 123, "cookie")
+		err := fs.DeleteFile(context.Background(), 1, 123, "cookie")
 
 		assert.NoError(t, err)
 		repoMock.AssertExpectations(t)
@@ -249,7 +258,7 @@ func TestFileService_DeleteFile(t *testing.T) {
 			Roles:  []string{"USER"},
 		}, nil)
 
-		err := fs.DeleteFile(1, 456, "cookie")
+		err := fs.DeleteFile(context.Background(), 1, 456, "cookie")
 
 		assert.Error(t, err)
 		assert.Contains(t, err.Error(), "파일 삭제 권한이 없습니다")
@@ -270,7 +279,7 @@ func TestFileService_GenerateDefaultProfileImage(t *testing.T) {
 	s3Mock.On("UploadFile", mock.AnythingOfType("string"), mock.Anything, "image/svg+xml").Return(nil)
 	repoMock.On("Save", mock.AnythingOfType("*model.FileMetadata")).Return(nil)
 
-	meta, err := fs.GenerateDefaultProfileImage("Test", "blue", &uploaderId, "USER", "123")
+	meta, err := fs.GenerateDefaultProfileImage(context.Background(), "Test", "blue", &uploaderId, "USER", "123")
 
 	assert.NoError(t, err)
 	assert.NotNil(t, meta)
@@ -294,6 +303,7 @@ func TestFileService_RenderFile(t *testing.T) {
 		Category:    "docs",
 		FileName:    "test.txt",
 		ContentType: "text/plain",
+		FileSize:    12, // < 1MB, 캐싱 대상
 		UploaderID:  &uploaderId,
 	}
 
@@ -301,16 +311,18 @@ func TestFileService_RenderFile(t *testing.T) {
 	repoMock.On("FindByID", uint(1)).Return(meta, nil)
 	s3Mock.On("GetFile", "USER/123/docs/test.txt").Return(io.NopCloser(bytes.NewReader([]byte("file content"))), "text/plain", nil).Once()
 
-	content, contentType, err := fs.RenderFile(1)
-
+	reader, _, contentType, err := fs.RenderFile(context.Background(), 1)
 	assert.NoError(t, err)
+	content, _ := io.ReadAll(reader)
+	reader.Close()
 	assert.Equal(t, "file content", string(content))
 	assert.Equal(t, "text/plain", contentType)
 
-	// [Scenario 2] Cache Hit - 두 번째 요청시 S3와 DB 모두 호출하지 않음 (Bug-10 수정 검증)
-	content2, contentType2, err2 := fs.RenderFile(1)
-
+	// [Scenario 2] Cache Hit - 두 번째 요청시 S3와 DB 모두 호출하지 않음
+	reader2, _, contentType2, err2 := fs.RenderFile(context.Background(), 1)
 	assert.NoError(t, err2)
+	content2, _ := io.ReadAll(reader2)
+	reader2.Close()
 	assert.Equal(t, "file content", string(content2))
 	assert.Equal(t, "text/plain", contentType2)
 
@@ -333,14 +345,13 @@ func TestFileService_DeleteMyProfile_PartialFailure(t *testing.T) {
 
 	repoMock.On("FindByUploaderAndCategory", uploaderId, "profile").Return(files, nil)
 	s3Mock.On("DeleteFile", "USER/123/profile/file1.jpg").Return(nil)
-	s3Mock.On("DeleteFile", "USER/123/profile/file2.jpg").Return(assert.AnError) // S3 삭제 실패
+	s3Mock.On("DeleteFile", "USER/123/profile/file2.jpg").Return(assert.AnError)
 	s3Mock.On("DeleteFile", "USER/123/profile/file3.jpg").Return(nil)
 	repoMock.On("Delete", uint(1)).Return(nil)
-	repoMock.On("Delete", uint(3)).Return(assert.AnError) // DB 삭제 실패
+	repoMock.On("Delete", uint(3)).Return(assert.AnError)
 
-	err := fs.DeleteMyProfile(uploaderId)
+	err := fs.DeleteMyProfile(context.Background(), uploaderId)
 
-	// 부분 실패가 발생하므로 에러가 반환되어야 함
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "partial delete errors")
 	assert.Contains(t, err.Error(), "S3 delete failed")
@@ -358,7 +369,9 @@ func TestFileService_UploadFileAsync_GoroutineSafety(t *testing.T) {
 	cfg := &config.Config{CloudFrontDomain: "cdn.test.com"}
 	fs := NewFileService(repoMock, s3Mock, epMock, nil, cfg)
 
-	header, err := createMultipartFileHeader("async_safe.txt", []byte("safe content"))
+	// PNG magic bytes
+	pngContent := append([]byte{0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A}, make([]byte, 512)...)
+	header, err := createMultipartFileHeader("async_safe.png", pngContent)
 	assert.NoError(t, err)
 
 	uploaderId := int64(789)
@@ -367,10 +380,8 @@ func TestFileService_UploadFileAsync_GoroutineSafety(t *testing.T) {
 	repoMock.On("Save", mock.AnythingOfType("*model.FileMetadata")).Return(nil)
 	epMock.On("SendFileUploadEvent", mock.AnythingOfType("string"), mock.AnythingOfType("uint"), mock.AnythingOfType("string"), mock.AnythingOfType("string"), uploaderId, "corr-id").Return(nil)
 
-	// 고루틴 실행
-	fs.UploadFileAsync(header, "safe_docs", &uploaderId, "USER", "789", "topic", "corr-id")
+	fs.UploadFileAsync(context.Background(), header, "safe_docs", &uploaderId, "USER", "789", "topic", "corr-id")
 
-	// 고루틴 완료 대기
 	time.Sleep(200 * time.Millisecond)
 
 	s3Mock.AssertExpectations(t)
@@ -383,16 +394,15 @@ func TestFileService_RenderFile_CacheTTLExpiration(t *testing.T) {
 	repoMock := new(mockFileRepository)
 	s3Mock := new(MockS3Service)
 
-	// 매우 짧은 TTL(50ms)로 fileService를 직접 생성하여 테스트
 	cfg := &config.Config{CloudFrontDomain: "cdn.test.com"}
 	uploaderId := int64(123)
 
-	// fileService를 직접 만들되, TTL을 매우 짧게 설정
 	fs := &fileService{
-		repo:       repoMock,
-		s3:         s3Mock,
-		cfg:        cfg,
-		fileCache:  cache.New(50*time.Millisecond, 10*time.Millisecond), // TTL: 50ms, Cleanup: 10ms
+		repo:      repoMock,
+		s3:        s3Mock,
+		cfg:       cfg,
+		fileCache: cache.New(50*time.Millisecond, 10*time.Millisecond),
+		semaphore: make(chan struct{}, 10),
 	}
 
 	meta := &model.FileMetadata{
@@ -401,6 +411,7 @@ func TestFileService_RenderFile_CacheTTLExpiration(t *testing.T) {
 		Category:    "docs",
 		FileName:    "test.txt",
 		ContentType: "text/plain",
+		FileSize:    14, // < 1MB
 		UploaderID:  &uploaderId,
 	}
 
@@ -412,27 +423,27 @@ func TestFileService_RenderFile_CacheTTLExpiration(t *testing.T) {
 		nil,
 	).Once()
 
-	content1, contentType1, err1 := fs.RenderFile(1)
-
+	reader1, _, contentType1, err1 := fs.RenderFile(context.Background(), 1)
 	assert.NoError(t, err1)
+	content1, _ := io.ReadAll(reader1)
+	reader1.Close()
 	assert.Equal(t, "cached content", string(content1))
 	assert.Equal(t, "text/plain", contentType1)
 
 	// [Phase 2] TTL이 만료되기 전 즉시 재호출 - 캐시 히트 (DB/S3 호출 없음)
-	content2, contentType2, err2 := fs.RenderFile(1)
-
+	reader2, _, contentType2, err2 := fs.RenderFile(context.Background(), 1)
 	assert.NoError(t, err2)
+	content2, _ := io.ReadAll(reader2)
+	reader2.Close()
 	assert.Equal(t, "cached content", string(content2))
 	assert.Equal(t, "text/plain", contentType2)
 
-	// Mock 검증: FindByID와 GetFile은 여전히 1회만 호출됨 (캐시 히트)
 	repoMock.AssertExpectations(t)
 	s3Mock.AssertExpectations(t)
 
 	// [Phase 3] TTL 만료 대기 (100ms > 50ms TTL)
 	time.Sleep(100 * time.Millisecond)
 
-	// TTL 만료 후 재호출을 위한 Mock 설정 (두 번째 호출)
 	repoMock.On("FindByID", uint(1)).Return(meta, nil).Once()
 	s3Mock.On("GetFile", "USER/123/docs/test.txt").Return(
 		io.NopCloser(bytes.NewReader([]byte("fresh content after expiry"))),
@@ -440,14 +451,13 @@ func TestFileService_RenderFile_CacheTTLExpiration(t *testing.T) {
 		nil,
 	).Once()
 
-	// TTL 만료 후 재호출 - 캐시 미스로 DB와 S3를 다시 조회해야 함
-	content3, contentType3, err3 := fs.RenderFile(1)
-
+	reader3, _, contentType3, err3 := fs.RenderFile(context.Background(), 1)
 	assert.NoError(t, err3)
+	content3, _ := io.ReadAll(reader3)
+	reader3.Close()
 	assert.Equal(t, "fresh content after expiry", string(content3))
 	assert.Equal(t, "text/plain", contentType3)
 
-	// Mock 검증: FindByID와 GetFile이 각각 2회씩 호출됨 (첫 호출 + TTL 만료 후 재호출)
 	repoMock.AssertExpectations(t)
 	s3Mock.AssertExpectations(t)
 }
