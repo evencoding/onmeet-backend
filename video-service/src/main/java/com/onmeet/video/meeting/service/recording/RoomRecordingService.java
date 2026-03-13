@@ -1,7 +1,7 @@
 package com.onmeet.video.meeting.service.recording;
 
-import com.onmeet.video.common.exception.BizException;
-import com.onmeet.video.common.exception.ErrorCode;
+import com.onmeet.common.exception.BusinessException;
+import com.onmeet.common.exception.errorcode.VideoErrorCode;
 import com.onmeet.video.common.util.ClockProvider;
 import com.onmeet.video.infra.livekit.LiveKitClient;
 import com.onmeet.video.infra.livekit.LiveKitClient.ParticipantInfo;
@@ -107,7 +107,8 @@ public class RoomRecordingService {
             .findByRoomIdAndStatus(roomId, RecordingStatus.RECORDING);
 
         if (activeRecordings.isEmpty()) {
-            throw new BizException(ErrorCode.NOT_FOUND, "No active recording found");
+            // TODO: [VIDEO][VideoErrorCode.ACTIVE_RECORDING_NOT_FOUND] 에러메시지 검수 요청
+            throw new BusinessException(VideoErrorCode.ACTIVE_RECORDING_NOT_FOUND);
         }
 
         for (RoomRecording recording : activeRecordings) {
@@ -135,21 +136,23 @@ public class RoomRecordingService {
     @Transactional(readOnly = true)
     public RoomRecordingResponse getRecording(Long recordingId) {
         RoomRecording recording = recordingRepository.findById(recordingId)
-            .orElseThrow(() -> new BizException(ErrorCode.NOT_FOUND, "Recording not found"));
+            .orElseThrow(() -> new BusinessException(VideoErrorCode.RECORDING_NOT_FOUND));
         return toResponse(recording);
     }
 
     @Transactional(readOnly = true)
     public String getDownloadUrl(Long recordingId) {
         RoomRecording recording = recordingRepository.findById(recordingId)
-            .orElseThrow(() -> new BizException(ErrorCode.NOT_FOUND, "Recording not found"));
+            .orElseThrow(() -> new BusinessException(VideoErrorCode.RECORDING_NOT_FOUND));
 
         if (recording.getStatus() != RecordingStatus.COMPLETED) {
-            throw new BizException(ErrorCode.INVALID_REQUEST, "Recording is not completed yet");
+            // TODO: [VIDEO][VideoErrorCode.RECORDING_NOT_COMPLETED] 에러메시지 검수 요청
+            throw new BusinessException(VideoErrorCode.RECORDING_NOT_COMPLETED);
         }
 
         if (recording.getS3Path() == null) {
-            throw new BizException(ErrorCode.NOT_FOUND, "Recording file not available");
+            // TODO: [VIDEO][VideoErrorCode.RECORDING_S3_NOT_READY] 에러메시지 검수 요청
+            throw new BusinessException(VideoErrorCode.RECORDING_S3_NOT_READY);
         }
 
         return recording.getS3Path();
@@ -158,7 +161,7 @@ public class RoomRecordingService {
     @Transactional
     public void deleteRecording(Long recordingId, Long userId) {
         RoomRecording recording = recordingRepository.findById(recordingId)
-            .orElseThrow(() -> new BizException(ErrorCode.NOT_FOUND, "Recording not found"));
+            .orElseThrow(() -> new BusinessException(VideoErrorCode.RECORDING_NOT_FOUND));
 
         MeetingRoom room = recording.getRoom();
         validateHostOrCoHost(room.getId(), room, userId);
@@ -211,25 +214,28 @@ public class RoomRecordingService {
 
     private void validateRecordingPreconditions(Long roomId, MeetingRoom room) {
         if (!room.isActive()) {
-            throw new BizException(ErrorCode.INVALID_REQUEST, "Room must be active to start recording");
+            // TODO: [VIDEO][VideoErrorCode.RECORDING_ROOM_NOT_ACTIVE] 에러메시지 검수 요청
+            throw new BusinessException(VideoErrorCode.RECORDING_ROOM_NOT_ACTIVE);
         }
 
         settingsRepository.findByRoomId(roomId).ifPresent(settings -> {
             if (!settings.isRecordingEnabled()) {
-                throw new BizException(ErrorCode.FORBIDDEN, "Recording is disabled for this room");
+                // TODO: [VIDEO][VideoErrorCode.RECORDING_DISABLED] 에러메시지 검수 요청
+                throw new BusinessException(VideoErrorCode.RECORDING_DISABLED);
             }
         });
 
         List<RoomRecording> activeRecordings = recordingRepository
             .findByRoomIdAndStatus(roomId, RecordingStatus.RECORDING);
         if (!activeRecordings.isEmpty()) {
-            throw new BizException(ErrorCode.CONFLICT, "Recording is already in progress");
+            // TODO: [VIDEO][VideoErrorCode.RECORDING_ALREADY_IN_PROGRESS] 에러메시지 검수 요청
+            throw new BusinessException(VideoErrorCode.RECORDING_ALREADY_IN_PROGRESS);
         }
     }
 
     private MeetingRoom findRoom(Long roomId) {
         return roomRepository.findById(roomId)
-            .orElseThrow(() -> new BizException(ErrorCode.NOT_FOUND, "Room not found"));
+            .orElseThrow(() -> new BusinessException(VideoErrorCode.ROOM_NOT_FOUND));
     }
 
     private void validateHostOrCoHost(Long roomId, MeetingRoom room, Long userId) {
@@ -238,7 +244,7 @@ public class RoomRecordingService {
         }
         participantRepository.findByRoomIdAndUserIdAndStatus(roomId, userId, ParticipantStatus.JOINED)
             .filter(p -> p.getRole() == ParticipantRole.CO_HOST)
-            .orElseThrow(() -> new BizException(ErrorCode.FORBIDDEN, "Only host or co-host can perform this action"));
+            .orElseThrow(() -> new BusinessException(VideoErrorCode.HOST_OR_COHOST_ONLY));
     }
 
     private RoomRecordingResponse toResponse(RoomRecording recording) {
