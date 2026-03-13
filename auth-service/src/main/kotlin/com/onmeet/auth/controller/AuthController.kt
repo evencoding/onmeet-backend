@@ -8,6 +8,7 @@ import com.onmeet.auth.config.JwtProperties
 import com.onmeet.auth.dto.*
 import com.onmeet.auth.security.KeyManager
 import com.onmeet.auth.service.AuthService
+import com.onmeet.auth.service.TokenServiceImpl
 import com.onmeet.auth.service.UserService
 import com.onmeet.common.security.JwtConstants
 import io.swagger.v3.oas.annotations.Operation
@@ -288,8 +289,7 @@ class AuthController(
     fun guestLogin(@RequestBody request: GuestLoginRequest): ResponseEntity<Void> {
         val tokenResponse = authService.guestLogin(request)
 
-        // Guest Refresh Token: 1 day (86400 seconds)
-        val guestRefreshMaxAge = 86400L
+        val guestRefreshMaxAge = TokenServiceImpl.GUEST_TOKEN_EXPIRY_SECONDS
 
         return ResponseEntity.ok()
             .header(HttpHeaders.SET_COOKIE, createAccessCookie(tokenResponse.accessToken).toString())
