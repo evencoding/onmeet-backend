@@ -1,4 +1,4 @@
-basePath: /file
+basePath: /file/v1
 definitions:
   handler.GenerateProfileRequest:
     properties:
@@ -6,7 +6,7 @@ definitions:
         example: '#FF5733'
         type: string
       name:
-        example: John Doe
+        example: 홍길동
         type: string
       ownerId:
         example: "123"
@@ -15,80 +15,129 @@ definitions:
         example: USER
         type: string
     type: object
+  model.ErrorResponse:
+    properties:
+      code:
+        example: FILE_001
+        type: string
+      message:
+        example: 멀티파트 폼 데이터 파싱에 실패했습니다
+        type: string
+      status:
+        example: 400
+        type: integer
+      timestamp:
+        example: 1234567890123
+        type: integer
+    type: object
   model.FileMetadata:
     properties:
       category:
+        example: TEAM_PROFILE
         type: string
       contentType:
+        example: image/jpeg
         type: string
       createdAt:
+        example: "2024-03-10T09:00:00Z"
         type: string
       extraInfo:
         description: datatypes.JSON은 PostgreSQL의 jsonb 타입을 지원하기 위한 특수 타입입니다.
         type: object
       fileName:
+        example: 550e8400-e29b-41d4-a716-446655440000.jpg
         type: string
       fileSize:
+        example: 204800
         type: integer
       id:
         description: |-
           백틱(`) 안에 있는 것은 'Struct Tag'라고 하며, GORM(ORM) 설정이나 JSON 변환 설정을 담습니다.
           gorm:"primaryKey"는 JPA의 @Id와 같고, json:"id"는 Jackson의 @JsonProperty("id")와 같습니다.
+        example: 1
         type: integer
       originalFileName:
+        example: photo.jpg
         type: string
       ownerId:
+        example: "123"
         type: string
       ownerType:
+        example: USER
         type: string
       s3Url:
+        example: https://cdn.onmeet.cloud/USER/123/TEAM_PROFILE/550e8400.jpg
         type: string
       updatedAt:
+        example: "2024-03-10T09:00:00Z"
         type: string
       uploaderId:
         description: '*int64처럼 포인터를 쓰는 이유는 DB의 NULL 값을 허용하기 위해서입니다. (Java의 클래스 타입
           Integer와 유사)'
+        example: 42
         type: integer
     type: object
-host: localhost:8086
+host: api.onmeet.cloud
 info:
-  contact:
-    email: support@swagger.io
-    name: API Support
-    url: http://www.swagger.io/support
-  description: File management service for OnMeet application.
-  license:
-    name: Apache 2.0
-    url: http://www.apache.org/licenses/LICENSE-2.0.html
-  termsOfService: http://swagger.io/terms/
+  contact: {}
+  description: |-
+    OnMeet 파일 관리 서비스입니다. S3(또는 MinIO) 기반의 파일 업로드/다운로드, 프로필 이미지 생성/삭제를 담당합니다.
+
+    ## 인증
+    모든 엔드포인트는 `X-Gateway-Secret` 헤더를 통한 게이트웨이 시크릿 검증이 필요합니다.
+    사용자 정보는 `X-User-Id`, `X-User-Roles` 헤더로 전달됩니다 (게이트웨이에서 JWT 검증 후 주입).
+
+    ## 에러 응답 형식
+    모든 에러는 다음 JSON 형식으로 반환됩니다:
+    `{"code": "FILE_001", "status": 400, "message": "에러 메시지", "timestamp": 1710000000000}`
+
+    ## 공통 에러
+    - `FILE_014` (403): X-Gateway-Secret 헤더가 없거나 일치하지 않는 경우 (모든 엔드포인트)
   title: OnMeet File Service API
   version: "1.0"
 paths:
   /{fileId}:
     delete:
-      description: Delete file by ID (Soft delete in DB, Hard delete in S3).
+      description: |-
+        파일 ID로 파일을 삭제합니다. S3에서 즉시 삭제(Hard Delete)되고 DB는 Soft Delete 처리됩니다.
+        삭제 권한: MANAGER 또는 ADMIN 역할 보유자만 가능합니다.
+        회사 파일(ownerType=COMPANY)은 동일 회사 관리자만, 개인 파일은 동일 회사 소속 관리자만 삭제 가능합니다.
       parameters:
-      - description: File ID
+      - description: 파일 ID (양의 정수)
         in: path
         name: fileId
         required: true
         type: integer
       responses:
         "204":
-          description: No Content
-        "500":
-          description: Internal Server Error
+          description: 삭제 성공 (응답 본문 없음)
+        "400":
+          description: 'FILE_006: fileId가 유효한 양의 정수가 아닌 경우'
           schema:
-            additionalProperties:
-              type: string
-            type: object
-      summary: Delete file
+            $ref: '#/definitions/model.ErrorResponse'
+        "403":
+          description: 'FILE_014: 게이트웨이 시크릿 오류 | FILE_020: MANAGER/ADMIN 권한 없음 | FILE_021:
+            다른 회사 파일 접근 불가'
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "404":
+          description: 'FILE_042: 삭제 대상 파일이 DB에 존재하지 않는 경우'
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: 'FILE_007: S3 삭제 또는 DB 삭제 실패 | FILE_019: auth-service 권한 조회
+            실패'
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      summary: 파일 삭제
       tags:
       - file
     get:
-      description: Get file metadata by ID.
+      description: |-
+        파일 ID로 DB에 저장된 파일 메타데이터(URL, 크기, 카테고리 등)를 조회합니다.
+        실제 파일 바이너리가 아닌 메타데이터만 반환합니다. 파일 내용은 /render/{fileId}를 사용하세요.
       parameters:
-      - description: File ID
+      - description: 파일 ID (양의 정수)
         in: path
         name: fileId
         required: true
@@ -97,25 +146,62 @@ paths:
       - application/json
       responses:
         "200":
-          description: OK
+          description: 파일 메타데이터
           schema:
             $ref: '#/definitions/model.FileMetadata'
-        "404":
-          description: Not Found
+        "400":
+          description: 'FILE_004: fileId가 유효한 양의 정수가 아닌 경우'
           schema:
-            additionalProperties:
-              type: string
-            type: object
-      summary: Get file info
+            $ref: '#/definitions/model.ErrorResponse'
+        "403":
+          description: 'FILE_014: X-Gateway-Secret 헤더 누락 또는 불일치'
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "404":
+          description: 'FILE_005: 해당 ID의 파일이 DB에 존재하지 않는 경우 | FILE_042: DB 레코드 없음'
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: 'FILE_041: DB 연결 오류 등 내부 서버 에러'
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      summary: 파일 메타데이터 조회
+      tags:
+      - file
+  /me/profile:
+    delete:
+      description: |-
+        현재 인증된 사용자가 업로드한 모든 프로필 카테고리 파일을 S3 및 DB에서 삭제합니다.
+        S3 삭제 실패 시 해당 파일의 DB 삭제를 건너뛰어 고아(orphan) 레코드를 방지합니다.
+        일부 파일 삭제 실패 시에도 500을 반환하며, 성공한 파일은 삭제됩니다.
+      responses:
+        "204":
+          description: 삭제 성공 (응답 본문 없음)
+        "401":
+          description: 'FILE_008: X-User-Id 헤더가 없어 사용자를 식별할 수 없는 경우'
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "403":
+          description: 'FILE_014: X-Gateway-Secret 헤더 누락 또는 불일치'
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: 'FILE_009: S3 또는 DB 삭제 중 일부 또는 전체 실패'
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      summary: 내 프로필 이미지 삭제
       tags:
       - file
   /profile/default:
     post:
       consumes:
       - application/json
-      description: Generate a default profile image based on name and color.
+      description: |-
+        이름 첫 글자와 배경색을 기반으로 SVG 프로필 이미지를 생성하고 S3에 저장합니다.
+        color를 비워두면 서버에서 미리 정의된 고대비 색상 팔레트 중 하나를 랜덤 선택합니다.
+        생성된 SVG는 category=profile로 저장됩니다.
       parameters:
-      - description: Request Body
+      - description: 프로필 생성 요청
         in: body
         name: request
         required: true
@@ -125,61 +211,86 @@ paths:
       - application/json
       responses:
         "200":
-          description: OK
+          description: 생성된 프로필 이미지 메타데이터
           schema:
             $ref: '#/definitions/model.FileMetadata'
-        "500":
-          description: Internal Server Error
+        "400":
+          description: 'FILE_010: 요청 JSON 파싱 실패 (잘못된 형식)'
           schema:
-            additionalProperties:
-              type: string
-            type: object
-      summary: Generate default profile image
+            $ref: '#/definitions/model.ErrorResponse'
+        "403":
+          description: 'FILE_014: X-Gateway-Secret 헤더 누락 또는 불일치'
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: 'FILE_011: SVG S3 업로드 또는 DB 저장 실패'
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      summary: 기본 프로필 이미지 생성
       tags:
       - file
   /render/{fileId}:
     get:
-      description: Download or render file content.
+      description: |-
+        파일 ID로 S3에서 실제 파일 바이너리를 가져와 반환합니다.
+        1MB 미만의 파일은 서버 인메모리 캐시(TTL 1시간)에 저장되어 반복 요청 시 S3 호출 없이 응답합니다.
+        응답 Content-Type은 파일의 실제 타입(image/jpeg, application/pdf 등)으로 동적 결정됩니다.
       parameters:
-      - description: File ID
+      - description: 파일 ID (양의 정수)
         in: path
         name: fileId
         required: true
         type: integer
+      produces:
+      - application/octet-stream
       responses:
         "200":
-          description: OK
+          description: '파일 바이너리 데이터 (Cache-Control: public, max-age=3600)'
           schema:
             type: string
-        "404":
-          description: Not Found
+        "400":
+          description: 'FILE_012: fileId가 유효한 양의 정수가 아닌 경우'
           schema:
-            additionalProperties:
-              type: string
-            type: object
-      summary: Render file
+            $ref: '#/definitions/model.ErrorResponse'
+        "403":
+          description: 'FILE_014: X-Gateway-Secret 헤더 누락 또는 불일치'
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "404":
+          description: 'FILE_013: 파일 메타데이터 없음 또는 S3 다운로드 실패 | FILE_033: DB에서 파일을 찾을
+            수 없음'
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: 'FILE_034: S3 GetObject 오류 | FILE_035: 파일 내용 읽기 오류'
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      summary: 파일 렌더링 (다운로드)
       tags:
       - file
   /upload:
     post:
       consumes:
       - multipart/form-data
-      description: Upload multiple files to S3.
+      description: |-
+        멀티파트 폼으로 하나 이상의 파일을 S3에 업로드합니다.
+        업로드된 파일의 메타데이터(URL, 크기, 타입 등)가 PostgreSQL에 저장됩니다.
+        category, ownerType, ownerId를 지정하지 않으면 기본값(USER / 업로더 ID)이 사용됩니다.
       parameters:
-      - description: Files to upload
+      - description: 업로드할 파일 (복수 가능)
         in: formData
         name: files
         required: true
         type: file
-      - description: File category (e.g., TEAM_PROFILE)
+      - description: '파일 카테고리 (예: TEAM_PROFILE, MEETING_SUMMARY)'
         in: formData
         name: category
         type: string
-      - description: Owner Type (e.g., USER, TEAM)
+      - description: '소유자 타입 (USER | TEAM | COMPANY). 기본값: USER'
         in: formData
         name: ownerType
         type: string
-      - description: Owner ID
+      - description: 소유자 ID. 미입력 시 업로더 ID 사용
         in: formData
         name: ownerId
         type: string
@@ -187,48 +298,58 @@ paths:
       - application/json
       responses:
         "200":
-          description: OK
+          description: 업로드된 파일 메타데이터 목록
           schema:
             items:
               $ref: '#/definitions/model.FileMetadata'
             type: array
-        "500":
-          description: Internal Server Error
+        "400":
+          description: 'FILE_001: 멀티파트 폼 데이터 파싱 실패 (Content-Type이 multipart/form-data가
+            아닌 경우)'
           schema:
-            additionalProperties:
-              type: string
-            type: object
-      summary: Upload files
+            $ref: '#/definitions/model.ErrorResponse'
+        "403":
+          description: 'FILE_014: X-Gateway-Secret 헤더 누락 또는 불일치'
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: 'FILE_002: S3 업로드 또는 DB 저장 실패'
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      summary: 파일 업로드
       tags:
       - file
   /upload-async:
     post:
       consumes:
       - multipart/form-data
-      description: Upload files asynchronously using Kafka.
+      description: |-
+        파일을 백그라운드 고루틴으로 비동기 처리하고 즉시 202를 반환합니다.
+        실제 S3 업로드 완료 후 callbackTopic으로 Kafka 이벤트가 발행됩니다.
+        업로드 실패 시 클라이언트에 별도 에러 응답이 없으며 서버 로그에만 기록됩니다.
       parameters:
-      - description: Files to upload
+      - description: 업로드할 파일 (복수 가능)
         in: formData
         name: files
         required: true
         type: file
-      - description: File category
+      - description: 파일 카테고리
         in: formData
         name: category
         type: string
-      - description: Owner Type
+      - description: 소유자 타입 (USER | TEAM | COMPANY)
         in: formData
         name: ownerType
         type: string
-      - description: Owner ID
+      - description: 소유자 ID
         in: formData
         name: ownerId
         type: string
-      - description: Callback Kafka Topic
+      - description: '업로드 완료 Kafka 토픽. 기본값: file-upload-events'
         in: formData
         name: callbackTopic
         type: string
-      - description: Correlation ID
+      - description: 요청 추적을 위한 Correlation ID
         in: formData
         name: correlationId
         type: string
@@ -236,11 +357,19 @@ paths:
       - application/json
       responses:
         "202":
-          description: Accepted
+          description: 비동기 업로드 시작 확인 (message, fileCount)
           schema:
             additionalProperties: true
             type: object
-      summary: Upload files asynchronously
+        "400":
+          description: 'FILE_003: 멀티파트 폼 데이터 파싱 실패'
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "403":
+          description: 'FILE_014: X-Gateway-Secret 헤더 누락 또는 불일치'
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      summary: 파일 비동기 업로드
       tags:
       - file
 swagger: "2.0"
