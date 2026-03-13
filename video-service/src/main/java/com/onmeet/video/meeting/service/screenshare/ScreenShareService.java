@@ -2,8 +2,8 @@ package com.onmeet.video.meeting.service.screenshare;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.onmeet.video.common.exception.BizException;
-import com.onmeet.video.common.exception.ErrorCode;
+import com.onmeet.common.exception.BusinessException;
+import com.onmeet.common.exception.errorcode.VideoErrorCode;
 import com.onmeet.video.common.util.ClockProvider;
 import com.onmeet.video.infra.auth.AuthServiceClient;
 import com.onmeet.video.infra.livekit.LiveKitClient;
@@ -62,20 +62,23 @@ public class ScreenShareService {
         MeetingRoom room = findRoom(roomId);
 
         if (!room.isActive()) {
-            throw new BizException(ErrorCode.INVALID_REQUEST, "Room is not active");
+            // TODO: [VIDEO][VideoErrorCode.SCREEN_SHARE_ROOM_NOT_ACTIVE] 에러메시지 검수 요청
+            throw new BusinessException(VideoErrorCode.SCREEN_SHARE_ROOM_NOT_ACTIVE);
         }
 
         RoomSettings settings = settingsRepository.findByRoomId(roomId).orElse(null);
         if (settings != null && !settings.isScreenShareAllowed()) {
-            throw new BizException(ErrorCode.FORBIDDEN, "Screen sharing is not allowed in this room");
+            // TODO: [VIDEO][VideoErrorCode.SCREEN_SHARE_NOT_ALLOWED] 에러메시지 검수 요청
+            throw new BusinessException(VideoErrorCode.SCREEN_SHARE_NOT_ALLOWED);
         }
 
         RoomParticipant participant = participantRepository
             .findByRoomIdAndUserIdAndStatus(roomId, userId, ParticipantStatus.JOINED)
-            .orElseThrow(() -> new BizException(ErrorCode.NOT_FOUND, "Not a joined participant of this room"));
+            .orElseThrow(() -> new BusinessException(VideoErrorCode.NOT_JOINED_PARTICIPANT));
 
         if (participant.isScreenSharing()) {
-            throw new BizException(ErrorCode.CONFLICT, "Already sharing screen");
+            // TODO: [VIDEO][VideoErrorCode.ALREADY_SHARING] 에러메시지 검수 요청
+            throw new BusinessException(VideoErrorCode.ALREADY_SHARING);
         }
 
         Instant now = clockProvider.now();
@@ -95,10 +98,11 @@ public class ScreenShareService {
 
         RoomParticipant participant = participantRepository
             .findByRoomIdAndUserIdAndStatus(roomId, userId, ParticipantStatus.JOINED)
-            .orElseThrow(() -> new BizException(ErrorCode.NOT_FOUND, "Not a joined participant of this room"));
+            .orElseThrow(() -> new BusinessException(VideoErrorCode.NOT_JOINED_PARTICIPANT));
 
         if (!participant.isScreenSharing()) {
-            throw new BizException(ErrorCode.INVALID_REQUEST, "Not currently sharing screen");
+            // TODO: [VIDEO][VideoErrorCode.NOT_SHARING] 에러메시지 검수 요청
+            throw new BusinessException(VideoErrorCode.NOT_SHARING);
         }
 
         participant.stopScreenShare();
@@ -116,10 +120,11 @@ public class ScreenShareService {
 
         RoomParticipant target = participantRepository
             .findByRoomIdAndUserIdAndStatus(roomId, targetUserId, ParticipantStatus.JOINED)
-            .orElseThrow(() -> new BizException(ErrorCode.NOT_FOUND, "Target participant not found"));
+            .orElseThrow(() -> new BusinessException(VideoErrorCode.NOT_JOINED_PARTICIPANT));
 
         if (!target.isScreenSharing()) {
-            throw new BizException(ErrorCode.INVALID_REQUEST, "Target is not currently sharing screen");
+            // TODO: [VIDEO][VideoErrorCode.TARGET_NOT_SHARING] 에러메시지 검수 요청
+            throw new BusinessException(VideoErrorCode.TARGET_NOT_SHARING);
         }
 
         target.stopScreenShare();
@@ -151,7 +156,7 @@ public class ScreenShareService {
 
     private MeetingRoom findRoom(Long roomId) {
         return roomRepository.findById(roomId)
-            .orElseThrow(() -> new BizException(ErrorCode.NOT_FOUND, "Room not found"));
+            .orElseThrow(() -> new BusinessException(VideoErrorCode.ROOM_NOT_FOUND));
     }
 
     private void validateHostOrCoHost(Long roomId, MeetingRoom room, Long userId) {
@@ -160,7 +165,7 @@ public class ScreenShareService {
         }
         participantRepository.findByRoomIdAndUserIdAndStatus(roomId, userId, ParticipantStatus.JOINED)
             .filter(p -> p.getRole() == ParticipantRole.CO_HOST)
-            .orElseThrow(() -> new BizException(ErrorCode.FORBIDDEN, "Only host or co-host can perform this action"));
+            .orElseThrow(() -> new BusinessException(VideoErrorCode.HOST_OR_COHOST_ONLY));
     }
 
     private void publishDataChannelMessage(MeetingRoom room, Long userId, String type) {
@@ -186,7 +191,8 @@ public class ScreenShareService {
             byte[] payload = objectMapper.writeValueAsBytes(message);
             liveKitClient.publishData(room.getLivekitRoomName(), payload, DataPacketKind.RELIABLE);
         } catch (JsonProcessingException e) {
-            throw new BizException(ErrorCode.INTERNAL_ERROR, "Failed to serialize screen share message");
+            // TODO: [VIDEO][VideoErrorCode.SCREEN_SHARE_SERIALIZE_FAILED] 에러메시지 검수 요청
+            throw new BusinessException(VideoErrorCode.SCREEN_SHARE_SERIALIZE_FAILED);
         }
     }
 }

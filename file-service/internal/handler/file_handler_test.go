@@ -265,7 +265,7 @@ func TestFileHandler_Upload_InvalidMultipartForm(t *testing.T) {
 	router.ServeHTTP(w, req)
 
 	assert.Equal(t, http.StatusBadRequest, w.Code)
-	assert.Contains(t, w.Body.String(), "Invalid multipart form")
+	assert.Contains(t, w.Body.String(), "FILE_001")
 }
 
 func TestFileHandler_UploadAsync_InvalidMultipartForm(t *testing.T) {
@@ -283,7 +283,7 @@ func TestFileHandler_UploadAsync_InvalidMultipartForm(t *testing.T) {
 	router.ServeHTTP(w, req)
 
 	assert.Equal(t, http.StatusBadRequest, w.Code)
-	assert.Contains(t, w.Body.String(), "Invalid multipart form")
+	assert.Contains(t, w.Body.String(), "FILE_003")
 }
 
 func TestFileHandler_GetFileInfo_InvalidFileId(t *testing.T) {
@@ -300,7 +300,7 @@ func TestFileHandler_GetFileInfo_InvalidFileId(t *testing.T) {
 	router.ServeHTTP(w, req)
 
 	assert.Equal(t, http.StatusBadRequest, w.Code)
-	assert.Contains(t, w.Body.String(), "Invalid file ID")
+	assert.Contains(t, w.Body.String(), "유효하지 않은 파일 ID입니다")
 }
 
 func TestFileHandler_DeleteFile_InvalidFileId(t *testing.T) {
@@ -317,7 +317,7 @@ func TestFileHandler_DeleteFile_InvalidFileId(t *testing.T) {
 	router.ServeHTTP(w, req)
 
 	assert.Equal(t, http.StatusBadRequest, w.Code)
-	assert.Contains(t, w.Body.String(), "Invalid file ID")
+	assert.Contains(t, w.Body.String(), "유효하지 않은 파일 ID입니다")
 }
 
 func TestFileHandler_RenderFile_InvalidFileId(t *testing.T) {
@@ -334,7 +334,7 @@ func TestFileHandler_RenderFile_InvalidFileId(t *testing.T) {
 	router.ServeHTTP(w, req)
 
 	assert.Equal(t, http.StatusBadRequest, w.Code)
-	assert.Contains(t, w.Body.String(), "Invalid file ID")
+	assert.Contains(t, w.Body.String(), "유효하지 않은 파일 ID입니다")
 }
 
 // ===== [Bug-7 Extreme Edge Cases] 극단적인 파싱 에러 케이스 =====
@@ -354,7 +354,7 @@ func TestFileHandler_GetFileInfo_MaxUint64Overflow(t *testing.T) {
 	router.ServeHTTP(w, req)
 
 	assert.Equal(t, http.StatusBadRequest, w.Code)
-	assert.Contains(t, w.Body.String(), "Invalid file ID")
+	assert.Contains(t, w.Body.String(), "유효하지 않은 파일 ID입니다")
 }
 
 func TestFileHandler_DeleteFile_NegativeFileId(t *testing.T) {
@@ -371,7 +371,7 @@ func TestFileHandler_DeleteFile_NegativeFileId(t *testing.T) {
 	router.ServeHTTP(w, req)
 
 	assert.Equal(t, http.StatusBadRequest, w.Code)
-	assert.Contains(t, w.Body.String(), "Invalid file ID")
+	assert.Contains(t, w.Body.String(), "유효하지 않은 파일 ID입니다")
 }
 
 func TestFileHandler_RenderFile_VeryLargeNumber(t *testing.T) {
@@ -389,7 +389,7 @@ func TestFileHandler_RenderFile_VeryLargeNumber(t *testing.T) {
 	router.ServeHTTP(w, req)
 
 	assert.Equal(t, http.StatusBadRequest, w.Code)
-	assert.Contains(t, w.Body.String(), "Invalid file ID")
+	assert.Contains(t, w.Body.String(), "유효하지 않은 파일 ID입니다")
 }
 
 func TestFileHandler_GetFileInfo_SpecialCharacters(t *testing.T) {
@@ -417,7 +417,7 @@ func TestFileHandler_GetFileInfo_SpecialCharacters(t *testing.T) {
 		// Empty string may route to a different handler, so we only check non-empty cases
 		if tc != "" {
 			assert.Equal(t, http.StatusBadRequest, w.Code, "Failed for input: "+tc)
-			assert.Contains(t, w.Body.String(), "Invalid file ID", "Failed for input: "+tc)
+			assert.Contains(t, w.Body.String(), "유효하지 않은 파일 ID입니다", "Failed for input: "+tc)
 		}
 	}
 }

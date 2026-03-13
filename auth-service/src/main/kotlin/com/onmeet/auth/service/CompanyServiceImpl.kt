@@ -6,6 +6,8 @@ import com.onmeet.auth.entity.Company
 import com.onmeet.auth.entity.Team
 import com.onmeet.auth.exception.*
 import com.onmeet.auth.repository.jpa.CompanyRepository
+import com.onmeet.common.exception.BusinessException
+import com.onmeet.common.exception.errorcode.AuthErrorCode
 import com.onmeet.auth.repository.jpa.TeamRepository
 import com.onmeet.auth.repository.jpa.UserRepository
 import org.springframework.stereotype.Service
@@ -22,16 +24,19 @@ class CompanyServiceImpl(
     @Transactional
     override fun createCompany(name: String): Company =
         if (companyRepository.findByName(name) != null) {
-            throw CompanyAlreadyExistsException("Company already exists with name: $name")
+            // TODO: [AUTH][AuthErrorCode.COMPANY_ALREADY_EXISTS] 에러메시지 검수 요청
+            throw BusinessException(AuthErrorCode.COMPANY_ALREADY_EXISTS)
         } else {
             companyRepository.save(Company(name = name))
         }
 
     override fun getCompany(id: Long): Company =
         companyRepository.findById(id)
-            .orElseThrow { CompanyNotFoundException("Company not found: $id") }
-    
+            // TODO: [AUTH][AuthErrorCode.COMPANY_NOT_FOUND] 에러메시지 검수 요청
+            .orElseThrow { BusinessException(AuthErrorCode.COMPANY_NOT_FOUND) }
+
     override fun getTeam(id: Long): Team =
         teamRepository.findById(id)
-            .orElseThrow { TeamNotFoundException("Team not found: $id") }
+            // TODO: [AUTH][AuthErrorCode.TEAM_NOT_FOUND] 에러메시지 검수 요청
+            .orElseThrow { BusinessException(AuthErrorCode.TEAM_NOT_FOUND) }
 }

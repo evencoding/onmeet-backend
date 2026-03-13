@@ -2,11 +2,11 @@ package com.onmeet.auth.service
 
 import com.onmeet.auth.dto.JobTitleRequest
 import com.onmeet.auth.entity.Company
-import com.onmeet.common.exception.CrossCompanyAccessException
-import com.onmeet.common.exception.InsufficientPermissionException
 import com.onmeet.auth.entity.JobTitle
 import com.onmeet.auth.entity.User
 import com.onmeet.auth.exception.*
+import com.onmeet.common.exception.BusinessException
+import com.onmeet.common.exception.errorcode.AuthErrorCode
 import com.onmeet.auth.repository.jpa.JobTitleRepository
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
@@ -41,14 +41,16 @@ class JobTitleServiceImpl(
     override fun updateJobTitle(manager: User, id: Long, request: JobTitleRequest): JobTitle {
         validateManager(manager)
         val jobTitle = jobTitleRepository.findById(id)
-            .orElseThrow { JobTitleNotFoundException("JobTitle not found: $id") }
-        
+            // TODO: [AUTH][AuthErrorCode.JOB_TITLE_NOT_FOUND] 에러메시지 검수 요청
+            .orElseThrow { BusinessException(AuthErrorCode.JOB_TITLE_NOT_FOUND) }
+
         if (jobTitle.company.requireId() != manager.company.requireId()) {
-            throw CrossCompanyAccessException("Unauthorized access to this company's job titles")
+            // TODO: [AUTH][AuthErrorCode.JOB_TITLE_CROSS_COMPANY] 에러메시지 검수 요청
+            throw BusinessException(AuthErrorCode.JOB_TITLE_CROSS_COMPANY)
         }
 
         jobTitle.name = request.name
-        
+
         if (request.isDefault && !jobTitle.isDefault) {
             unsetDefaultFlags(manager.company)
             jobTitle.isDefault = true
@@ -56,7 +58,8 @@ class JobTitleServiceImpl(
             val hasOtherDefault = jobTitleRepository.findAllByCompany(manager.company)
                 .any { it.id != jobTitle.id && it.isDefault }
             if (!hasOtherDefault) {
-                throw CompanyMismatchException("At least one default job title must exist")
+                // TODO: [AUTH][AuthErrorCode.JOB_TITLE_DEFAULT_REQUIRED] 에러메시지 검수 요청
+                throw BusinessException(AuthErrorCode.JOB_TITLE_DEFAULT_REQUIRED)
             }
             jobTitle.isDefault = false
         }
@@ -68,17 +71,20 @@ class JobTitleServiceImpl(
     override fun deleteJobTitle(manager: User, id: Long) {
         validateManager(manager)
         val jobTitle = jobTitleRepository.findById(id)
-            .orElseThrow { JobTitleNotFoundException("JobTitle not found: $id") }
+            // TODO: [AUTH][AuthErrorCode.JOB_TITLE_NOT_FOUND] 에러메시지 검수 요청
+            .orElseThrow { BusinessException(AuthErrorCode.JOB_TITLE_NOT_FOUND) }
 
         if (jobTitle.company.requireId() != manager.company.requireId()) {
-            throw CrossCompanyAccessException("Unauthorized access")
+            // TODO: [AUTH][AuthErrorCode.JOB_TITLE_CROSS_COMPANY] 에러메시지 검수 요청
+            throw BusinessException(AuthErrorCode.JOB_TITLE_CROSS_COMPANY)
         }
 
         if (jobTitle.isDefault) {
             val hasOtherDefault = jobTitleRepository.findAllByCompany(manager.company)
                 .any { it.id != jobTitle.id && it.isDefault }
             if (!hasOtherDefault) {
-                throw CompanyMismatchException("Cannot delete the only default job title")
+                // TODO: [AUTH][AuthErrorCode.JOB_TITLE_DEFAULT_REQUIRED] 에러메시지 검수 요청
+                throw BusinessException(AuthErrorCode.JOB_TITLE_DEFAULT_REQUIRED)
             }
         }
 
@@ -103,7 +109,8 @@ class JobTitleServiceImpl(
 
     private fun validateManager(user: User) {
         if (!user.hasRole(User.Role.MANAGER)) {
-            throw InsufficientPermissionException("Only managers can manage job titles")
+            // TODO: [AUTH][AuthErrorCode.JOB_TITLE_MANAGE_FORBIDDEN] 에러메시지 검수 요청
+            throw BusinessException(AuthErrorCode.JOB_TITLE_MANAGE_FORBIDDEN)
         }
     }
 

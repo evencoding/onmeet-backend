@@ -1,7 +1,7 @@
 package com.onmeet.video.meeting.service.invitation;
 
-import com.onmeet.video.common.exception.BizException;
-import com.onmeet.video.common.exception.ErrorCode;
+import com.onmeet.common.exception.BusinessException;
+import com.onmeet.common.exception.errorcode.VideoErrorCode;
 import com.onmeet.video.infra.auth.AuthServiceClient;
 import com.onmeet.video.meeting.dto.invitation.InvitationResponse;
 import com.onmeet.video.meeting.entity.invitation.InvitationStatus;
@@ -41,21 +41,25 @@ public class RoomInvitationService {
         MeetingRoom room = findRoom(roomId);
 
         if (room.isEnded()) {
-            throw new BizException(ErrorCode.INVALID_REQUEST, "Cannot invite to an ended room");
+            // TODO: [VIDEO][VideoErrorCode.INVITE_ROOM_ENDED] 에러메시지 검수 요청
+            throw new BusinessException(VideoErrorCode.INVITE_ROOM_ENDED);
         }
 
         if (inviteeUserId.equals(inviterUserId)) {
-            throw new BizException(ErrorCode.INVALID_REQUEST, "Cannot invite yourself");
+            // TODO: [VIDEO][VideoErrorCode.SELF_INVITE_DENIED] 에러메시지 검수 요청
+            throw new BusinessException(VideoErrorCode.SELF_INVITE_DENIED);
         }
 
         if (invitationRepository.existsByRoomIdAndInviteeUserIdAndStatus(
                 roomId, inviteeUserId, InvitationStatus.PENDING)) {
-            throw new BizException(ErrorCode.CONFLICT, "Invitation already pending for this user");
+            // TODO: [VIDEO][VideoErrorCode.INVITATION_ALREADY_PENDING] 에러메시지 검수 요청
+            throw new BusinessException(VideoErrorCode.INVITATION_ALREADY_PENDING);
         }
 
         // Validate invitee user exists
         if (!authServiceClient.userExists(inviteeUserId)) {
-            throw new BizException(ErrorCode.NOT_FOUND, "Invitee user not found: " + inviteeUserId);
+            // TODO: [VIDEO][VideoErrorCode.INVITEE_NOT_FOUND] 에러메시지 검수 요청
+            throw new BusinessException(VideoErrorCode.INVITEE_NOT_FOUND);
         }
 
         RoomInvitation invitation = new RoomInvitation(room, inviterUserId, inviteeUserId);
@@ -64,7 +68,7 @@ public class RoomInvitationService {
         // 초대받은 사용자에게 초대 알림 (Kafka 비동기)
         notificationEventPublisher.publishNotification(
             new NotificationRequestDto(
-                inviteeUserId, "MEETING_INVITATION", "회의 초대",
+                inviteeUserId, null, "MEETING_INVITATION", "회의 초대",
                 room.getTitle() + " 회의에 초대되었습니다.",
                 "/meeting/" + roomId, "MEETING", String.valueOf(roomId), inviterUserId
             )
@@ -78,7 +82,8 @@ public class RoomInvitationService {
         MeetingRoom room = findRoom(roomId);
 
         if (room.isEnded()) {
-            throw new BizException(ErrorCode.INVALID_REQUEST, "Cannot invite to an ended room");
+            // TODO: [VIDEO][VideoErrorCode.INVITE_ROOM_ENDED] 에러메시지 검수 요청
+            throw new BusinessException(VideoErrorCode.INVITE_ROOM_ENDED);
         }
 
         // Validate all invitee users exist
@@ -88,8 +93,8 @@ public class RoomInvitationService {
                 .collect(Collectors.toList());
 
         if (!nonExistentUsers.isEmpty()) {
-            throw new BizException(ErrorCode.NOT_FOUND,
-                    "Some users not found: " + nonExistentUsers);
+            // TODO: [VIDEO][VideoErrorCode.BULK_INVITE_USER_NOT_FOUND] 에러메시지 검수 요청
+            throw new BusinessException(VideoErrorCode.BULK_INVITE_USER_NOT_FOUND);
         }
 
         List<InvitationResponse> results = new ArrayList<>();
@@ -109,7 +114,7 @@ public class RoomInvitationService {
         List<Long> inviteeIds = results.stream()
                 .map(InvitationResponse::inviteeUserId)
                 .collect(Collectors.toList());
-        
+
         if (!inviteeIds.isEmpty()) {
             notificationEventPublisher.publishNotification(
                 new NotificationRequestDto(
@@ -137,7 +142,8 @@ public class RoomInvitationService {
         validateInvitee(invitation, userId);
 
         if (!invitation.isPending()) {
-            throw new BizException(ErrorCode.INVALID_REQUEST, "Invitation is no longer pending");
+            // TODO: [VIDEO][VideoErrorCode.INVITATION_ALREADY_PROCESSED] 에러메시지 검수 요청
+            throw new BusinessException(VideoErrorCode.INVITATION_ALREADY_PROCESSED);
         }
 
         invitation.accept();
@@ -145,7 +151,7 @@ public class RoomInvitationService {
         // 호스트에게 초대 수락 알림
         notificationEventPublisher.publishNotification(
             new NotificationRequestDto(
-                invitation.getInviterUserId(), "INVITATION_ACCEPTED",
+                invitation.getInviterUserId(), null, "INVITATION_ACCEPTED",
                 "초대 수락",
                 "사용자가 회의 초대를 수락했습니다.",
                 "/meeting/" + invitation.getRoom().getId(),
@@ -162,7 +168,8 @@ public class RoomInvitationService {
         validateInvitee(invitation, userId);
 
         if (!invitation.isPending()) {
-            throw new BizException(ErrorCode.INVALID_REQUEST, "Invitation is no longer pending");
+            // TODO: [VIDEO][VideoErrorCode.INVITATION_ALREADY_PROCESSED] 에러메시지 검수 요청
+            throw new BusinessException(VideoErrorCode.INVITATION_ALREADY_PROCESSED);
         }
 
         invitation.decline();
@@ -170,7 +177,7 @@ public class RoomInvitationService {
         // 호스트에게 초대 거절 알림 (Kafka 비동기)
         notificationEventPublisher.publishNotification(
             new NotificationRequestDto(
-                invitation.getInviterUserId(), "INVITATION_DECLINED", "초대 거절",
+                invitation.getInviterUserId(), null, "INVITATION_DECLINED", "초대 거절",
                 "사용자가 회의 초대를 거절했습니다.",
                 "/meeting/" + invitation.getRoom().getId(),
                 "MEETING", String.valueOf(invitation.getRoom().getId()), userId
@@ -185,23 +192,24 @@ public class RoomInvitationService {
         MeetingRoom room = findRoom(roomId);
 
         if (!room.isHost(requesterId)) {
-            throw new BizException(ErrorCode.FORBIDDEN, "Only the host can cancel invitations");
+            // TODO: [VIDEO][VideoErrorCode.HOST_ONLY] 에러메시지 검수 요청
+            throw new BusinessException(VideoErrorCode.HOST_ONLY);
         }
 
         RoomInvitation invitation = invitationRepository.findByRoomIdAndInviteeUserId(roomId, inviteeUserId)
-                .orElseThrow(() -> new BizException(ErrorCode.NOT_FOUND, "Invitation not found"));
+                .orElseThrow(() -> new BusinessException(VideoErrorCode.INVITATION_NOT_FOUND));
 
         if (!invitation.isPending()) {
-            throw new BizException(ErrorCode.INVALID_REQUEST, "Invitation is no longer pending");
+            // TODO: [VIDEO][VideoErrorCode.INVITATION_ALREADY_PROCESSED] 에러메시지 검수 요청
+            throw new BusinessException(VideoErrorCode.INVITATION_ALREADY_PROCESSED);
         }
 
         invitation.cancel();
 
-        // 포함)
         // 초대 취소된 사용자에게 취소 알림
         notificationEventPublisher.publishNotification(
             new NotificationRequestDto(
-                inviteeUserId, "INVITATION_CANCELLED",
+                inviteeUserId, null, "INVITATION_CANCELLED",
                 "초대 취소",
                 "회의 초대가 취소되었습니다.",
                 "/meeting/" + roomId,
@@ -212,17 +220,18 @@ public class RoomInvitationService {
 
     private MeetingRoom findRoom(Long roomId) {
         return roomRepository.findById(roomId)
-                .orElseThrow(() -> new BizException(ErrorCode.NOT_FOUND, "Room not found"));
+                .orElseThrow(() -> new BusinessException(VideoErrorCode.ROOM_NOT_FOUND));
     }
 
     private RoomInvitation findInvitation(Long invitationId) {
         return invitationRepository.findById(invitationId)
-                .orElseThrow(() -> new BizException(ErrorCode.NOT_FOUND, "Invitation not found"));
+                .orElseThrow(() -> new BusinessException(VideoErrorCode.INVITATION_NOT_FOUND));
     }
 
     private void validateInvitee(RoomInvitation invitation, Long userId) {
         if (!invitation.getInviteeUserId().equals(userId)) {
-            throw new BizException(ErrorCode.FORBIDDEN, "Only the invitee can perform this action");
+            // TODO: [VIDEO][VideoErrorCode.NOT_INVITEE] 에러메시지 검수 요청
+            throw new BusinessException(VideoErrorCode.NOT_INVITEE);
         }
     }
 

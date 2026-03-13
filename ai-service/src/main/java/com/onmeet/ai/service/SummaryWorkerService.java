@@ -13,6 +13,8 @@ import com.onmeet.ai.pipeline.transcript.TranscriptRenderer;
 import com.onmeet.ai.repository.MinutesRepository;
 import com.onmeet.ai.messaging.producer.NotificationEventPublisher;
 import com.onmeet.common.dto.NotificationRequestDto;
+import com.onmeet.common.exception.BusinessException;
+import com.onmeet.common.exception.errorcode.AiErrorCode;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -51,7 +53,7 @@ public class SummaryWorkerService {
         // AI 요약 진행 중 알림 (Kafka 비동기)
         notificationEventPublisher.publishNotification(
             new NotificationRequestDto(
-                e.getHostUserId(), "AI_SUMMARY_PROGRESS", "AI 요약 시작",
+                e.getHostUserId(), null, "AI_SUMMARY_PROGRESS", "AI 요약 시작",
                 "회의록 AI 요약이 시작되었습니다.",
                 "/meeting/" + e.getRoomId() + "?tab=minutes", "MEETING", String.valueOf(e.getRoomId()), null
             )
@@ -63,12 +65,14 @@ public class SummaryWorkerService {
         try {
             doc = om.readValue(transcriptJson, TranscriptDocument.class);
         } catch (Exception ex) {
-            throw new IllegalStateException("failed to parse transcript json: " + e.getTranscriptS3Key(), ex);
+            // TODO: [AI][AiErrorCode.TRANSCRIPT_PARSE_FAILED] 에러메시지 검수 요청
+            throw new BusinessException(AiErrorCode.TRANSCRIPT_PARSE_FAILED);
         }
 
         String plain = renderer.toPlainText(doc);
         if (plain == null || plain.isBlank()) {
-            throw new IllegalStateException("empty transcript");
+            // TODO: [AI][AiErrorCode.TRANSCRIPT_EMPTY] 에러메시지 검수 요청
+            throw new BusinessException(AiErrorCode.TRANSCRIPT_EMPTY);
         }
 
         String summaryJson = summarizerClient.summarize(plain, "ko", "default", "claude-sonnet");
@@ -94,7 +98,7 @@ public class SummaryWorkerService {
         // AI 요약 완료 알림 (Kafka 비동기)
         notificationEventPublisher.publishNotification(
             new NotificationRequestDto(
-                e.getHostUserId(), "AI_SUMMARY_COMPLETED", "AI 요약 완료",
+                e.getHostUserId(), null, "AI_SUMMARY_COMPLETED", "AI 요약 완료",
                 "회의록 AI 요약이 완료되었습니다.",
                 "/meeting/" + e.getRoomId() + "?tab=minutes", "MEETING", String.valueOf(e.getRoomId()), null
             )
