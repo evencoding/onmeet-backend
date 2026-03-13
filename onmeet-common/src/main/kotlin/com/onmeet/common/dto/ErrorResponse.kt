@@ -10,7 +10,14 @@ import java.time.Instant
  * @property timestamp 에러 발생 시각 (Unix Timestamp, Milliseconds)
  */
 data class ErrorResponse @JvmOverloads constructor(
+    val code: String,
     val status: Int,
     val message: String,
     val timestamp: Long = Instant.now().toEpochMilli()
-)
+) {
+    companion object {
+        @JvmStatic
+        fun of(code: String, status: Int, message: String): ErrorResponse =
+            ErrorResponse(code = code, status = status, message = message)
+    }
+}
