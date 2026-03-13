@@ -21,15 +21,18 @@ import (
 
 // @title           OnMeet File Service API
 // @version         1.0
-// @description     File management service for OnMeet application.
-// @termsOfService  http://swagger.io/terms/
-
-// @contact.name    API Support
-// @contact.url     http://www.swagger.io/support
-// @contact.email   support@swagger.io
-
-// @license.name    Apache 2.0
-// @license.url     http://www.apache.org/licenses/LICENSE-2.0.html
+// @description     OnMeet 파일 관리 서비스입니다. S3(또는 MinIO) 기반의 파일 업로드/다운로드, 프로필 이미지 생성/삭제를 담당합니다.
+// @description
+// @description     ## 인증
+// @description     모든 엔드포인트는 `X-Gateway-Secret` 헤더를 통한 게이트웨이 시크릿 검증이 필요합니다.
+// @description     사용자 정보는 `X-User-Id`, `X-User-Roles` 헤더로 전달됩니다 (게이트웨이에서 JWT 검증 후 주입).
+// @description
+// @description     ## 에러 응답 형식
+// @description     모든 에러는 다음 JSON 형식으로 반환됩니다:
+// @description     `{"code": "FILE_001", "status": 400, "message": "에러 메시지", "timestamp": 1710000000000}`
+// @description
+// @description     ## 공통 에러
+// @description     - `FILE_014` (403): X-Gateway-Secret 헤더가 없거나 일치하지 않는 경우 (모든 엔드포인트)
 
 // @host            api.onmeet.cloud
 // @BasePath        /file/v1
@@ -70,6 +73,7 @@ func main() {
 
 	// 6. 전역 미들웨어 설정
 	r.Use(CORSMiddleware())
+	r.Use(middleware.ErrorHandlerMiddleware())
 
 	// 7. 라우팅 설정 (API 엔드포인트)
 	// Public Group (Swagger, Health Check)
