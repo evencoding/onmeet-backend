@@ -1,7 +1,13 @@
 package main
 
 import (
+	"context"
 	"log"
+	"net/http"
+	"os"
+	"os/signal"
+	"syscall"
+	"time"
 
 	"com.onmeet.file/internal/client"
 	"com.onmeet.file/internal/config"
@@ -37,25 +43,36 @@ import (
 // @host            api.onmeet.cloud
 // @BasePath        /file/v1
 
-// main 함수는 프로그램의 시작점입니다. Java의 public static void main과 같습니다.
 func main() {
 	// 1. 설정 로드
 	cfg := config.LoadConfig()
 
-	// 2. 데이터베이스 연결 (GORM 이용)
-	// postgres.Open은 연결 정보를 담은 드라이버를 생성합니다.
+	// 2. 보안: GATEWAY_SHARED_SECRET가 비어있으면 기동 거부
+	if cfg.GatewaySharedSecret == "" {
+		log.Fatal("GATEWAY_SHARED_SECRET environment variable must not be empty")
+	}
+
+	// 3. 데이터베이스 연결 (GORM 이용)
 	db, err := gorm.Open(postgres.Open(cfg.PostgresURL), &gorm.Config{})
 	if err != nil {
-		// log.Fatal은 메시지를 출력하고 프로그램을 즉시 종료합니다.
 		log.Fatal("Failed to connect to database:", err)
 	}
 
-	// 3. 테이블 자동 생성 (마이그레이션)
-	// JPA의 hibernate.ddl-auto: update와 유사한 기능입니다.
-	_ = db.AutoMigrate(&model.FileMetadata{})
+	// 4. PostgreSQL 커넥션 풀 설정
+	sqlDB, err := db.DB()
+	if err != nil {
+		log.Fatal("Failed to get sql.DB from GORM:", err)
+	}
+	sqlDB.SetMaxOpenConns(25)
+	sqlDB.SetMaxIdleConns(10)
+	sqlDB.SetConnMaxLifetime(5 * time.Minute)
 
-	// 4. 의존성 주입 (Dependency Injection)
-	// Go는 Spring처럼 자동으로 빈을 관리하지 않기 때문에, 아래처럼 직접 생성해서 연결해줍니다.
+	// 5. 테이블 자동 생성 (마이그레이션) - 에러 처리 추가
+	if err := db.AutoMigrate(&model.FileMetadata{}); err != nil {
+		log.Fatal("Failed to run AutoMigrate:", err)
+	}
+
+	// 6. 의존성 주입
 	repo := repository.NewPostgresFileRepository(db)
 	s3Svc, err := service.NewS3Service(cfg)
 	if err != nil {
@@ -67,28 +84,23 @@ func main() {
 	svc := service.NewFileService(repo, s3Svc, ep, auth, cfg)
 	h := handler.NewFileHandler(svc)
 
-	// 5. 웹 서버(Router) 설정
-	// gin.Default()는 로깅과 패닉 복구 미들웨어가 포함된 기본 엔진을 생성합니다.
+	// 7. 웹 서버(Router) 설정
 	r := gin.Default()
 
-	// 6. 전역 미들웨어 설정
-	r.Use(CORSMiddleware())
+	// 8. 전역 미들웨어 설정
+	r.Use(CORSMiddleware(cfg.CORSAllowedOrigins))
 	r.Use(middleware.ErrorHandlerMiddleware())
 
-	// 7. 라우팅 설정 (API 엔드포인트)
-	// Public Group (Swagger, Health Check)
+	// 9. 라우팅 설정
 	publicGroup := r.Group("/file")
 	{
-		// Swagger UI (ginSwagger가 자동으로 doc.json 제공)
 		publicGroup.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 	}
 
-	// Health Check (Public, without /v1)
 	r.GET("/file/actuator/health", func(c *gin.Context) {
 		c.JSON(200, gin.H{"status": "UP"})
 	})
 
-	// Protected Group (API with /v1)
 	protectedGroup := r.Group("/file/v1")
 	protectedGroup.Use(middleware.SecurityMiddleware(cfg))
 	{
@@ -101,16 +113,44 @@ func main() {
 		protectedGroup.DELETE("/me/profile", h.DeleteMyProfile)
 	}
 
-	// 8. 서버 실행
-	log.Printf("File Service (PostgreSQL) starting on port %s...", cfg.Port)
-	if err := r.Run(":" + cfg.Port); err != nil {
-		log.Fatal("Failed to run server:", err)
+	// 10. Graceful Shutdown 설정
+	srv := &http.Server{
+		Addr:    ":" + cfg.Port,
+		Handler: r,
 	}
+
+	go func() {
+		log.Printf("File Service (PostgreSQL) starting on port %s...", cfg.Port)
+		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			log.Fatal("Failed to run server:", err)
+		}
+	}()
+
+	// OS 시그널 대기 (SIGINT, SIGTERM)
+	quit := make(chan os.Signal, 1)
+	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
+	<-quit
+	log.Println("Shutting down server...")
+
+	// 5초 내 graceful shutdown
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	if err := srv.Shutdown(ctx); err != nil {
+		log.Printf("Server forced to shutdown: %v", err)
+	}
+
+	// Kafka writer 닫기
+	if err := ep.Close(); err != nil {
+		log.Printf("Kafka writer close error: %v", err)
+	}
+
+	log.Println("Server exited")
 }
 
-func CORSMiddleware() gin.HandlerFunc {
+func CORSMiddleware(allowedOrigins string) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		c.Writer.Header().Set("Access-Control-Allow-Origin", "http://localhost:8080")
+		c.Writer.Header().Set("Access-Control-Allow-Origin", allowedOrigins)
 		c.Writer.Header().Set("Access-Control-Allow-Credentials", "true")
 		c.Writer.Header().Set("Access-Control-Allow-Headers", "Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization, accept, origin, Cache-Control, X-Requested-With")
 		c.Writer.Header().Set("Access-Control-Allow-Methods", "POST, OPTIONS, GET, PUT, DELETE")
