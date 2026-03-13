@@ -67,8 +67,12 @@ public class NotificationSettingService {
                 setting.isTeamNotification();
             
             // 회의록 완성 알림 토글
-            case EVENT, AI_SUMMARY_PROGRESS, AI_SUMMARY_COMPLETED -> 
+            case EVENT, AI_SUMMARY_PROGRESS, AI_SUMMARY_COMPLETED ->
                 setting.isMinutesCompletedNotification();
+
+            // 초대 응답 관련
+            case INVITATION_ACCEPTED, INVITATION_DECLINED, INVITATION_CANCELLED ->
+                setting.isMeetingNotification();
         };
     }
 

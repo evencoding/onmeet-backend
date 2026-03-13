@@ -1,5 +1,7 @@
 package com.onmeet.notification.service;
 
+import com.onmeet.common.exception.BusinessException;
+import com.onmeet.common.exception.errorcode.NotificationErrorCode;
 import com.onmeet.notification.dto.NotificationResponseDto;
 import com.onmeet.notification.entity.NotificationRecipient;
 import com.onmeet.notification.repository.NotificationRecipientRepository;
@@ -39,7 +41,10 @@ public class NotificationQueryService {
     @Transactional
     public void markAsRead(Long recipientId, Long userId) {
         NotificationRecipient recipient = recipientRepository.findByIdAndUserId(recipientId, userId)
-                .orElseThrow(() -> new IllegalArgumentException("알림을 찾을 수 없습니다. id=" + recipientId));
+                .orElseThrow(() -> {
+                    // TODO: [NOTI][NotificationErrorCode.NOTIFICATION_NOT_FOUND] 에러메시지 검수 요청
+                    throw new BusinessException(NotificationErrorCode.NOTIFICATION_NOT_FOUND);
+                });
         recipient.markAsRead();
     }
 
@@ -57,7 +62,10 @@ public class NotificationQueryService {
     @Transactional
     public void deleteNotification(Long recipientId, Long userId) {
         NotificationRecipient recipient = recipientRepository.findByIdAndUserId(recipientId, userId)
-                .orElseThrow(() -> new IllegalArgumentException("알림을 찾을 수 없습니다. id=" + recipientId));
+                .orElseThrow(() -> {
+                    // TODO: [NOTI][NotificationErrorCode.NOTIFICATION_NOT_FOUND] 에러메시지 검수 요청
+                    throw new BusinessException(NotificationErrorCode.NOTIFICATION_NOT_FOUND);
+                });
         recipientRepository.delete(recipient);
     }
 
