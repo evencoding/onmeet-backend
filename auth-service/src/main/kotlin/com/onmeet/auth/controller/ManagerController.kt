@@ -4,6 +4,7 @@ import com.onmeet.auth.dto.InvitationRequest
 import com.onmeet.auth.dto.JobTitleRequest
 import com.onmeet.auth.dto.JobTitleResponse
 import com.onmeet.auth.dto.PageResponse
+import com.onmeet.auth.dto.TeamRejectRequest
 import com.onmeet.auth.dto.UserResponseDto
 import com.onmeet.auth.dto.toResponseDto
 import com.onmeet.auth.entity.User
@@ -356,8 +357,6 @@ class ManagerController(
         @PathVariable teamId: Long
     ): ResponseEntity<Void> =
         teamService.approveTeam(teamId, user).let { ResponseEntity.ok().build() }
-    
-    data class TeamRejectRequest(val reason: String?)
 
     @Operation(summary = "팀 반려", description = "팀 생성 요청을 반려합니다 (매니저 전용). 사유를 입력할 수 있습니다.")
     @ApiResponses(value = [
