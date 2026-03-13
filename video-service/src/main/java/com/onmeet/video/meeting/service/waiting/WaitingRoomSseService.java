@@ -1,7 +1,7 @@
 package com.onmeet.video.meeting.service.waiting;
 
-import com.onmeet.video.common.exception.BizException;
-import com.onmeet.video.common.exception.ErrorCode;
+import com.onmeet.common.exception.BusinessException;
+import com.onmeet.common.exception.errorcode.VideoErrorCode;
 import com.onmeet.video.infra.livekit.LiveKitClient;
 import com.onmeet.video.infra.livekit.LiveKitClient.TokenGrants;
 import com.onmeet.video.infra.livekit.LiveKitProperties;
@@ -48,12 +48,12 @@ public class WaitingRoomSseService {
 
     public SseEmitter subscribeParticipant(Long roomId, Long userId) {
         MeetingRoom room = roomRepository.findById(roomId)
-                .orElseThrow(() -> new BizException(ErrorCode.NOT_FOUND, "Room not found"));
+                .orElseThrow(() -> new BusinessException(VideoErrorCode.ROOM_NOT_FOUND));
 
         RoomParticipant participant = participantRepository
                 .findByRoomIdAndUserIdAndStatusIn(roomId, userId,
                         java.util.List.of(ParticipantStatus.WAITING, ParticipantStatus.JOINED))
-                .orElseThrow(() -> new BizException(ErrorCode.NOT_FOUND, "Not a waiting participant"));
+                .orElseThrow(() -> new BusinessException(VideoErrorCode.WAITING_ROOM_NOT_REGISTERED));
 
         SseEmitter emitter = new SseEmitter(SSE_TIMEOUT);
 
@@ -88,13 +88,12 @@ public class WaitingRoomSseService {
 
     public SseEmitter subscribeHost(Long roomId, Long userId) {
         MeetingRoom room = roomRepository.findById(roomId)
-                .orElseThrow(() -> new BizException(ErrorCode.NOT_FOUND, "Room not found"));
+                .orElseThrow(() -> new BusinessException(VideoErrorCode.ROOM_NOT_FOUND));
 
         if (!room.isHost(userId)) {
             participantRepository.findByRoomIdAndUserIdAndStatus(roomId, userId, ParticipantStatus.JOINED)
                     .filter(p -> p.getRole() == ParticipantRole.CO_HOST)
-                    .orElseThrow(() -> new BizException(ErrorCode.FORBIDDEN,
-                            "Only host or co-host can subscribe to waiting room events"));
+                    .orElseThrow(() -> new BusinessException(VideoErrorCode.HOST_OR_COHOST_ONLY));
         }
 
         SseEmitter emitter = new SseEmitter(SSE_TIMEOUT);
