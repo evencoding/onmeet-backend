@@ -6,8 +6,9 @@ import com.onmeet.auth.entity.Team
 import com.onmeet.auth.entity.TeamMember
 import com.onmeet.auth.entity.User
 import com.onmeet.auth.entity.Company
-import com.onmeet.common.exception.InsufficientPermissionException
 import com.onmeet.auth.exception.*
+import com.onmeet.common.exception.BusinessException
+import com.onmeet.common.exception.errorcode.AuthErrorCode
 import com.onmeet.auth.repository.jpa.TeamMemberRepository
 import com.onmeet.auth.repository.jpa.TeamRepository
 import com.onmeet.auth.repository.jpa.UserRepository
@@ -30,7 +31,8 @@ class TeamServiceImpl(
         val company = user.company
 
         if (teamRepository.findByNameAndCompanyId(request.name, company.requireId()) != null) {
-            throw TeamAlreadyExistsException("Team already exists in this company: ${request.name}")
+            // TODO: [AUTH][AuthErrorCode.TEAM_ALREADY_EXISTS] 에러메시지 검수 요청
+            throw BusinessException(AuthErrorCode.TEAM_ALREADY_EXISTS)
         }
 
         val isManager = user.roles.contains(User.Role.MANAGER)
@@ -39,26 +41,31 @@ class TeamServiceImpl(
         // MANAGER: 팀원과 팀장을 지정하여 생성
         if (isManager) {
             if (request.memberIds.isNullOrEmpty() || request.leaderId == null) {
-                throw IllegalArgumentException("Manager must specify member IDs and leader ID")
+                // TODO: [AUTH][AuthErrorCode.TEAM_MEMBERS_REQUIRED] 에러메시지 검수 요청
+                throw BusinessException(AuthErrorCode.TEAM_MEMBERS_REQUIRED)
             }
 
             if (!request.memberIds.contains(request.leaderId)) {
-                throw IllegalArgumentException("Leader must be one of the team members")
+                // TODO: [AUTH][AuthErrorCode.LEADER_NOT_IN_MEMBERS] 에러메시지 검수 요청
+                throw BusinessException(AuthErrorCode.LEADER_NOT_IN_MEMBERS)
             }
 
             val members = userRepository.findAllById(request.memberIds)
             if (members.size != request.memberIds.size) {
-                throw UserNotFoundException("Some members not found")
+                // TODO: [AUTH][AuthErrorCode.TEAM_MEMBER_NOT_FOUND] 에러메시지 검수 요청
+                throw BusinessException(AuthErrorCode.TEAM_MEMBER_NOT_FOUND)
             }
 
             members.forEach { member ->
                 if (member.company.requireId() != company.requireId()) {
-                    throw CompanyMismatchException("All members must belong to the same company")
+                    // TODO: [AUTH][AuthErrorCode.TEAM_MEMBER_COMPANY_MISMATCH] 에러메시지 검수 요청
+                    throw BusinessException(AuthErrorCode.TEAM_MEMBER_COMPANY_MISMATCH)
                 }
             }
 
             val leader = members.find { it.id == request.leaderId }
-                ?: throw UserNotFoundException("Leader not found in member list")
+                // TODO: [AUTH][AuthErrorCode.TEAM_LEADER_NOT_FOUND] 에러메시지 검수 요청
+                ?: throw BusinessException(AuthErrorCode.TEAM_LEADER_NOT_FOUND)
 
             val team = Team(
                 name = request.name,
@@ -138,7 +145,8 @@ class TeamServiceImpl(
     @Transactional
     override fun createTeam(company: Company, name: String, description: String?, color: String?): Team =
         if (teamRepository.findByNameAndCompanyId(name, company.requireId()) != null) {
-            throw TeamAlreadyExistsException("Team already exists in this company: $name")
+            // TODO: [AUTH][AuthErrorCode.TEAM_ALREADY_EXISTS] 에러메시지 검수 요청
+            throw BusinessException(AuthErrorCode.TEAM_ALREADY_EXISTS)
         } else {
             teamRepository.save(
                 Team(
@@ -154,27 +162,32 @@ class TeamServiceImpl(
     @Transactional
     override fun createTeam(companyId: Long, name: String, description: String?, color: String?): Team =
         companyRepository.findById(companyId)
-            .orElseThrow { CompanyNotFoundException("Company not found: $companyId") }
+            // TODO: [AUTH][AuthErrorCode.COMPANY_NOT_FOUND] 에러메시지 검수 요청
+            .orElseThrow { BusinessException(AuthErrorCode.COMPANY_NOT_FOUND) }
             .let { createTeam(it, name, description, color) }
 
     @Transactional
     override fun approveTeam(teamId: Long, approver: User): Unit {
         // Service layer permission validation (defense in depth with Controller's @PreAuthorize)
         if (!approver.isManager()) {
-            throw InsufficientPermissionException("Only managers can approve teams")
+            // TODO: [AUTH][AuthErrorCode.TEAM_APPROVE_FORBIDDEN] 에러메시지 검수 요청
+            throw BusinessException(AuthErrorCode.TEAM_APPROVE_FORBIDDEN)
         }
 
         val team = teamRepository.findById(teamId)
-            .orElseThrow { TeamNotFoundException("Team not found: $teamId") }
+            // TODO: [AUTH][AuthErrorCode.TEAM_NOT_FOUND] 에러메시지 검수 요청
+            .orElseThrow { BusinessException(AuthErrorCode.TEAM_NOT_FOUND) }
 
         // Verify the manager belongs to the same company
         if (!team.belongsToCompany(approver.company.requireId())) {
-            throw CompanyMismatchException("Manager can only approve teams in their own company")
+            // TODO: [AUTH][AuthErrorCode.TEAM_COMPANY_MISMATCH] 에러메시지 검수 요청
+            throw BusinessException(AuthErrorCode.TEAM_COMPANY_MISMATCH)
         }
 
         // Only pending teams can be approved
         if (team.status != Team.TeamStatus.PENDING_APPROVAL) {
-            throw IllegalStateException("Only pending teams can be approved (current: ${team.status})")
+            // TODO: [AUTH][AuthErrorCode.TEAM_NOT_PENDING] 에러메시지 검수 요청
+            throw BusinessException(AuthErrorCode.TEAM_NOT_PENDING)
         }
 
         team.status = Team.TeamStatus.ACTIVE
@@ -210,20 +223,24 @@ class TeamServiceImpl(
     override fun rejectTeam(teamId: Long, approver: User, reason: String?): Unit {
         // Service layer permission validation (defense in depth with Controller's @PreAuthorize)
         if (!approver.isManager()) {
-            throw InsufficientPermissionException("Only managers can reject teams")
+            // TODO: [AUTH][AuthErrorCode.TEAM_REJECT_FORBIDDEN] 에러메시지 검수 요청
+            throw BusinessException(AuthErrorCode.TEAM_REJECT_FORBIDDEN)
         }
 
         val team = teamRepository.findById(teamId)
-            .orElseThrow { TeamNotFoundException("Team not found: $teamId") }
+            // TODO: [AUTH][AuthErrorCode.TEAM_NOT_FOUND] 에러메시지 검수 요청
+            .orElseThrow { BusinessException(AuthErrorCode.TEAM_NOT_FOUND) }
 
         // Verify the manager belongs to the same company
         if (!team.belongsToCompany(approver.company.requireId())) {
-            throw CompanyMismatchException("Manager can only reject teams in their own company")
+            // TODO: [AUTH][AuthErrorCode.TEAM_COMPANY_MISMATCH] 에러메시지 검수 요청
+            throw BusinessException(AuthErrorCode.TEAM_COMPANY_MISMATCH)
         }
 
         // Only pending teams can be rejected
         if (team.status != Team.TeamStatus.PENDING_APPROVAL) {
-            throw IllegalStateException("Only pending teams can be rejected (current: ${team.status})")
+            // TODO: [AUTH][AuthErrorCode.TEAM_NOT_PENDING] 에러메시지 검수 요청
+            throw BusinessException(AuthErrorCode.TEAM_NOT_PENDING)
         }
 
         team.status = Team.TeamStatus.REJECTED
@@ -249,13 +266,16 @@ class TeamServiceImpl(
     @Transactional
     override fun assignLeader(teamId: Long, manager: User, newLeaderId: Long) {
         val team = teamRepository.findById(teamId)
-            .orElseThrow { TeamNotFoundException("Team not found: $teamId") }
+            // TODO: [AUTH][AuthErrorCode.TEAM_NOT_FOUND] 에러메시지 검수 요청
+            .orElseThrow { BusinessException(AuthErrorCode.TEAM_NOT_FOUND) }
 
         val newLeader = userRepository.findById(newLeaderId)
-            .orElseThrow { UserNotFoundException("User not found: $newLeaderId") }
+            // TODO: [AUTH][AuthErrorCode.USER_NOT_FOUND] 에러메시지 검수 요청
+            .orElseThrow { BusinessException(AuthErrorCode.USER_NOT_FOUND) }
 
         if (!team.belongsToCompany(newLeader.company.requireId())) {
-            throw CompanyMismatchException("User must belong to the same company")
+            // TODO: [AUTH][AuthErrorCode.TEAM_DELEGATE_COMPANY_MISMATCH] 에러메시지 검수 요청
+            throw BusinessException(AuthErrorCode.TEAM_DELEGATE_COMPANY_MISMATCH)
         }
 
         // 기존 리더의 역할을 MEMBER로 변경
@@ -299,18 +319,22 @@ class TeamServiceImpl(
     @Transactional
     override fun delegateLeader(teamId: Long, currentLeader: User, newLeaderId: Long) {
         val team = teamRepository.findById(teamId)
-            .orElseThrow { TeamNotFoundException("Team not found: $teamId") }
+            // TODO: [AUTH][AuthErrorCode.TEAM_NOT_FOUND] 에러메시지 검수 요청
+            .orElseThrow { BusinessException(AuthErrorCode.TEAM_NOT_FOUND) }
 
         val newLeader = userRepository.findById(newLeaderId)
-            .orElseThrow { UserNotFoundException("User not found: $newLeaderId") }
+            // TODO: [AUTH][AuthErrorCode.USER_NOT_FOUND] 에러메시지 검수 요청
+            .orElseThrow { BusinessException(AuthErrorCode.USER_NOT_FOUND) }
 
         if (!team.belongsToCompany(newLeader.company.requireId())) {
-            throw CompanyMismatchException("User must belong to the same company")
+            // TODO: [AUTH][AuthErrorCode.TEAM_DELEGATE_COMPANY_MISMATCH] 에러메시지 검수 요청
+            throw BusinessException(AuthErrorCode.TEAM_DELEGATE_COMPANY_MISMATCH)
         }
 
         // 현재 리더의 역할을 MEMBER로 변경
         val currentLeaderMembership = teamMemberRepository.findByUserIdAndTeamId(currentLeader.requireId(), teamId)
-            ?: throw IllegalStateException("Current leader is not a team member")
+            // TODO: [AUTH][AuthErrorCode.TEAM_LEADER_NOT_MEMBER] 에러메시지 검수 요청
+            ?: throw BusinessException(AuthErrorCode.TEAM_LEADER_NOT_MEMBER)
         currentLeaderMembership.role = TeamMember.TeamRole.MEMBER
         teamMemberRepository.save(currentLeaderMembership)
 
@@ -349,15 +373,17 @@ class TeamServiceImpl(
     @Transactional
     override fun dissolveTeam(teamId: Long, requester: User): Unit {
         val team = teamRepository.findById(teamId)
-            .orElseThrow { TeamNotFoundException("Team not found: $teamId") }
+            // TODO: [AUTH][AuthErrorCode.TEAM_NOT_FOUND] 에러메시지 검수 요청
+            .orElseThrow { BusinessException(AuthErrorCode.TEAM_NOT_FOUND) }
 
         // Verify the requester belongs to the same company
         if (!team.belongsToCompany(requester.company.requireId())) {
-            throw CompanyMismatchException("Cannot dissolve teams in another company")
+            // TODO: [AUTH][AuthErrorCode.TEAM_DISSOLVE_COMPANY_MISMATCH] 에러메시지 검수 요청
+            throw BusinessException(AuthErrorCode.TEAM_DISSOLVE_COMPANY_MISMATCH)
         }
 
         // 팀 해체 알림을 위해 팀원 목록 미리 조회
-        val teamMembers = teamMemberRepository.findAllByTeamId(teamId)
+        val teamMembers = teamMemberRepository.findByTeamId(teamId)
 
         // Explicitly delete all TeamMember associations before deleting the team
         // (defense in depth even though cascade should handle it)
@@ -382,14 +408,17 @@ class TeamServiceImpl(
     @Transactional
     override fun cancelTeamRequest(teamId: Long, requester: User): Unit {
         val team = teamRepository.findById(teamId)
-            .orElseThrow { TeamNotFoundException("Team not found: $teamId") }
+            // TODO: [AUTH][AuthErrorCode.TEAM_NOT_FOUND] 에러메시지 검수 요청
+            .orElseThrow { BusinessException(AuthErrorCode.TEAM_NOT_FOUND) }
 
         if (team.status != Team.TeamStatus.PENDING_APPROVAL) {
-            throw IllegalStateException("Only pending team requests can be cancelled")
+            // TODO: [AUTH][AuthErrorCode.TEAM_CANCEL_NOT_PENDING] 에러메시지 검수 요청
+            throw BusinessException(AuthErrorCode.TEAM_CANCEL_NOT_PENDING)
         }
 
         if (team.leader?.id != requester.id) {
-            throw InsufficientPermissionException("Only the requester can cancel the team creation request")
+            // TODO: [AUTH][AuthErrorCode.TEAM_CANCEL_FORBIDDEN] 에러메시지 검수 요청
+            throw BusinessException(AuthErrorCode.TEAM_CANCEL_FORBIDDEN)
         }
 
         teamRepository.delete(team)

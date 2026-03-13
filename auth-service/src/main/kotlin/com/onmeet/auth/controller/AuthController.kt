@@ -19,6 +19,8 @@ import io.swagger.v3.oas.annotations.media.Content
 import io.swagger.v3.oas.annotations.media.Schema
 import io.swagger.v3.oas.annotations.media.ExampleObject
 import com.onmeet.common.dto.ErrorResponse
+import com.onmeet.common.exception.BusinessException
+import com.onmeet.common.exception.errorcode.AuthErrorCode
 import org.springframework.http.HttpHeaders
 import org.springframework.http.ResponseCookie
 import org.springframework.http.ResponseEntity
@@ -52,7 +54,7 @@ class AuthController(
                 mediaType = "application/json",
                 schema = Schema(implementation = ErrorResponse::class),
                 examples = [ExampleObject(
-                    value = """{"status": 400, "message": "Validation failed: email: must be a valid email", "timestamp": 1234567890}"""
+                    value = """{"code":"COMMON_VALIDATION_FAILED","status":400,"message":"입력값 검증 실패: email: 유효한 이메일이 아닙니다","timestamp":1710000000000}"""
                 )]
             )]
         ),
@@ -63,7 +65,7 @@ class AuthController(
                 mediaType = "application/json",
                 schema = Schema(implementation = ErrorResponse::class),
                 examples = [ExampleObject(
-                    value = """{"status": 409, "message": "Email already exists", "timestamp": 1234567890}"""
+                    value = """{"code":"AUTH_001","status":409,"message":"이미 사용 중인 이메일입니다","timestamp":1710000000000}"""
                 )]
             )]
         ),
@@ -74,7 +76,7 @@ class AuthController(
                 mediaType = "application/json",
                 schema = Schema(implementation = ErrorResponse::class),
                 examples = [ExampleObject(
-                    value = """{"status": 500, "message": "Internal server error occurred", "timestamp": 1234567890}"""
+                    value = """{"code":"COMMON_INTERNAL_ERROR","status":500,"message":"서버 내부 오류가 발생했습니다","timestamp":1710000000000}"""
                 )]
             )]
         )
@@ -103,7 +105,7 @@ class AuthController(
                 mediaType = "application/json",
                 schema = Schema(implementation = ErrorResponse::class),
                 examples = [ExampleObject(
-                    value = """{"status": 400, "message": "Invalid invitation code", "timestamp": 1234567890}"""
+                    value = """{"code":"AUTH_003","status":400,"message":"유효하지 않은 초대 코드이거나 이메일이 일치하지 않습니다","timestamp":1710000000000}"""
                 )]
             )]
         ),
@@ -114,7 +116,7 @@ class AuthController(
                 mediaType = "application/json",
                 schema = Schema(implementation = ErrorResponse::class),
                 examples = [ExampleObject(
-                    value = """{"status": 404, "message": "Invitation not found", "timestamp": 1234567890}"""
+                    value = """{"code":"AUTH_002","status":404,"message":"초대 코드를 찾을 수 없습니다","timestamp":1710000000000}"""
                 )]
             )]
         ),
@@ -125,7 +127,7 @@ class AuthController(
                 mediaType = "application/json",
                 schema = Schema(implementation = ErrorResponse::class),
                 examples = [ExampleObject(
-                    value = """{"status": 409, "message": "Email already exists", "timestamp": 1234567890}"""
+                    value = """{"code":"AUTH_001","status":409,"message":"이미 사용 중인 이메일입니다","timestamp":1710000000000}"""
                 )]
             )]
         ),
@@ -136,7 +138,7 @@ class AuthController(
                 mediaType = "application/json",
                 schema = Schema(implementation = ErrorResponse::class),
                 examples = [ExampleObject(
-                    value = """{"status": 500, "message": "Internal server error occurred", "timestamp": 1234567890}"""
+                    value = """{"code":"COMMON_INTERNAL_ERROR","status":500,"message":"서버 내부 오류가 발생했습니다","timestamp":1710000000000}"""
                 )]
             )]
         )
@@ -165,7 +167,7 @@ class AuthController(
                 mediaType = "application/json",
                 schema = Schema(implementation = ErrorResponse::class),
                 examples = [ExampleObject(
-                    value = """{"status": 400, "message": "Invalid invitation code", "timestamp": 1234567890}"""
+                    value = """{"code":"AUTH_003","status":400,"message":"유효하지 않은 초대 코드이거나 이메일이 일치하지 않습니다","timestamp":1710000000000}"""
                 )]
             )]
         ),
@@ -176,7 +178,7 @@ class AuthController(
                 mediaType = "application/json",
                 schema = Schema(implementation = ErrorResponse::class),
                 examples = [ExampleObject(
-                    value = """{"status": 404, "message": "Invitation not found", "timestamp": 1234567890}"""
+                    value = """{"code":"AUTH_002","status":404,"message":"초대 코드를 찾을 수 없습니다","timestamp":1710000000000}"""
                 )]
             )]
         ),
@@ -187,7 +189,7 @@ class AuthController(
                 mediaType = "application/json",
                 schema = Schema(implementation = ErrorResponse::class),
                 examples = [ExampleObject(
-                    value = """{"status": 500, "message": "Internal server error occurred", "timestamp": 1234567890}"""
+                    value = """{"code":"COMMON_INTERNAL_ERROR","status":500,"message":"서버 내부 오류가 발생했습니다","timestamp":1710000000000}"""
                 )]
             )]
         )
@@ -216,7 +218,7 @@ class AuthController(
                 mediaType = "application/json",
                 schema = Schema(implementation = ErrorResponse::class),
                 examples = [ExampleObject(
-                    value = """{"status": 400, "message": "Invalid argument", "timestamp": 1234567890}"""
+                    value = """{"code":"COMMON_VALIDATION_FAILED","status":400,"message":"입력값 검증 실패: 필수 항목이 누락되었습니다","timestamp":1710000000000}"""
                 )]
             )]
         ),
@@ -227,7 +229,7 @@ class AuthController(
                 mediaType = "application/json",
                 schema = Schema(implementation = ErrorResponse::class),
                 examples = [ExampleObject(
-                    value = """{"status": 401, "message": "Authentication failed", "timestamp": 1234567890}"""
+                    value = """{"code":"AUTH_004","status":401,"message":"이메일 또는 비밀번호가 일치하지 않습니다","timestamp":1710000000000}"""
                 )]
             )]
         ),
@@ -238,7 +240,7 @@ class AuthController(
                 mediaType = "application/json",
                 schema = Schema(implementation = ErrorResponse::class),
                 examples = [ExampleObject(
-                    value = """{"status": 500, "message": "Internal server error occurred", "timestamp": 1234567890}"""
+                    value = """{"code":"COMMON_INTERNAL_ERROR","status":500,"message":"서버 내부 오류가 발생했습니다","timestamp":1710000000000}"""
                 )]
             )]
         )
@@ -266,7 +268,7 @@ class AuthController(
                 mediaType = "application/json",
                 schema = Schema(implementation = ErrorResponse::class),
                 examples = [ExampleObject(
-                    value = """{"status": 400, "message": "Invalid argument", "timestamp": 1234567890}"""
+                    value = """{"code":"COMMON_VALIDATION_FAILED","status":400,"message":"입력값 검증 실패: 필수 항목이 누락되었습니다","timestamp":1710000000000}"""
                 )]
             )]
         ),
@@ -277,7 +279,7 @@ class AuthController(
                 mediaType = "application/json",
                 schema = Schema(implementation = ErrorResponse::class),
                 examples = [ExampleObject(
-                    value = """{"status": 500, "message": "Internal server error occurred", "timestamp": 1234567890}"""
+                    value = """{"code":"COMMON_INTERNAL_ERROR","status":500,"message":"서버 내부 오류가 발생했습니다","timestamp":1710000000000}"""
                 )]
             )]
         )
@@ -308,7 +310,7 @@ class AuthController(
                 mediaType = "application/json",
                 schema = Schema(implementation = ErrorResponse::class),
                 examples = [ExampleObject(
-                    value = """{"status": 500, "message": "Internal server error occurred", "timestamp": 1234567890}"""
+                    value = """{"code":"COMMON_INTERNAL_ERROR","status":500,"message":"서버 내부 오류가 발생했습니다","timestamp":1710000000000}"""
                 )]
             )]
         )
@@ -348,7 +350,7 @@ class AuthController(
                 mediaType = "application/json",
                 schema = Schema(implementation = ErrorResponse::class),
                 examples = [ExampleObject(
-                    value = """{"status": 400, "message": "Refresh token is missing", "timestamp": 1234567890}"""
+                    value = """{"code":"AUTH_005","status":400,"message":"유효하지 않은 리프레시 토큰입니다","timestamp":1710000000000}"""
                 )]
             )]
         ),
@@ -359,7 +361,7 @@ class AuthController(
                 mediaType = "application/json",
                 schema = Schema(implementation = ErrorResponse::class),
                 examples = [ExampleObject(
-                    value = """{"status": 401, "message": "Invalid or expired refresh token", "timestamp": 1234567890}"""
+                    value = """{"code":"AUTH_005","status":400,"message":"유효하지 않은 리프레시 토큰입니다","timestamp":1710000000000}"""
                 )]
             )]
         ),
@@ -370,7 +372,7 @@ class AuthController(
                 mediaType = "application/json",
                 schema = Schema(implementation = ErrorResponse::class),
                 examples = [ExampleObject(
-                    value = """{"status": 500, "message": "Internal server error occurred", "timestamp": 1234567890}"""
+                    value = """{"code":"COMMON_INTERNAL_ERROR","status":500,"message":"서버 내부 오류가 발생했습니다","timestamp":1710000000000}"""
                 )]
             )]
         )
@@ -380,8 +382,9 @@ class AuthController(
         @CookieValue(name = JwtConstants.REFRESH_TOKEN_COOKIE_NAME, required = false) cookieRefreshToken: String?,
         @RequestBody(required = false) request: RefreshRequest?
     ): ResponseEntity<TokenResponse> {
+        // TODO: [AUTH][AuthErrorCode.INVALID_REFRESH_TOKEN] 에러메시지 검수 요청
         val refreshToken = cookieRefreshToken ?: request?.refreshToken
-            ?: throw IllegalArgumentException("Refresh token is missing")
+            ?: throw BusinessException(AuthErrorCode.INVALID_REFRESH_TOKEN)
 
         val tokenResponse = authService.refresh(refreshToken)
 
@@ -415,7 +418,7 @@ class AuthController(
                 mediaType = "application/json",
                 schema = Schema(implementation = ErrorResponse::class),
                 examples = [ExampleObject(
-                    value = """{"status": 500, "message": "Internal server error occurred", "timestamp": 1234567890}"""
+                    value = """{"code":"COMMON_INTERNAL_ERROR","status":500,"message":"서버 내부 오류가 발생했습니다","timestamp":1710000000000}"""
                 )]
             )]
         )
@@ -463,7 +466,7 @@ class AuthController(
                 mediaType = "application/json",
                 schema = Schema(implementation = ErrorResponse::class),
                 examples = [ExampleObject(
-                    value = """{"status": 404, "message": "User not found", "timestamp": 1234567890}"""
+                    value = """{"code":"AUTH_006","status":404,"message":"해당 사용자를 찾을 수 없습니다","timestamp":1710000000000}"""
                 )]
             )]
         ),
@@ -474,7 +477,7 @@ class AuthController(
                 mediaType = "application/json",
                 schema = Schema(implementation = ErrorResponse::class),
                 examples = [ExampleObject(
-                    value = """{"status": 500, "message": "Internal server error occurred", "timestamp": 1234567890}"""
+                    value = """{"code":"COMMON_INTERNAL_ERROR","status":500,"message":"서버 내부 오류가 발생했습니다","timestamp":1710000000000}"""
                 )]
             )]
         )
@@ -500,7 +503,7 @@ class AuthController(
                 mediaType = "application/json",
                 schema = Schema(implementation = ErrorResponse::class),
                 examples = [ExampleObject(
-                    value = """{"status": 404, "message": "User not found", "timestamp": 1234567890}"""
+                    value = """{"code":"AUTH_006","status":404,"message":"해당 사용자를 찾을 수 없습니다","timestamp":1710000000000}"""
                 )]
             )]
         ),
@@ -511,7 +514,7 @@ class AuthController(
                 mediaType = "application/json",
                 schema = Schema(implementation = ErrorResponse::class),
                 examples = [ExampleObject(
-                    value = """{"status": 500, "message": "Internal server error occurred", "timestamp": 1234567890}"""
+                    value = """{"code":"COMMON_INTERNAL_ERROR","status":500,"message":"서버 내부 오류가 발생했습니다","timestamp":1710000000000}"""
                 )]
             )]
         )
@@ -539,7 +542,7 @@ class AuthController(
                 mediaType = "application/json",
                 schema = Schema(implementation = ErrorResponse::class),
                 examples = [ExampleObject(
-                    value = """{"status": 404, "message": "User not found", "timestamp": 1234567890}"""
+                    value = """{"code":"AUTH_006","status":404,"message":"해당 사용자를 찾을 수 없습니다","timestamp":1710000000000}"""
                 )]
             )]
         ),
@@ -550,7 +553,7 @@ class AuthController(
                 mediaType = "application/json",
                 schema = Schema(implementation = ErrorResponse::class),
                 examples = [ExampleObject(
-                    value = """{"status": 500, "message": "Internal server error occurred", "timestamp": 1234567890}"""
+                    value = """{"code":"COMMON_INTERNAL_ERROR","status":500,"message":"서버 내부 오류가 발생했습니다","timestamp":1710000000000}"""
                 )]
             )]
         )
@@ -610,10 +613,10 @@ class AuthController(
                 schema = Schema(implementation = ErrorResponse::class),
                 examples = [ExampleObject(
                     name = "이메일 형식 오류",
-                    value = """{"status": 400, "message": "Invalid email format", "timestamp": 1234567890}"""
+                    value = """{"code":"COMMON_VALIDATION_FAILED","status":400,"message":"입력값 검증 실패: email: 유효한 이메일이 아닙니다","timestamp":1710000000000}"""
                 ), ExampleObject(
                     name = "필수 필드 누락",
-                    value = """{"status": 400, "message": "Email is required", "timestamp": 1234567890}"""
+                    value = """{"code":"COMMON_VALIDATION_FAILED","status":400,"message":"입력값 검증 실패: email: 필수 항목입니다","timestamp":1710000000000}"""
                 )]
             )]
         ),
@@ -629,7 +632,7 @@ class AuthController(
                 schema = Schema(implementation = ErrorResponse::class),
                 examples = [ExampleObject(
                     name = "사용자 없음",
-                    value = """{"status": 404, "message": "User not found", "timestamp": 1234567890}"""
+                    value = """{"code":"AUTH_011","status":404,"message":"해당 이메일로 등록된 사용자가 없습니다","timestamp":1710000000000}"""
                 )]
             )]
         ),
@@ -646,7 +649,7 @@ class AuthController(
                 schema = Schema(implementation = ErrorResponse::class),
                 examples = [ExampleObject(
                     name = "서버 오류",
-                    value = """{"status": 500, "message": "Internal server error occurred", "timestamp": 1234567890}"""
+                    value = """{"code":"COMMON_INTERNAL_ERROR","status":500,"message":"서버 내부 오류가 발생했습니다","timestamp":1710000000000}"""
                 )]
             )]
         )

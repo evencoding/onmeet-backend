@@ -3,6 +3,8 @@ package com.onmeet.auth.controller.internal
 import com.onmeet.auth.security.TeamSecurity
 import com.onmeet.common.dto.SecurityCheckResponse
 import com.onmeet.common.dto.ErrorResponse
+import com.onmeet.common.exception.BusinessException
+import com.onmeet.common.exception.errorcode.AuthErrorCode
 import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.responses.ApiResponse
 import io.swagger.v3.oas.annotations.responses.ApiResponses
@@ -11,7 +13,6 @@ import io.swagger.v3.oas.annotations.media.Schema
 import io.swagger.v3.oas.annotations.media.ExampleObject
 import io.swagger.v3.oas.annotations.tags.Tag
 import org.springframework.beans.factory.annotation.Value
-import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.*
 
@@ -25,7 +26,8 @@ class InternalSecurityController(
 
     private fun validateSecret(secret: String?) {
         if (secret != sharedSecret) {
-            throw RuntimeException("Invalid internal secret")
+            // TODO: [AUTH][AuthErrorCode.INVALID_INTERNAL_SECRET] 에러메시지 검수 요청
+            throw BusinessException(AuthErrorCode.INVALID_INTERNAL_SECRET)
         }
     }
 
@@ -51,13 +53,13 @@ class InternalSecurityController(
             )]
         ),
         ApiResponse(
-            responseCode = "500",
-            description = "서버 내부 오류 - 유효하지 않은 Internal Secret 포함",
+            responseCode = "401",
+            description = "인증 실패 - 유효하지 않은 Internal Secret",
             content = [Content(
                 mediaType = "application/json",
                 schema = Schema(implementation = ErrorResponse::class),
                 examples = [ExampleObject(
-                    value = """{"status": 500, "message": "Invalid internal secret", "timestamp": 1234567890}"""
+                    value = """{"code": "AUTH_046", "status": 401, "message": "유효하지 않은 내부 인증 시크릿입니다", "timestamp": 1234567890}"""
                 )]
             )]
         )
@@ -95,13 +97,13 @@ class InternalSecurityController(
             )]
         ),
         ApiResponse(
-            responseCode = "500",
-            description = "서버 내부 오류 - 유효하지 않은 Internal Secret 포함",
+            responseCode = "401",
+            description = "인증 실패 - 유효하지 않은 Internal Secret",
             content = [Content(
                 mediaType = "application/json",
                 schema = Schema(implementation = ErrorResponse::class),
                 examples = [ExampleObject(
-                    value = """{"status": 500, "message": "Invalid internal secret", "timestamp": 1234567890}"""
+                    value = """{"code": "AUTH_046", "status": 401, "message": "유효하지 않은 내부 인증 시크릿입니다", "timestamp": 1234567890}"""
                 )]
             )]
         )
@@ -139,13 +141,13 @@ class InternalSecurityController(
             )]
         ),
         ApiResponse(
-            responseCode = "500",
-            description = "서버 내부 오류 - 유효하지 않은 Internal Secret 포함",
+            responseCode = "401",
+            description = "인증 실패 - 유효하지 않은 Internal Secret",
             content = [Content(
                 mediaType = "application/json",
                 schema = Schema(implementation = ErrorResponse::class),
                 examples = [ExampleObject(
-                    value = """{"status": 500, "message": "Invalid internal secret", "timestamp": 1234567890}"""
+                    value = """{"code": "AUTH_046", "status": 401, "message": "유효하지 않은 내부 인증 시크릿입니다", "timestamp": 1234567890}"""
                 )]
             )]
         )

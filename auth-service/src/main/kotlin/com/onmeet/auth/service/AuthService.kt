@@ -5,6 +5,8 @@ import com.onmeet.auth.dto.toResponseDto
 import com.onmeet.auth.entity.User
 import com.onmeet.auth.exception.*
 import com.onmeet.auth.repository.jpa.UserRepository
+import com.onmeet.common.exception.BusinessException
+import com.onmeet.common.exception.errorcode.AuthErrorCode
 import org.springframework.security.authentication.AuthenticationManager
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken
 import org.springframework.security.crypto.password.PasswordEncoder
@@ -39,7 +41,8 @@ class AuthService(
     @Transactional
     fun signupCompany(request: CompanySignupRequest, profileImage: org.springframework.web.multipart.MultipartFile?): Long {
         if (userRepository.existsByEmail(request.email)) {
-            throw EmailAlreadyExistsException("Email already in use: ${request.email}")
+            // TODO: [AUTH][AuthErrorCode.EMAIL_ALREADY_EXISTS] 에러메시지 검수 요청
+            throw BusinessException(AuthErrorCode.EMAIL_ALREADY_EXISTS)
         }
 
         // 1. Create Company
@@ -76,7 +79,8 @@ class AuthService(
         val invitation = invitationService.validateInvitation(request.email, request.code)
 
         if (userRepository.existsByEmail(request.email)) {
-            throw EmailAlreadyExistsException("Email already in use: ${request.email}")
+            // TODO: [AUTH][AuthErrorCode.EMAIL_ALREADY_EXISTS] 에러메시지 검수 요청
+            throw BusinessException(AuthErrorCode.EMAIL_ALREADY_EXISTS)
         }
 
         // 2. Assign Default Job Title
@@ -179,17 +183,20 @@ class AuthService(
     @Transactional
     fun resetUserProfileImage(targetUserId: Long, requesterEmail: String) {
         val targetUser = userRepository.findById(targetUserId)
-            .orElseThrow { UserNotFoundException("User not found: $targetUserId") }
-        
+            // TODO: [AUTH][AuthErrorCode.USER_NOT_FOUND] 에러메시지 검수 요청
+            .orElseThrow { BusinessException(AuthErrorCode.USER_NOT_FOUND) }
+
         val requester = userRepository.findByEmail(requesterEmail)
-            .orElseThrow { UserNotFoundException("Requester not found: $requesterEmail") }
+            // TODO: [AUTH][AuthErrorCode.REQUESTER_NOT_FOUND] 에러메시지 검수 요청
+            .orElseThrow { BusinessException(AuthErrorCode.REQUESTER_NOT_FOUND) }
 
         // 권한 체크: 같은 회사의 매니저여야 함
-        val isManager = requester.roles.contains(User.Role.MANAGER) && 
+        val isManager = requester.roles.contains(User.Role.MANAGER) &&
                         requester.company.id == targetUser.company.id
 
         if (!isManager) {
-            throw UnauthorizedException("Only managers can reset other users' profile images.")
+            // TODO: [AUTH][AuthErrorCode.PROFILE_RESET_FORBIDDEN] 에러메시지 검수 요청
+            throw BusinessException(AuthErrorCode.PROFILE_RESET_FORBIDDEN)
         }
 
         // 기존 이미지가 있다면 삭제 요청
@@ -223,10 +230,12 @@ class AuthService(
     @Transactional
     fun withdraw(email: String, request: WithdrawRequest) {
         val user = userRepository.findByEmail(email)
-            .orElseThrow { UserNotFoundException("User not found: $email") }
+            // TODO: [AUTH][AuthErrorCode.USER_NOT_FOUND] 에러메시지 검수 요청
+            .orElseThrow { BusinessException(AuthErrorCode.USER_NOT_FOUND) }
 
         if (!passwordEncoder.matches(request.password, user.passwordHash)) {
-            throw InvalidPasswordException("Invalid password")
+            // TODO: [AUTH][AuthErrorCode.INVALID_PASSWORD] 에러메시지 검수 요청
+            throw BusinessException(AuthErrorCode.INVALID_PASSWORD)
         }
 
         // Archive user data
@@ -264,10 +273,12 @@ class AuthService(
     @Transactional
     fun changePassword(email: String, request: ChangePasswordRequest) {
         val user = userRepository.findByEmail(email)
-            .orElseThrow { UserNotFoundException("User not found: $email") }
+            // TODO: [AUTH][AuthErrorCode.USER_NOT_FOUND] 에러메시지 검수 요청
+            .orElseThrow { BusinessException(AuthErrorCode.USER_NOT_FOUND) }
 
         if (!passwordEncoder.matches(request.oldPassword, user.passwordHash)) {
-            throw InvalidPasswordException("Old password does not match")
+            // TODO: [AUTH][AuthErrorCode.CURRENT_PASSWORD_MISMATCH] 에러메시지 검수 요청
+            throw BusinessException(AuthErrorCode.CURRENT_PASSWORD_MISMATCH)
         }
 
         user.passwordHash = passwordEncoder.encode(request.newPassword)
@@ -288,7 +299,8 @@ class AuthService(
     @Transactional
     fun findPassword(email: String) {
         val user = userRepository.findByEmail(email)
-            .orElseThrow { UserNotFoundException("User not found: $email") }
+            // TODO: [AUTH][AuthErrorCode.USER_EMAIL_NOT_FOUND] 에러메시지 검수 요청
+            .orElseThrow { BusinessException(AuthErrorCode.USER_EMAIL_NOT_FOUND) }
 
         // Generate 8-character temporary password
         val temporaryPassword = generateTemporaryPassword()

@@ -34,11 +34,25 @@ class InternalTeamController(
             )]
         ),
         ApiResponse(
+            responseCode = "401",
+            description = "내부 인증 실패 - 유효하지 않은 Gateway Secret",
+            content = [Content(
+                mediaType = "application/json",
+                schema = Schema(implementation = ErrorResponse::class),
+                examples = [ExampleObject(
+                    value = """{"code":"AUTH_046","status":401,"message":"유효하지 않은 내부 인증 시크릿입니다","timestamp":1710000000000}"""
+                )]
+            )]
+        ),
+        ApiResponse(
             responseCode = "500",
             description = "서버 내부 오류",
             content = [Content(
                 mediaType = "application/json",
-                schema = Schema(implementation = ErrorResponse::class)
+                schema = Schema(implementation = ErrorResponse::class),
+                examples = [ExampleObject(
+                    value = """{"code":"COMMON_INTERNAL_ERROR","status":500,"message":"서버 내부 오류가 발생했습니다","timestamp":1710000000000}"""
+                )]
             )]
         )
     ])
@@ -65,10 +79,24 @@ class InternalTeamController(
         ),
         ApiResponse(
             responseCode = "400",
-            description = "잘못된 요청 - 필수 필드 누락",
+            description = "잘못된 요청 - teamId 또는 userId 필드 누락",
             content = [Content(
                 mediaType = "application/json",
-                schema = Schema(implementation = ErrorResponse::class)
+                schema = Schema(implementation = ErrorResponse::class),
+                examples = [ExampleObject(
+                    value = """{"code":"COMMON_VALIDATION_FAILED","status":400,"message":"입력값 검증 실패: 유효하지 않은 데이터입니다","timestamp":1710000000000}"""
+                )]
+            )]
+        ),
+        ApiResponse(
+            responseCode = "401",
+            description = "내부 인증 실패 - 유효하지 않은 Gateway Secret",
+            content = [Content(
+                mediaType = "application/json",
+                schema = Schema(implementation = ErrorResponse::class),
+                examples = [ExampleObject(
+                    value = """{"code":"AUTH_046","status":401,"message":"유효하지 않은 내부 인증 시크릿입니다","timestamp":1710000000000}"""
+                )]
             )]
         ),
         ApiResponse(
@@ -76,7 +104,10 @@ class InternalTeamController(
             description = "서버 내부 오류",
             content = [Content(
                 mediaType = "application/json",
-                schema = Schema(implementation = ErrorResponse::class)
+                schema = Schema(implementation = ErrorResponse::class),
+                examples = [ExampleObject(
+                    value = """{"code":"COMMON_INTERNAL_ERROR","status":500,"message":"서버 내부 오류가 발생했습니다","timestamp":1710000000000}"""
+                )]
             )]
         )
     ])

@@ -57,7 +57,7 @@ class ManagerController(
                 mediaType = "application/json",
                 schema = Schema(implementation = ErrorResponse::class),
                 examples = [ExampleObject(
-                    value = """{"status": 401, "message": "Authentication failed", "timestamp": 1234567890}"""
+                    value = """{"code":"AUTH_004","status":401,"message":"인증에 실패했습니다","timestamp":1710000000000}"""
                 )]
             )]
         ),
@@ -68,7 +68,7 @@ class ManagerController(
                 mediaType = "application/json",
                 schema = Schema(implementation = ErrorResponse::class),
                 examples = [ExampleObject(
-                    value = """{"status": 403, "message": "Access denied", "timestamp": 1234567890}"""
+                    value = """{"code":"COMMON_ACCESS_DENIED","status":403,"message":"접근이 거부되었습니다","timestamp":1710000000000}"""
                 )]
             )]
         ),
@@ -79,7 +79,7 @@ class ManagerController(
                 mediaType = "application/json",
                 schema = Schema(implementation = ErrorResponse::class),
                 examples = [ExampleObject(
-                    value = """{"status": 500, "message": "Internal server error occurred", "timestamp": 1234567890}"""
+                    value = """{"code":"COMMON_INTERNAL_ERROR","status":500,"message":"서버 내부 오류가 발생했습니다","timestamp":1710000000000}"""
                 )]
             )]
         )
@@ -108,7 +108,7 @@ class ManagerController(
                 mediaType = "application/json",
                 schema = Schema(implementation = ErrorResponse::class),
                 examples = [ExampleObject(
-                    value = """{"status": 400, "message": "Invalid argument", "timestamp": 1234567890}"""
+                    value = """{"code":"COMMON_VALIDATION_FAILED","status":400,"message":"입력값 검증 실패: 유효하지 않은 데이터입니다","timestamp":1710000000000}"""
                 )]
             )]
         ),
@@ -119,7 +119,7 @@ class ManagerController(
                 mediaType = "application/json",
                 schema = Schema(implementation = ErrorResponse::class),
                 examples = [ExampleObject(
-                    value = """{"status": 401, "message": "Authentication failed", "timestamp": 1234567890}"""
+                    value = """{"code":"AUTH_004","status":401,"message":"인증에 실패했습니다","timestamp":1710000000000}"""
                 )]
             )]
         ),
@@ -130,7 +130,7 @@ class ManagerController(
                 mediaType = "application/json",
                 schema = Schema(implementation = ErrorResponse::class),
                 examples = [ExampleObject(
-                    value = """{"status": 403, "message": "Access denied", "timestamp": 1234567890}"""
+                    value = """{"code":"COMMON_ACCESS_DENIED","status":403,"message":"접근이 거부되었습니다","timestamp":1710000000000}"""
                 )]
             )]
         ),
@@ -141,7 +141,7 @@ class ManagerController(
                 mediaType = "application/json",
                 schema = Schema(implementation = ErrorResponse::class),
                 examples = [ExampleObject(
-                    value = """{"status": 404, "message": "User not found", "timestamp": 1234567890}"""
+                    value = """{"code":"AUTH_006","status":404,"message":"해당 사용자를 찾을 수 없습니다","timestamp":1710000000000}"""
                 )]
             )]
         ),
@@ -152,7 +152,7 @@ class ManagerController(
                 mediaType = "application/json",
                 schema = Schema(implementation = ErrorResponse::class),
                 examples = [ExampleObject(
-                    value = """{"status": 500, "message": "Internal server error occurred", "timestamp": 1234567890}"""
+                    value = """{"code":"COMMON_INTERNAL_ERROR","status":500,"message":"서버 내부 오류가 발생했습니다","timestamp":1710000000000}"""
                 )]
             )]
         )
@@ -181,7 +181,7 @@ class ManagerController(
                 mediaType = "application/json",
                 schema = Schema(implementation = ErrorResponse::class),
                 examples = [ExampleObject(
-                    value = """{"status": 400, "message": "Invalid argument", "timestamp": 1234567890}"""
+                    value = """{"code":"COMMON_VALIDATION_FAILED","status":400,"message":"입력값 검증 실패: 유효하지 않은 데이터입니다","timestamp":1710000000000}"""
                 )]
             )]
         ),
@@ -192,7 +192,7 @@ class ManagerController(
                 mediaType = "application/json",
                 schema = Schema(implementation = ErrorResponse::class),
                 examples = [ExampleObject(
-                    value = """{"status": 401, "message": "Authentication failed", "timestamp": 1234567890}"""
+                    value = """{"code":"AUTH_004","status":401,"message":"인증에 실패했습니다","timestamp":1710000000000}"""
                 )]
             )]
         ),
@@ -203,7 +203,7 @@ class ManagerController(
                 mediaType = "application/json",
                 schema = Schema(implementation = ErrorResponse::class),
                 examples = [ExampleObject(
-                    value = """{"status": 403, "message": "Access denied", "timestamp": 1234567890}"""
+                    value = """{"code":"COMMON_ACCESS_DENIED","status":403,"message":"접근이 거부되었습니다","timestamp":1710000000000}"""
                 )]
             )]
         ),
@@ -214,7 +214,7 @@ class ManagerController(
                 mediaType = "application/json",
                 schema = Schema(implementation = ErrorResponse::class),
                 examples = [ExampleObject(
-                    value = """{"status": 404, "message": "User not found", "timestamp": 1234567890}"""
+                    value = """{"code":"AUTH_006","status":404,"message":"해당 사용자를 찾을 수 없습니다","timestamp":1710000000000}"""
                 )]
             )]
         ),
@@ -225,7 +225,7 @@ class ManagerController(
                 mediaType = "application/json",
                 schema = Schema(implementation = ErrorResponse::class),
                 examples = [ExampleObject(
-                    value = """{"status": 500, "message": "Internal server error occurred", "timestamp": 1234567890}"""
+                    value = """{"code":"COMMON_INTERNAL_ERROR","status":500,"message":"서버 내부 오류가 발생했습니다","timestamp":1710000000000}"""
                 )]
             )]
         )
@@ -250,7 +250,7 @@ class ManagerController(
                 mediaType = "application/json",
                 schema = Schema(implementation = ErrorResponse::class),
                 examples = [ExampleObject(
-                    value = """{"status": 401, "message": "Authentication failed", "timestamp": 1234567890}"""
+                    value = """{"code":"AUTH_004","status":401,"message":"인증에 실패했습니다","timestamp":1710000000000}"""
                 )]
             )]
         ),
@@ -261,7 +261,7 @@ class ManagerController(
                 mediaType = "application/json",
                 schema = Schema(implementation = ErrorResponse::class),
                 examples = [ExampleObject(
-                    value = """{"status": 403, "message": "Access denied", "timestamp": 1234567890}"""
+                    value = """{"code":"COMMON_ACCESS_DENIED","status":403,"message":"접근이 거부되었습니다","timestamp":1710000000000}"""
                 )]
             )]
         ),
@@ -272,7 +272,7 @@ class ManagerController(
                 mediaType = "application/json",
                 schema = Schema(implementation = ErrorResponse::class),
                 examples = [ExampleObject(
-                    value = """{"status": 404, "message": "User not found", "timestamp": 1234567890}"""
+                    value = """{"code":"AUTH_006","status":404,"message":"해당 사용자를 찾을 수 없습니다","timestamp":1710000000000}"""
                 )]
             )]
         ),
@@ -283,7 +283,7 @@ class ManagerController(
                 mediaType = "application/json",
                 schema = Schema(implementation = ErrorResponse::class),
                 examples = [ExampleObject(
-                    value = """{"status": 500, "message": "Internal server error occurred", "timestamp": 1234567890}"""
+                    value = """{"code":"COMMON_INTERNAL_ERROR","status":500,"message":"서버 내부 오류가 발생했습니다","timestamp":1710000000000}"""
                 )]
             )]
         )
@@ -311,7 +311,7 @@ class ManagerController(
                 mediaType = "application/json",
                 schema = Schema(implementation = ErrorResponse::class),
                 examples = [ExampleObject(
-                    value = """{"status": 401, "message": "Authentication failed", "timestamp": 1234567890}"""
+                    value = """{"code":"AUTH_004","status":401,"message":"인증에 실패했습니다","timestamp":1710000000000}"""
                 )]
             )]
         ),
@@ -322,7 +322,7 @@ class ManagerController(
                 mediaType = "application/json",
                 schema = Schema(implementation = ErrorResponse::class),
                 examples = [ExampleObject(
-                    value = """{"status": 403, "message": "Access denied", "timestamp": 1234567890}"""
+                    value = """{"code":"COMMON_ACCESS_DENIED","status":403,"message":"접근이 거부되었습니다","timestamp":1710000000000}"""
                 )]
             )]
         ),
@@ -333,7 +333,7 @@ class ManagerController(
                 mediaType = "application/json",
                 schema = Schema(implementation = ErrorResponse::class),
                 examples = [ExampleObject(
-                    value = """{"status": 404, "message": "Team not found", "timestamp": 1234567890}"""
+                    value = """{"code":"AUTH_025","status":404,"message":"해당 팀을 찾을 수 없습니다","timestamp":1710000000000}"""
                 )]
             )]
         ),
@@ -344,7 +344,7 @@ class ManagerController(
                 mediaType = "application/json",
                 schema = Schema(implementation = ErrorResponse::class),
                 examples = [ExampleObject(
-                    value = """{"status": 500, "message": "Internal server error occurred", "timestamp": 1234567890}"""
+                    value = """{"code":"COMMON_INTERNAL_ERROR","status":500,"message":"서버 내부 오류가 발생했습니다","timestamp":1710000000000}"""
                 )]
             )]
         )
@@ -372,7 +372,7 @@ class ManagerController(
                 mediaType = "application/json",
                 schema = Schema(implementation = ErrorResponse::class),
                 examples = [ExampleObject(
-                    value = """{"status": 401, "message": "Authentication failed", "timestamp": 1234567890}"""
+                    value = """{"code":"AUTH_004","status":401,"message":"인증에 실패했습니다","timestamp":1710000000000}"""
                 )]
             )]
         ),
@@ -383,7 +383,7 @@ class ManagerController(
                 mediaType = "application/json",
                 schema = Schema(implementation = ErrorResponse::class),
                 examples = [ExampleObject(
-                    value = """{"status": 403, "message": "Access denied", "timestamp": 1234567890}"""
+                    value = """{"code":"COMMON_ACCESS_DENIED","status":403,"message":"접근이 거부되었습니다","timestamp":1710000000000}"""
                 )]
             )]
         ),
@@ -394,7 +394,7 @@ class ManagerController(
                 mediaType = "application/json",
                 schema = Schema(implementation = ErrorResponse::class),
                 examples = [ExampleObject(
-                    value = """{"status": 404, "message": "Team not found", "timestamp": 1234567890}"""
+                    value = """{"code":"AUTH_025","status":404,"message":"해당 팀을 찾을 수 없습니다","timestamp":1710000000000}"""
                 )]
             )]
         ),
@@ -405,7 +405,7 @@ class ManagerController(
                 mediaType = "application/json",
                 schema = Schema(implementation = ErrorResponse::class),
                 examples = [ExampleObject(
-                    value = """{"status": 500, "message": "Internal server error occurred", "timestamp": 1234567890}"""
+                    value = """{"code":"COMMON_INTERNAL_ERROR","status":500,"message":"서버 내부 오류가 발생했습니다","timestamp":1710000000000}"""
                 )]
             )]
         )
@@ -432,7 +432,7 @@ class ManagerController(
                 mediaType = "application/json",
                 schema = Schema(implementation = ErrorResponse::class),
                 examples = [ExampleObject(
-                    value = """{"status": 400, "message": "User is not a member of this team", "timestamp": 1234567890}"""
+                    value = """{"code":"AUTH_031","status":400,"message":"현재 리더가 팀 멤버가 아닙니다","timestamp":1710000000000}"""
                 )]
             )]
         ),
@@ -443,7 +443,7 @@ class ManagerController(
                 mediaType = "application/json",
                 schema = Schema(implementation = ErrorResponse::class),
                 examples = [ExampleObject(
-                    value = """{"status": 401, "message": "Authentication failed", "timestamp": 1234567890}"""
+                    value = """{"code":"AUTH_004","status":401,"message":"인증에 실패했습니다","timestamp":1710000000000}"""
                 )]
             )]
         ),
@@ -454,7 +454,7 @@ class ManagerController(
                 mediaType = "application/json",
                 schema = Schema(implementation = ErrorResponse::class),
                 examples = [ExampleObject(
-                    value = """{"status": 403, "message": "Access denied", "timestamp": 1234567890}"""
+                    value = """{"code":"COMMON_ACCESS_DENIED","status":403,"message":"접근이 거부되었습니다","timestamp":1710000000000}"""
                 )]
             )]
         ),
@@ -465,7 +465,7 @@ class ManagerController(
                 mediaType = "application/json",
                 schema = Schema(implementation = ErrorResponse::class),
                 examples = [ExampleObject(
-                    value = """{"status": 404, "message": "Team not found", "timestamp": 1234567890}"""
+                    value = """{"code":"AUTH_025","status":404,"message":"해당 팀을 찾을 수 없습니다","timestamp":1710000000000}"""
                 )]
             )]
         ),
@@ -476,7 +476,7 @@ class ManagerController(
                 mediaType = "application/json",
                 schema = Schema(implementation = ErrorResponse::class),
                 examples = [ExampleObject(
-                    value = """{"status": 500, "message": "Internal server error occurred", "timestamp": 1234567890}"""
+                    value = """{"code":"COMMON_INTERNAL_ERROR","status":500,"message":"서버 내부 오류가 발생했습니다","timestamp":1710000000000}"""
                 )]
             )]
         )
@@ -507,7 +507,7 @@ class ManagerController(
                 mediaType = "application/json",
                 schema = Schema(implementation = ErrorResponse::class),
                 examples = [ExampleObject(
-                    value = """{"status": 400, "message": "Invalid email format", "timestamp": 1234567890}"""
+                    value = """{"code":"COMMON_VALIDATION_FAILED","status":400,"message":"입력값 검증 실패: email: 유효한 이메일이 아닙니다","timestamp":1710000000000}"""
                 )]
             )]
         ),
@@ -518,7 +518,7 @@ class ManagerController(
                 mediaType = "application/json",
                 schema = Schema(implementation = ErrorResponse::class),
                 examples = [ExampleObject(
-                    value = """{"status": 401, "message": "Authentication failed", "timestamp": 1234567890}"""
+                    value = """{"code":"AUTH_004","status":401,"message":"인증에 실패했습니다","timestamp":1710000000000}"""
                 )]
             )]
         ),
@@ -529,7 +529,7 @@ class ManagerController(
                 mediaType = "application/json",
                 schema = Schema(implementation = ErrorResponse::class),
                 examples = [ExampleObject(
-                    value = """{"status": 403, "message": "Access denied", "timestamp": 1234567890}"""
+                    value = """{"code":"COMMON_ACCESS_DENIED","status":403,"message":"접근이 거부되었습니다","timestamp":1710000000000}"""
                 )]
             )]
         ),
@@ -540,7 +540,7 @@ class ManagerController(
                 mediaType = "application/json",
                 schema = Schema(implementation = ErrorResponse::class),
                 examples = [ExampleObject(
-                    value = """{"status": 404, "message": "Company not found", "timestamp": 1234567890}"""
+                    value = """{"code":"AUTH_035","status":404,"message":"해당 회사를 찾을 수 없습니다","timestamp":1710000000000}"""
                 )]
             )]
         ),
@@ -551,7 +551,7 @@ class ManagerController(
                 mediaType = "application/json",
                 schema = Schema(implementation = ErrorResponse::class),
                 examples = [ExampleObject(
-                    value = """{"status": 409, "message": "Active invitation already exists", "timestamp": 1234567890}"""
+                    value = """{"code":"AUTH_037","status":409,"message":"해당 이메일로 이미 유효한 초대가 존재합니다","timestamp":1710000000000}"""
                 )]
             )]
         ),
@@ -562,7 +562,7 @@ class ManagerController(
                 mediaType = "application/json",
                 schema = Schema(implementation = ErrorResponse::class),
                 examples = [ExampleObject(
-                    value = """{"status": 500, "message": "Internal server error occurred", "timestamp": 1234567890}"""
+                    value = """{"code":"COMMON_INTERNAL_ERROR","status":500,"message":"서버 내부 오류가 발생했습니다","timestamp":1710000000000}"""
                 )]
             )]
         )
@@ -596,7 +596,7 @@ class ManagerController(
                 mediaType = "application/json",
                 schema = Schema(implementation = ErrorResponse::class),
                 examples = [ExampleObject(
-                    value = """{"status": 400, "message": "Invalid job title data", "timestamp": 1234567890}"""
+                    value = """{"code":"COMMON_VALIDATION_FAILED","status":400,"message":"입력값 검증 실패: 유효하지 않은 직급 데이터입니다","timestamp":1710000000000}"""
                 )]
             )]
         ),
@@ -607,7 +607,7 @@ class ManagerController(
                 mediaType = "application/json",
                 schema = Schema(implementation = ErrorResponse::class),
                 examples = [ExampleObject(
-                    value = """{"status": 401, "message": "Authentication failed", "timestamp": 1234567890}"""
+                    value = """{"code":"AUTH_004","status":401,"message":"인증에 실패했습니다","timestamp":1710000000000}"""
                 )]
             )]
         ),
@@ -618,7 +618,7 @@ class ManagerController(
                 mediaType = "application/json",
                 schema = Schema(implementation = ErrorResponse::class),
                 examples = [ExampleObject(
-                    value = """{"status": 403, "message": "Access denied", "timestamp": 1234567890}"""
+                    value = """{"code":"COMMON_ACCESS_DENIED","status":403,"message":"접근이 거부되었습니다","timestamp":1710000000000}"""
                 )]
             )]
         ),
@@ -629,7 +629,7 @@ class ManagerController(
                 mediaType = "application/json",
                 schema = Schema(implementation = ErrorResponse::class),
                 examples = [ExampleObject(
-                    value = """{"status": 500, "message": "Internal server error occurred", "timestamp": 1234567890}"""
+                    value = """{"code":"COMMON_INTERNAL_ERROR","status":500,"message":"서버 내부 오류가 발생했습니다","timestamp":1710000000000}"""
                 )]
             )]
         )
@@ -659,7 +659,7 @@ class ManagerController(
                 mediaType = "application/json",
                 schema = Schema(implementation = ErrorResponse::class),
                 examples = [ExampleObject(
-                    value = """{"status": 400, "message": "Invalid job title data", "timestamp": 1234567890}"""
+                    value = """{"code":"COMMON_VALIDATION_FAILED","status":400,"message":"입력값 검증 실패: 유효하지 않은 직급 데이터입니다","timestamp":1710000000000}"""
                 )]
             )]
         ),
@@ -670,7 +670,7 @@ class ManagerController(
                 mediaType = "application/json",
                 schema = Schema(implementation = ErrorResponse::class),
                 examples = [ExampleObject(
-                    value = """{"status": 401, "message": "Authentication failed", "timestamp": 1234567890}"""
+                    value = """{"code":"AUTH_004","status":401,"message":"인증에 실패했습니다","timestamp":1710000000000}"""
                 )]
             )]
         ),
@@ -681,7 +681,7 @@ class ManagerController(
                 mediaType = "application/json",
                 schema = Schema(implementation = ErrorResponse::class),
                 examples = [ExampleObject(
-                    value = """{"status": 403, "message": "Access denied", "timestamp": 1234567890}"""
+                    value = """{"code":"COMMON_ACCESS_DENIED","status":403,"message":"접근이 거부되었습니다","timestamp":1710000000000}"""
                 )]
             )]
         ),
@@ -692,7 +692,7 @@ class ManagerController(
                 mediaType = "application/json",
                 schema = Schema(implementation = ErrorResponse::class),
                 examples = [ExampleObject(
-                    value = """{"status": 404, "message": "Job title not found", "timestamp": 1234567890}"""
+                    value = """{"code":"AUTH_014","status":404,"message":"해당 직급을 찾을 수 없습니다","timestamp":1710000000000}"""
                 )]
             )]
         ),
@@ -703,7 +703,7 @@ class ManagerController(
                 mediaType = "application/json",
                 schema = Schema(implementation = ErrorResponse::class),
                 examples = [ExampleObject(
-                    value = """{"status": 500, "message": "Internal server error occurred", "timestamp": 1234567890}"""
+                    value = """{"code":"COMMON_INTERNAL_ERROR","status":500,"message":"서버 내부 오류가 발생했습니다","timestamp":1710000000000}"""
                 )]
             )]
         )
@@ -730,7 +730,7 @@ class ManagerController(
                 mediaType = "application/json",
                 schema = Schema(implementation = ErrorResponse::class),
                 examples = [ExampleObject(
-                    value = """{"status": 401, "message": "Authentication failed", "timestamp": 1234567890}"""
+                    value = """{"code":"AUTH_004","status":401,"message":"인증에 실패했습니다","timestamp":1710000000000}"""
                 )]
             )]
         ),
@@ -741,7 +741,7 @@ class ManagerController(
                 mediaType = "application/json",
                 schema = Schema(implementation = ErrorResponse::class),
                 examples = [ExampleObject(
-                    value = """{"status": 403, "message": "Access denied", "timestamp": 1234567890}"""
+                    value = """{"code":"COMMON_ACCESS_DENIED","status":403,"message":"접근이 거부되었습니다","timestamp":1710000000000}"""
                 )]
             )]
         ),
@@ -752,7 +752,7 @@ class ManagerController(
                 mediaType = "application/json",
                 schema = Schema(implementation = ErrorResponse::class),
                 examples = [ExampleObject(
-                    value = """{"status": 404, "message": "Job title not found", "timestamp": 1234567890}"""
+                    value = """{"code":"AUTH_014","status":404,"message":"해당 직급을 찾을 수 없습니다","timestamp":1710000000000}"""
                 )]
             )]
         ),
@@ -763,7 +763,7 @@ class ManagerController(
                 mediaType = "application/json",
                 schema = Schema(implementation = ErrorResponse::class),
                 examples = [ExampleObject(
-                    value = """{"status": 500, "message": "Internal server error occurred", "timestamp": 1234567890}"""
+                    value = """{"code":"COMMON_INTERNAL_ERROR","status":500,"message":"서버 내부 오류가 발생했습니다","timestamp":1710000000000}"""
                 )]
             )]
         )
