@@ -27,11 +27,11 @@ class PrivacyEncryptor : AttributeConverter<String, String> {
 
     override fun convertToDatabaseColumn(attribute: String?): String? {
         if (attribute == null) return null
-        val keySpec = SecretKeySpec(secretKey.toByteArray(), AES_ALGORITHM)
+        val keySpec = SecretKeySpec(secretKey.toByteArray(Charsets.UTF_8), AES_ALGORITHM)
         val iv = ByteArray(GCM_IV_LENGTH).also { SecureRandom().nextBytes(it) }
         val cipher = Cipher.getInstance(GCM_TRANSFORMATION)
         cipher.init(Cipher.ENCRYPT_MODE, keySpec, GCMParameterSpec(GCM_TAG_BITS, iv))
-        val ciphertext = cipher.doFinal(attribute.toByteArray())
+        val ciphertext = cipher.doFinal(attribute.toByteArray(Charsets.UTF_8))
         return Base64.getEncoder().encodeToString(iv + ciphertext)
     }
 
@@ -52,18 +52,18 @@ class PrivacyEncryptor : AttributeConverter<String, String> {
     }
 
     private fun decryptGcm(decoded: ByteArray): String {
-        val keySpec = SecretKeySpec(secretKey.toByteArray(), AES_ALGORITHM)
+        val keySpec = SecretKeySpec(secretKey.toByteArray(Charsets.UTF_8), AES_ALGORITHM)
         val iv = decoded.copyOfRange(0, GCM_IV_LENGTH)
         val ciphertext = decoded.copyOfRange(GCM_IV_LENGTH, decoded.size)
         val cipher = Cipher.getInstance(GCM_TRANSFORMATION)
         cipher.init(Cipher.DECRYPT_MODE, keySpec, GCMParameterSpec(GCM_TAG_BITS, iv))
-        return String(cipher.doFinal(ciphertext))
+        return String(cipher.doFinal(ciphertext), Charsets.UTF_8)
     }
 
     private fun decryptEcb(decoded: ByteArray): String {
-        val keySpec = SecretKeySpec(secretKey.toByteArray(), AES_ALGORITHM)
+        val keySpec = SecretKeySpec(secretKey.toByteArray(Charsets.UTF_8), AES_ALGORITHM)
         val cipher = Cipher.getInstance(ECB_TRANSFORMATION)
         cipher.init(Cipher.DECRYPT_MODE, keySpec)
-        return String(cipher.doFinal(decoded))
+        return String(cipher.doFinal(decoded), Charsets.UTF_8)
     }
 }
