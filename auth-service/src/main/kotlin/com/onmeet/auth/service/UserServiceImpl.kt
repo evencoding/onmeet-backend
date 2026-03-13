@@ -5,9 +5,8 @@ import com.onmeet.auth.entity.User
 import com.onmeet.auth.exception.*
 import com.onmeet.auth.repository.jpa.JobTitleRepository
 import com.onmeet.auth.repository.jpa.UserRepository
-import com.onmeet.common.exception.CrossCompanyAccessException
-import com.onmeet.common.exception.EntityNotFoundException
-import com.onmeet.common.exception.InsufficientPermissionException
+import com.onmeet.common.exception.BusinessException
+import com.onmeet.common.exception.errorcode.AuthErrorCode
 import org.springframework.cache.annotation.CacheEvict
 import org.springframework.cache.annotation.Cacheable
 import org.springframework.stereotype.Service
@@ -36,15 +35,18 @@ class UserServiceImpl(
     @CacheEvict(value = ["userInfo"], key = "#userId")
     override fun updateUserProfile(userId: Long, requester: User, request: UserProfileUpdateRequest, profileImage: MultipartFile?): UserResponseDto {
         val user = userRepository.findById(userId)
-            .orElseThrow { UserNotFoundException("User not found: $userId") }
+            // TODO: [AUTH][AuthErrorCode.USER_NOT_FOUND] 에러메시지 검수 요청
+            .orElseThrow { BusinessException(AuthErrorCode.USER_NOT_FOUND) }
 
         // Permission check: self or company manager
         if (!requester.isSelf(user) && !requester.isManager()) {
-            throw InsufficientPermissionException("No permission to update this profile")
+            // TODO: [AUTH][AuthErrorCode.PROFILE_UPDATE_FORBIDDEN] 에러메시지 검수 요청
+            throw BusinessException(AuthErrorCode.PROFILE_UPDATE_FORBIDDEN)
         }
 
         if (requester.isManager() && !user.belongsToCompany(requester.company.requireId())) {
-            throw CrossCompanyAccessException("Manager can only update users in their own company")
+            // TODO: [AUTH][AuthErrorCode.CROSS_COMPANY_ACCESS] 에러메시지 검수 요청
+            throw BusinessException(AuthErrorCode.CROSS_COMPANY_ACCESS)
         }
 
         // Update text fields
@@ -52,9 +54,11 @@ class UserServiceImpl(
         request.employeeId?.let { user.employeeId = it }
         request.jobTitleId?.let { titleId ->
             val jobTitle = jobTitleRepository.findById(titleId)
-                .orElseThrow { JobTitleNotFoundException("JobTitle not found: $titleId") }
+                // TODO: [AUTH][AuthErrorCode.JOB_TITLE_NOT_FOUND] 에러메시지 검수 요청
+                .orElseThrow { BusinessException(AuthErrorCode.JOB_TITLE_NOT_FOUND) }
             if (!jobTitle.belongsToCompany(user.company.requireId())) {
-                throw CompanyMismatchException("JobTitle does not belong to user's company")
+                // TODO: [AUTH][AuthErrorCode.JOB_TITLE_COMPANY_MISMATCH] 에러메시지 검수 요청
+                throw BusinessException(AuthErrorCode.JOB_TITLE_COMPANY_MISMATCH)
             }
             user.jobTitle = jobTitle
         }
@@ -82,10 +86,12 @@ class UserServiceImpl(
 
     override fun getUserInfo(userId: Long, requester: User): UserResponseDto {
         val user = userRepository.findById(userId)
-            .orElseThrow { UserNotFoundException("User not found: $userId") }
+            // TODO: [AUTH][AuthErrorCode.USER_NOT_FOUND] 에러메시지 검수 요청
+            .orElseThrow { BusinessException(AuthErrorCode.USER_NOT_FOUND) }
 
         if (!user.belongsToCompany(requester.company.requireId())) {
-            throw CrossCompanyAccessException("You cannot access user info from another company")
+            // TODO: [AUTH][AuthErrorCode.CROSS_COMPANY_ACCESS] 에러메시지 검수 요청
+            throw BusinessException(AuthErrorCode.CROSS_COMPANY_ACCESS)
         }
 
         return user.toResponseDto()
@@ -94,11 +100,13 @@ class UserServiceImpl(
     override fun getUserInfo(email: String): UserResponseDto =
         userRepository.findByEmail(email)
             .map { it.toResponseDto() }
-            .orElseThrow { UserNotFoundException("User not found with email: $email") }
+            // TODO: [AUTH][AuthErrorCode.USER_NOT_FOUND] 에러메시지 검수 요청
+            .orElseThrow { BusinessException(AuthErrorCode.USER_NOT_FOUND) }
 
     override fun getAllEmployees(manager: User, pageable: Pageable): PageResponse<UserResponseDto> =
         if (!manager.isManager()) {
-            throw InsufficientPermissionException("Only managers can view all employees")
+            // TODO: [AUTH][AuthErrorCode.EMPLOYEE_LIST_FORBIDDEN] 에러메시지 검수 요청
+            throw BusinessException(AuthErrorCode.EMPLOYEE_LIST_FORBIDDEN)
         } else {
             userRepository.findByCompany(manager.company, pageable)
                 .let { PageResponse.from(it) { user -> user.toResponseDto() } }
@@ -107,11 +115,13 @@ class UserServiceImpl(
     override fun getCompanyIdByUserId(userId: Long): Long =
         userRepository.findById(userId)
             .map { it.company.requireId() }
-            .orElseThrow { UserNotFoundException("User not found with ID: $userId") }
+            // TODO: [AUTH][AuthErrorCode.USER_NOT_FOUND] 에러메시지 검수 요청
+            .orElseThrow { BusinessException(AuthErrorCode.USER_NOT_FOUND) }
 
     override fun getUserPermissions(userId: Long): UserPermissionResponse {
         val user = userRepository.findById(userId)
-            .orElseThrow { UserNotFoundException("User not found: $userId") }
+            // TODO: [AUTH][AuthErrorCode.USER_NOT_FOUND] 에러메시지 검수 요청
+            .orElseThrow { BusinessException(AuthErrorCode.USER_NOT_FOUND) }
 
         return UserPermissionResponse(
             userId = user.requireId(),
@@ -125,7 +135,8 @@ class UserServiceImpl(
     @CacheEvict(value = ["userInfo"], key = "#userId")
     override fun deactivateUser(userId: Long, manager: User): UserResponseDto {
         val user = userRepository.findById(userId)
-            .orElseThrow { UserNotFoundException("User not found: $userId") }
+            // TODO: [AUTH][AuthErrorCode.USER_NOT_FOUND] 에러메시지 검수 요청
+            .orElseThrow { BusinessException(AuthErrorCode.USER_NOT_FOUND) }
 
         validateManagerPermission(manager, user)
         user.deactivate()
@@ -147,7 +158,8 @@ class UserServiceImpl(
     @CacheEvict(value = ["userInfo"], key = "#userId")
     override fun activateUser(userId: Long, manager: User): UserResponseDto {
         val user = userRepository.findById(userId)
-            .orElseThrow { UserNotFoundException("User not found: $userId") }
+            // TODO: [AUTH][AuthErrorCode.USER_NOT_FOUND] 에러메시지 검수 요청
+            .orElseThrow { BusinessException(AuthErrorCode.USER_NOT_FOUND) }
 
         validateManagerPermission(manager, user)
         user.activate()
@@ -173,7 +185,8 @@ class UserServiceImpl(
     // Internal API - No permission check
     override fun getUserInfoById(userId: Long): UserInfoDto {
         val user = userRepository.findById(userId)
-            .orElseThrow { UserNotFoundException("User not found: $userId") }
+            // TODO: [AUTH][AuthErrorCode.USER_NOT_FOUND] 에러메시지 검수 요청
+            .orElseThrow { BusinessException(AuthErrorCode.USER_NOT_FOUND) }
         return user.toUserInfoDto()
     }
 
@@ -196,10 +209,12 @@ class UserServiceImpl(
 
     private fun validateManagerPermission(manager: User, targetUser: User) {
         if (!manager.isManager()) {
-            throw InsufficientPermissionException("Only managers can change user status")
+            // TODO: [AUTH][AuthErrorCode.USER_STATUS_CHANGE_FORBIDDEN] 에러메시지 검수 요청
+            throw BusinessException(AuthErrorCode.USER_STATUS_CHANGE_FORBIDDEN)
         }
         if (!targetUser.belongsToCompany(manager.company.requireId())) {
-            throw CrossCompanyAccessException("Manager can only manage users in their own company")
+            // TODO: [AUTH][AuthErrorCode.CROSS_COMPANY_MANAGE_FORBIDDEN] 에러메시지 검수 요청
+            throw BusinessException(AuthErrorCode.CROSS_COMPANY_MANAGE_FORBIDDEN)
         }
     }
 }
