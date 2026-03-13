@@ -9,6 +9,8 @@ import com.onmeet.ai.pipeline.storage.StorageClient;
 import com.onmeet.ai.pipeline.storage.StorageKeyFactory;
 import com.onmeet.ai.pipeline.transcript.RedisMeetingEventStore;
 import com.onmeet.ai.pipeline.transcript.TranscriptDocument;
+import com.onmeet.common.exception.BusinessException;
+import com.onmeet.common.exception.errorcode.AiErrorCode;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
@@ -108,7 +110,8 @@ public class TranscriptBuilderService {
         try {
             return om.readValue(json, type);
         } catch (Exception e) {
-            throw new IllegalStateException("failed to parse stored event json: " + type.getSimpleName(), e);
+            // TODO: [AI][AiErrorCode.REDIS_EVENT_PARSE_FAILED] 에러메시지 검수 요청
+            throw new BusinessException(AiErrorCode.REDIS_EVENT_PARSE_FAILED);
         }
     }
 
@@ -116,7 +119,8 @@ public class TranscriptBuilderService {
         try {
             return om.writeValueAsString(obj);
         } catch (Exception e) {
-            throw new IllegalStateException("failed to serialize transcript json", e);
+            // TODO: [AI][AiErrorCode.TRANSCRIPT_SERIALIZE_FAILED] 에러메시지 검수 요청
+            throw new BusinessException(AiErrorCode.TRANSCRIPT_SERIALIZE_FAILED);
         }
     }
 }

@@ -1,5 +1,7 @@
 package com.onmeet.ai.pipeline.storage;
 
+import com.onmeet.common.exception.BusinessException;
+import com.onmeet.common.exception.errorcode.AiErrorCode;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import software.amazon.awssdk.core.ResponseBytes;
@@ -33,29 +35,47 @@ public class S3StorageClient implements StorageClient {
 
     @Override
     public void writeBytes(String key, byte[] bytes, String contentType) {
-        PutObjectRequest req = PutObjectRequest.builder()
-                .bucket(bucket)
-                .key(key)
-                .contentType(contentType)
-                .build();
-        s3.putObject(req, RequestBody.fromBytes(bytes));
+        try {
+            PutObjectRequest req = PutObjectRequest.builder()
+                    .bucket(bucket)
+                    .key(key)
+                    .contentType(contentType)
+                    .build();
+            s3.putObject(req, RequestBody.fromBytes(bytes));
+        } catch (S3Exception e) {
+            // TODO: [AI][AiErrorCode.S3_UPLOAD_FAILED] 에러메시지 검수 요청
+            throw new BusinessException(AiErrorCode.S3_UPLOAD_FAILED);
+        }
     }
 
     @Override
     public byte[] readBytes(String key) {
-        GetObjectRequest req = GetObjectRequest.builder()
-                .bucket(bucket)
-                .key(key)
-                .build();
-        ResponseBytes<GetObjectResponse> resp = s3.getObjectAsBytes(req);
-        return resp.asByteArray();
+        try {
+            GetObjectRequest req = GetObjectRequest.builder()
+                    .bucket(bucket)
+                    .key(key)
+                    .build();
+            ResponseBytes<GetObjectResponse> resp = s3.getObjectAsBytes(req);
+            return resp.asByteArray();
+        } catch (NoSuchKeyException e) {
+            // TODO: [AI][AiErrorCode.S3_FILE_NOT_FOUND] 에러메시지 검수 요청
+            throw new BusinessException(AiErrorCode.S3_FILE_NOT_FOUND);
+        } catch (S3Exception e) {
+            // TODO: [AI][AiErrorCode.S3_CLIENT_ERROR] 에러메시지 검수 요청
+            throw new BusinessException(AiErrorCode.S3_CLIENT_ERROR);
+        }
     }
 
     @Override
     public void delete(String key) {
-        s3.deleteObject(DeleteObjectRequest.builder()
-                .bucket(bucket)
-                .key(key)
-                .build());
+        try {
+            s3.deleteObject(DeleteObjectRequest.builder()
+                    .bucket(bucket)
+                    .key(key)
+                    .build());
+        } catch (S3Exception e) {
+            // TODO: [AI][AiErrorCode.S3_CLIENT_ERROR] 에러메시지 검수 요청
+            throw new BusinessException(AiErrorCode.S3_CLIENT_ERROR);
+        }
     }
 }

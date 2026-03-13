@@ -11,7 +11,8 @@ import com.onmeet.ai.pipeline.storage.StorageKeyFactory;
 import com.onmeet.ai.pipeline.transcript.TranscriptDocument;
 import com.onmeet.ai.pipeline.transcript.TranscriptRenderer;
 import com.onmeet.ai.repository.MinutesRepository;
-import com.onmeet.common.exception.EntityNotFoundException;
+import com.onmeet.common.exception.BusinessException;
+import com.onmeet.common.exception.errorcode.AiErrorCode;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -50,11 +51,18 @@ public class MinutesService {
 
         try {
             String transcriptJson = storageClient.readText(m.getTranscriptS3Key());
-            TranscriptDocument doc = om.readValue(transcriptJson, TranscriptDocument.class);
+            TranscriptDocument doc;
+            try {
+                doc = om.readValue(transcriptJson, TranscriptDocument.class);
+            } catch (Exception e) {
+                // TODO: [AI][AiErrorCode.TRANSCRIPT_PARSE_FAILED] 에러메시지 검수 요청
+                throw new BusinessException(AiErrorCode.TRANSCRIPT_PARSE_FAILED);
+            }
 
             String plain = renderer.toPlainText(doc);
             if (plain == null || plain.isBlank()) {
-                throw new IllegalArgumentException("Transcript is empty, cannot regenerate minutes");
+                // TODO: [AI][AiErrorCode.TRANSCRIPT_EMPTY] 에러메시지 검수 요청
+                throw new BusinessException(AiErrorCode.TRANSCRIPT_EMPTY);
             }
 
             String language = (req != null && req.getLanguage() != null) ? req.getLanguage() : "ko";
@@ -71,12 +79,13 @@ public class MinutesService {
 
             return MinutesResponse.from(m);
 
-        } catch (EntityNotFoundException | IllegalArgumentException e) {
+        } catch (BusinessException e) {
             throw e;
         } catch (Exception e) {
             m.markFailed(e.getMessage());
             minutesRepository.save(m);
-            throw new IllegalStateException("regenerate failed: " + e.getMessage(), e);
+            // TODO: [AI][AiErrorCode.SUMMARIZE_FAILED] 에러메시지 검수 요청
+            throw new BusinessException(AiErrorCode.SUMMARIZE_FAILED);
         }
     }
 
@@ -100,6 +109,6 @@ public class MinutesService {
 
     private Minutes findMinutesOrThrow(Long roomId) {
         return minutesRepository.findByRoomId(roomId)
-                .orElseThrow(() -> new EntityNotFoundException("Minutes not found for room: " + roomId));
+                .orElseThrow(() -> new BusinessException(AiErrorCode.MINUTES_NOT_FOUND));
     }
 }
