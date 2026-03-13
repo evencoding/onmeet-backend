@@ -23,7 +23,8 @@ public class EmailService {
     // [Security] Path Traversal 방지: Kafka 메시지에서 수신한 templateName을 화이트리스트로 검증
     private static final Set<String> ALLOWED_TEMPLATES = Set.of(
             "company-invitation",
-            "guest-invitation"
+            "guest-invitation",
+            "temporary-password"
     );
 
     private final JavaMailSender javaMailSender;
@@ -72,6 +73,7 @@ public class EmailService {
             throw e;
         } catch (Exception e) {
             log.error("Failed to send email to: {}", to, e);
+            throw new BusinessException(EmailErrorCode.SEND_FAILED);
         }
     }
 

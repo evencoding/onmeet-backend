@@ -22,9 +22,14 @@ public class GmailOAuth2TokenService {
 
     private static final Logger log = LoggerFactory.getLogger(GmailOAuth2TokenService.class);
     private static final String TOKEN_URL = "https://oauth2.googleapis.com/token";
+    // Tokens expire in 60 min; refresh at 55 min to avoid expiry races
+    private static final long TOKEN_TTL_MS = 55 * 60 * 1000L;
 
     private final GmailOAuth2Config config;
     private final RestTemplate restTemplate;
+
+    private volatile String cachedToken = null;
+    private volatile long tokenExpiryMs = 0L;
 
     public GmailOAuth2TokenService(GmailOAuth2Config config, RestTemplateBuilder restTemplateBuilder) {
         this.config = config;
@@ -32,8 +37,30 @@ public class GmailOAuth2TokenService {
     }
 
     public String getAccessToken() {
+        if (cachedToken != null && System.currentTimeMillis() < tokenExpiryMs) {
+            return cachedToken;
+        }
+        synchronized (this) {
+            if (cachedToken != null && System.currentTimeMillis() < tokenExpiryMs) {
+                return cachedToken;
+            }
+            cachedToken = refreshAccessToken();
+            tokenExpiryMs = System.currentTimeMillis() + TOKEN_TTL_MS;
+            return cachedToken;
+        }
+    }
+
+    private String refreshAccessToken() {
         if (config.getClientId() == null || config.getClientId().isBlank()) {
             log.warn("GMAIL_CLIENT_ID is missing or blank. Token cannot be refreshed.");
+            throw new BusinessException(EmailErrorCode.CREDENTIALS_MISSING);
+        }
+        if (config.getClientSecret() == null || config.getClientSecret().isBlank()) {
+            log.warn("GMAIL_CLIENT_SECRET is missing or blank. Token cannot be refreshed.");
+            throw new BusinessException(EmailErrorCode.CREDENTIALS_MISSING);
+        }
+        if (config.getRefreshToken() == null || config.getRefreshToken().isBlank()) {
+            log.warn("GMAIL_REFRESH_TOKEN is missing or blank. Token cannot be refreshed.");
             throw new BusinessException(EmailErrorCode.CREDENTIALS_MISSING);
         }
 
