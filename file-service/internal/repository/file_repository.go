@@ -1,6 +1,8 @@
 package repository
 
 import (
+	"errors"
+
 	"com.onmeet.file/internal/model"
 	"gorm.io/gorm"
 )
@@ -39,7 +41,10 @@ func (r *postgresFileRepository) FindByID(id uint) (*model.FileMetadata, error) 
 	// First는 단 건 조회를 수행합니다. JPA의 findById()와 유사합니다.
 	// &metadata는 조회된 결과를 해당 변수에 담아달라는 뜻(주소 전달)입니다.
 	if err := r.db.First(&metadata, id).Error; err != nil {
-		return nil, err
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, model.ErrDBNotFound
+		}
+		return nil, model.NewAppError(model.CodeDBSaveFail, 500, "파일 메타데이터 DB 조회에 실패했습니다")
 	}
 	return &metadata, nil
 }

@@ -4,8 +4,8 @@ import com.onmeet.auth.config.InvitationProperties
 import com.onmeet.auth.dto.GuestInviteRequestDto
 import com.onmeet.auth.dto.GuestJoinResultDto
 import com.onmeet.auth.entity.GuestInvitation
-import com.onmeet.auth.exception.InvalidInvitationException
-import com.onmeet.auth.exception.UserNotFoundException
+import com.onmeet.common.exception.BusinessException
+import com.onmeet.common.exception.errorcode.AuthErrorCode
 import com.onmeet.auth.repository.jpa.GuestInvitationRepository
 import com.onmeet.auth.repository.jpa.UserRepository
 import org.springframework.stereotype.Service
@@ -33,12 +33,14 @@ class GuestService(
     @Transactional
     fun inviteGuest(request: GuestInviteRequestDto, inviterEmail: String) {
         val user = userRepository.findByEmail(inviterEmail)
-            .orElseThrow { UserNotFoundException("User not found") }
+            // TODO: [AUTH][AuthErrorCode.GUEST_INVITER_NOT_FOUND] 에러메시지 검수 요청
+            .orElseThrow { BusinessException(AuthErrorCode.GUEST_INVITER_NOT_FOUND) }
 
         // [Security] [IDOR 방어] video-service 연동을 통해 초대자가 해당 roomId의 호스트인지 검증
         val room = internalRoomClient.getRoomByCode(request.roomId, gatewaySecret)
         if (room.hostUserId != (user.id ?: 0L)) {
-            throw com.onmeet.common.exception.InsufficientPermissionException("You do not have permission to invite guests to this room.")
+            // TODO: [AUTH][AuthErrorCode.GUEST_INVITE_FORBIDDEN] 에러메시지 검수 요청
+            throw BusinessException(AuthErrorCode.GUEST_INVITE_FORBIDDEN)
         }
 
         val uuid = UUID.randomUUID().toString()
@@ -66,10 +68,12 @@ class GuestService(
     @Transactional(readOnly = true)
     fun joinMeeting(uuid: String): GuestJoinResultDto {
         val invitation = guestInvitationRepository.findByUuid(uuid)
-            .orElseThrow { InvalidInvitationException("Invalid or expired guest invitation link") }
+            // TODO: [AUTH][AuthErrorCode.GUEST_LINK_INVALID] 에러메시지 검수 요청
+            .orElseThrow { BusinessException(AuthErrorCode.GUEST_LINK_INVALID) }
 
         if (invitation.expiresAt.isBefore(LocalDateTime.now())) {
-            throw InvalidInvitationException("This guest invitation link has expired")
+            // TODO: [AUTH][AuthErrorCode.GUEST_LINK_EXPIRED] 에러메시지 검수 요청
+            throw BusinessException(AuthErrorCode.GUEST_LINK_EXPIRED)
         }
 
         // Issue guest tokens

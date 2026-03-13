@@ -252,7 +252,7 @@ func TestFileService_DeleteFile(t *testing.T) {
 		err := fs.DeleteFile(1, 456, "cookie")
 
 		assert.Error(t, err)
-		assert.Contains(t, err.Error(), "permission denied")
+		assert.Contains(t, err.Error(), "파일 삭제 권한이 없습니다")
 		repoMock.AssertExpectations(t)
 		authMock.AssertExpectations(t)
 	})

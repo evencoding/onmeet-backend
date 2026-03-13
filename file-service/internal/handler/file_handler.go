@@ -17,7 +17,7 @@ type FileHandler struct {
 
 // GenerateProfileRequest defines the body for generating a default profile image.
 type GenerateProfileRequest struct {
-	Name      string `json:"name" example:"John Doe"`
+	Name      string `json:"name" example:"홍길동"`
 	Color     string `json:"color" example:"#FF5733"`
 	OwnerType string `json:"ownerType" example:"USER"`
 	OwnerId   string `json:"ownerId" example:"123"`
@@ -27,24 +27,38 @@ func NewFileHandler(svc service.FileService) *FileHandler {
 	return &FileHandler{svc: svc}
 }
 
+// respondError는 에러가 *model.AppError이면 해당 코드/상태를 사용하고,
+// 아니면 defaultAppErr으로 응답합니다.
+func respondError(c *gin.Context, err error, defaultAppErr *model.AppError) {
+	if appErr, ok := err.(*model.AppError); ok {
+		c.JSON(appErr.Status, model.ErrorResponseFromAppError(appErr))
+	} else {
+		c.JSON(defaultAppErr.Status, model.ErrorResponseFromAppError(defaultAppErr))
+	}
+}
+
 // Upload godoc
-// @Summary      Upload files
-// @Description  Upload multiple files to S3.
+// @Summary      파일 업로드
+// @Description  멀티파트 폼으로 하나 이상의 파일을 S3에 업로드합니다.
+// @Description  업로드된 파일의 메타데이터(URL, 크기, 타입 등)가 PostgreSQL에 저장됩니다.
+// @Description  category, ownerType, ownerId를 지정하지 않으면 기본값(USER / 업로더 ID)이 사용됩니다.
 // @Tags         file
 // @Accept       multipart/form-data
 // @Produce      json
-// @Param        files formData file true "Files to upload"
-// @Param        category formData string false "File category (e.g., TEAM_PROFILE)"
-// @Param        ownerType formData string false "Owner Type (e.g., USER, TEAM)"
-// @Param        ownerId formData string false "Owner ID"
-// @Success      200  {array}   model.FileMetadata
-// @Failure      500  {object}  model.ErrorResponse
+// @Param        files     formData  file    true   "업로드할 파일 (복수 가능)"
+// @Param        category  formData  string  false  "파일 카테고리 (예: TEAM_PROFILE, MEETING_SUMMARY)"
+// @Param        ownerType formData  string  false  "소유자 타입 (USER | TEAM | COMPANY). 기본값: USER"
+// @Param        ownerId   formData  string  false  "소유자 ID. 미입력 시 업로더 ID 사용"
+// @Success      200  {array}   model.FileMetadata  "업로드된 파일 메타데이터 목록"
+// @Failure      400  {object}  model.ErrorResponse "FILE_001: 멀티파트 폼 데이터 파싱 실패 (Content-Type이 multipart/form-data가 아닌 경우)"
+// @Failure      403  {object}  model.ErrorResponse "FILE_014: X-Gateway-Secret 헤더 누락 또는 불일치"
+// @Failure      500  {object}  model.ErrorResponse "FILE_002: S3 업로드 또는 DB 저장 실패"
 // @Router       /upload [post]
 func (h *FileHandler) Upload(c *gin.Context) {
 	// MultipartForm 데이터를 파싱합니다.
 	form, err := c.MultipartForm()
 	if err != nil {
-		c.JSON(http.StatusBadRequest, model.NewErrorResponse(http.StatusBadRequest, "Invalid multipart form: "+err.Error()))
+		c.JSON(http.StatusBadRequest, model.ErrorResponseFromAppError(model.ErrMultipartParseFail))
 		return
 	}
 	files := form.File["files"]
@@ -62,8 +76,7 @@ func (h *FileHandler) Upload(c *gin.Context) {
 
 	results, err := h.svc.UploadFiles(files, category, uploaderId, ownerType, ownerId)
 	if err != nil {
-		// 에러 발생 시 JSON 형태로 에러 메시지를 응답합니다.
-		c.JSON(http.StatusInternalServerError, model.NewErrorResponse(http.StatusInternalServerError, err.Error()))
+		respondError(c, err, model.NewAppError(model.CodeUploadFail, http.StatusInternalServerError, "파일 업로드에 실패했습니다"))
 		return
 	}
 
@@ -72,23 +85,27 @@ func (h *FileHandler) Upload(c *gin.Context) {
 }
 
 // UploadAsync godoc
-// @Summary      Upload files asynchronously
-// @Description  Upload files asynchronously using Kafka.
+// @Summary      파일 비동기 업로드
+// @Description  파일을 백그라운드 고루틴으로 비동기 처리하고 즉시 202를 반환합니다.
+// @Description  실제 S3 업로드 완료 후 callbackTopic으로 Kafka 이벤트가 발행됩니다.
+// @Description  업로드 실패 시 클라이언트에 별도 에러 응답이 없으며 서버 로그에만 기록됩니다.
 // @Tags         file
 // @Accept       multipart/form-data
 // @Produce      json
-// @Param        files formData file true "Files to upload"
-// @Param        category formData string false "File category"
-// @Param        ownerType formData string false "Owner Type"
-// @Param        ownerId formData string false "Owner ID"
-// @Param        callbackTopic formData string false "Callback Kafka Topic"
-// @Param        correlationId formData string false "Correlation ID"
-// @Success      202  {object}  map[string]interface{}
+// @Param        files          formData  file    true   "업로드할 파일 (복수 가능)"
+// @Param        category       formData  string  false  "파일 카테고리"
+// @Param        ownerType      formData  string  false  "소유자 타입 (USER | TEAM | COMPANY)"
+// @Param        ownerId        formData  string  false  "소유자 ID"
+// @Param        callbackTopic  formData  string  false  "업로드 완료 Kafka 토픽. 기본값: file-upload-events"
+// @Param        correlationId  formData  string  false  "요청 추적을 위한 Correlation ID"
+// @Success      202  {object}  map[string]interface{}  "비동기 업로드 시작 확인 (message, fileCount)"
+// @Failure      400  {object}  model.ErrorResponse     "FILE_003: 멀티파트 폼 데이터 파싱 실패"
+// @Failure      403  {object}  model.ErrorResponse     "FILE_014: X-Gateway-Secret 헤더 누락 또는 불일치"
 // @Router       /upload-async [post]
 func (h *FileHandler) UploadAsync(c *gin.Context) {
 	form, err := c.MultipartForm()
 	if err != nil {
-		c.JSON(http.StatusBadRequest, model.NewErrorResponse(http.StatusBadRequest, "Invalid multipart form: "+err.Error()))
+		c.JSON(http.StatusBadRequest, model.ErrorResponseFromAppError(model.ErrAsyncMultipartParseFail))
 		return
 	}
 	files := form.File["files"]
@@ -116,26 +133,30 @@ func (h *FileHandler) UploadAsync(c *gin.Context) {
 }
 
 // GetFileInfo godoc
-// @Summary      Get file info
-// @Description  Get file metadata by ID.
+// @Summary      파일 메타데이터 조회
+// @Description  파일 ID로 DB에 저장된 파일 메타데이터(URL, 크기, 카테고리 등)를 조회합니다.
+// @Description  실제 파일 바이너리가 아닌 메타데이터만 반환합니다. 파일 내용은 /render/{fileId}를 사용하세요.
 // @Tags         file
 // @Produce      json
-// @Param        fileId path int true "File ID"
-// @Success      200  {object}  model.FileMetadata
-// @Failure      404  {object}  model.ErrorResponse
+// @Param        fileId  path  int  true  "파일 ID (양의 정수)"
+// @Success      200  {object}  model.FileMetadata  "파일 메타데이터"
+// @Failure      400  {object}  model.ErrorResponse "FILE_004: fileId가 유효한 양의 정수가 아닌 경우"
+// @Failure      403  {object}  model.ErrorResponse "FILE_014: X-Gateway-Secret 헤더 누락 또는 불일치"
+// @Failure      404  {object}  model.ErrorResponse "FILE_005: 해당 ID의 파일이 DB에 존재하지 않는 경우 | FILE_042: DB 레코드 없음"
+// @Failure      500  {object}  model.ErrorResponse "FILE_041: DB 연결 오류 등 내부 서버 에러"
 // @Router       /{fileId} [get]
 func (h *FileHandler) GetFileInfo(c *gin.Context) {
 	// URL 경로 파라미터(/:fileId)를 가져옵니다. @PathVariable과 같습니다.
 	idStr := c.Param("fileId")
 	id, err := strconv.ParseUint(idStr, 10, 64)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, model.NewErrorResponse(http.StatusBadRequest, "Invalid file ID: "+idStr))
+		c.JSON(http.StatusBadRequest, model.ErrorResponseFromAppError(model.ErrInvalidFileID))
 		return
 	}
 
 	metadata, err := h.svc.GetFile(uint(id))
 	if err != nil {
-		c.JSON(http.StatusNotFound, model.NewErrorResponse(http.StatusNotFound, "File not found"))
+		respondError(c, err, model.NewAppError(model.CodeFileNotFound, http.StatusNotFound, "파일을 찾을 수 없습니다"))
 		return
 	}
 
@@ -143,18 +164,23 @@ func (h *FileHandler) GetFileInfo(c *gin.Context) {
 }
 
 // DeleteFile godoc
-// @Summary      Delete file
-// @Description  Delete file by ID (Soft delete in DB, Hard delete in S3).
+// @Summary      파일 삭제
+// @Description  파일 ID로 파일을 삭제합니다. S3에서 즉시 삭제(Hard Delete)되고 DB는 Soft Delete 처리됩니다.
+// @Description  삭제 권한: MANAGER 또는 ADMIN 역할 보유자만 가능합니다.
+// @Description  회사 파일(ownerType=COMPANY)은 동일 회사 관리자만, 개인 파일은 동일 회사 소속 관리자만 삭제 가능합니다.
 // @Tags         file
-// @Param        fileId path int true "File ID"
-// @Success      204
-// @Failure      500  {object}  model.ErrorResponse
+// @Param        fileId  path  int  true  "파일 ID (양의 정수)"
+// @Success      204  "삭제 성공 (응답 본문 없음)"
+// @Failure      400  {object}  model.ErrorResponse "FILE_006: fileId가 유효한 양의 정수가 아닌 경우"
+// @Failure      403  {object}  model.ErrorResponse "FILE_014: 게이트웨이 시크릿 오류 | FILE_020: MANAGER/ADMIN 권한 없음 | FILE_021: 다른 회사 파일 접근 불가"
+// @Failure      404  {object}  model.ErrorResponse "FILE_042: 삭제 대상 파일이 DB에 존재하지 않는 경우"
+// @Failure      500  {object}  model.ErrorResponse "FILE_007: S3 삭제 또는 DB 삭제 실패 | FILE_019: auth-service 권한 조회 실패"
 // @Router       /{fileId} [delete]
 func (h *FileHandler) DeleteFile(c *gin.Context) {
 	idStr := c.Param("fileId")
 	id, err := strconv.ParseUint(idStr, 10, 64)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, model.NewErrorResponse(http.StatusBadRequest, "Invalid file ID: "+idStr))
+		c.JSON(http.StatusBadRequest, model.ErrorResponseFromAppError(model.ErrDeleteInvalidFileID))
 		return
 	}
 
@@ -168,7 +194,7 @@ func (h *FileHandler) DeleteFile(c *gin.Context) {
 
 	err = h.svc.DeleteFile(uint(id), requesterId, cookie)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, model.NewErrorResponse(http.StatusInternalServerError, err.Error()))
+		respondError(c, err, model.NewAppError(model.CodeDeleteFail, http.StatusInternalServerError, "파일 삭제에 실패했습니다"))
 		return
 	}
 
@@ -177,24 +203,28 @@ func (h *FileHandler) DeleteFile(c *gin.Context) {
 }
 
 // DeleteMyProfile godoc
-// @Summary      Delete my profile image
-// @Description  Delete all profile images uploaded by the current user.
+// @Summary      내 프로필 이미지 삭제
+// @Description  현재 인증된 사용자가 업로드한 모든 프로필 카테고리 파일을 S3 및 DB에서 삭제합니다.
+// @Description  S3 삭제 실패 시 해당 파일의 DB 삭제를 건너뛰어 고아(orphan) 레코드를 방지합니다.
+// @Description  일부 파일 삭제 실패 시에도 500을 반환하며, 성공한 파일은 삭제됩니다.
 // @Tags         file
-// @Success      204
-// @Failure      500  {object}  model.ErrorResponse
+// @Success      204  "삭제 성공 (응답 본문 없음)"
+// @Failure      401  {object}  model.ErrorResponse "FILE_008: X-User-Id 헤더가 없어 사용자를 식별할 수 없는 경우"
+// @Failure      403  {object}  model.ErrorResponse "FILE_014: X-Gateway-Secret 헤더 누락 또는 불일치"
+// @Failure      500  {object}  model.ErrorResponse "FILE_009: S3 또는 DB 삭제 중 일부 또는 전체 실패"
 // @Router       /me/profile [delete]
 func (h *FileHandler) DeleteMyProfile(c *gin.Context) {
 	var uploaderId int64
 	if idStr, exists := c.Get("userId"); exists {
 		uploaderId, _ = strconv.ParseInt(idStr.(string), 10, 64)
 	} else {
-		c.JSON(http.StatusUnauthorized, model.NewErrorResponse(http.StatusUnauthorized, "Unauthorized"))
+		c.JSON(http.StatusUnauthorized, model.ErrorResponseFromAppError(model.ErrUnauthorized))
 		return
 	}
 
 	err := h.svc.DeleteMyProfile(uploaderId)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, model.NewErrorResponse(http.StatusInternalServerError, err.Error()))
+		respondError(c, err, model.NewAppError(model.CodeProfileDeleteFail, http.StatusInternalServerError, "프로필 이미지 삭제에 실패했습니다"))
 		return
 	}
 
@@ -202,20 +232,24 @@ func (h *FileHandler) DeleteMyProfile(c *gin.Context) {
 }
 
 // GenerateProfileImage godoc
-// @Summary      Generate default profile image
-// @Description  Generate a default profile image based on name and color.
+// @Summary      기본 프로필 이미지 생성
+// @Description  이름 첫 글자와 배경색을 기반으로 SVG 프로필 이미지를 생성하고 S3에 저장합니다.
+// @Description  color를 비워두면 서버에서 미리 정의된 고대비 색상 팔레트 중 하나를 랜덤 선택합니다.
+// @Description  생성된 SVG는 category=profile로 저장됩니다.
 // @Tags         file
 // @Accept       json
 // @Produce      json
-// @Param        request body GenerateProfileRequest true "Request Body"
-// @Success      200  {object}  model.FileMetadata
-// @Failure      500  {object}  model.ErrorResponse
+// @Param        request  body  handler.GenerateProfileRequest  true  "프로필 생성 요청"
+// @Success      200  {object}  model.FileMetadata  "생성된 프로필 이미지 메타데이터"
+// @Failure      400  {object}  model.ErrorResponse "FILE_010: 요청 JSON 파싱 실패 (잘못된 형식)"
+// @Failure      403  {object}  model.ErrorResponse "FILE_014: X-Gateway-Secret 헤더 누락 또는 불일치"
+// @Failure      500  {object}  model.ErrorResponse "FILE_011: SVG S3 업로드 또는 DB 저장 실패"
 // @Router       /profile/default [post]
 func (h *FileHandler) GenerateProfileImage(c *gin.Context) {
 	var req GenerateProfileRequest
 
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, model.NewErrorResponse(http.StatusBadRequest, err.Error()))
+		c.JSON(http.StatusBadRequest, model.ErrorResponseFromAppError(model.ErrRequestParseFail))
 		return
 	}
 
@@ -227,7 +261,7 @@ func (h *FileHandler) GenerateProfileImage(c *gin.Context) {
 
 	metadata, err := h.svc.GenerateDefaultProfileImage(req.Name, req.Color, uploaderId, req.OwnerType, req.OwnerId)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, model.NewErrorResponse(http.StatusInternalServerError, err.Error()))
+		respondError(c, err, model.NewAppError(model.CodeDefaultProfileGenFail, http.StatusInternalServerError, "기본 프로필 이미지 생성에 실패했습니다"))
 		return
 	}
 
@@ -235,24 +269,30 @@ func (h *FileHandler) GenerateProfileImage(c *gin.Context) {
 }
 
 // RenderFile godoc
-// @Summary      Render file
-// @Description  Download or render file content.
+// @Summary      파일 렌더링 (다운로드)
+// @Description  파일 ID로 S3에서 실제 파일 바이너리를 가져와 반환합니다.
+// @Description  1MB 미만의 파일은 서버 인메모리 캐시(TTL 1시간)에 저장되어 반복 요청 시 S3 호출 없이 응답합니다.
+// @Description  응답 Content-Type은 파일의 실제 타입(image/jpeg, application/pdf 등)으로 동적 결정됩니다.
 // @Tags         file
-// @Param        fileId path int true "File ID"
-// @Success      200  {string}  binary
-// @Failure      404  {object}  model.ErrorResponse
+// @Produce      application/octet-stream
+// @Param        fileId  path  int  true  "파일 ID (양의 정수)"
+// @Success      200  {string}  binary  "파일 바이너리 데이터 (Cache-Control: public, max-age=3600)"
+// @Failure      400  {object}  model.ErrorResponse "FILE_012: fileId가 유효한 양의 정수가 아닌 경우"
+// @Failure      403  {object}  model.ErrorResponse "FILE_014: X-Gateway-Secret 헤더 누락 또는 불일치"
+// @Failure      404  {object}  model.ErrorResponse "FILE_013: 파일 메타데이터 없음 또는 S3 다운로드 실패 | FILE_033: DB에서 파일을 찾을 수 없음"
+// @Failure      500  {object}  model.ErrorResponse "FILE_034: S3 GetObject 오류 | FILE_035: 파일 내용 읽기 오류"
 // @Router       /render/{fileId} [get]
 func (h *FileHandler) RenderFile(c *gin.Context) {
 	idStr := c.Param("fileId")
 	id, err := strconv.ParseUint(idStr, 10, 64)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, model.NewErrorResponse(http.StatusBadRequest, "Invalid file ID: "+idStr))
+		c.JSON(http.StatusBadRequest, model.ErrorResponseFromAppError(model.ErrRenderInvalidFileID))
 		return
 	}
 
 	content, contentType, err := h.svc.RenderFile(uint(id))
 	if err != nil {
-		c.JSON(http.StatusNotFound, model.NewErrorResponse(http.StatusNotFound, "File not found or render error"))
+		respondError(c, err, model.NewAppError(model.CodeRenderFail, http.StatusNotFound, "파일을 찾을 수 없거나 렌더링에 실패했습니다"))
 		return
 	}
 

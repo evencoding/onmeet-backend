@@ -2,8 +2,8 @@ package com.onmeet.video.meeting.service.chat;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.onmeet.video.common.exception.BizException;
-import com.onmeet.video.common.exception.ErrorCode;
+import com.onmeet.common.exception.BusinessException;
+import com.onmeet.common.exception.errorcode.VideoErrorCode;
 import com.onmeet.video.common.util.ClockProvider;
 import com.onmeet.video.infra.auth.AuthServiceClient;
 import com.onmeet.video.infra.livekit.LiveKitClient;
@@ -60,7 +60,8 @@ public class ChatIntegrationService {
         MeetingRoom room = resolveRoom(request);
 
         if (room.isEnded()) {
-            throw new BizException(ErrorCode.INVALID_REQUEST, "Room has already ended");
+            // TODO: [VIDEO][VideoErrorCode.ROOM_ALREADY_ENDED] 에러메시지 검수 요청
+            throw new BusinessException(VideoErrorCode.ROOM_ALREADY_ENDED);
         }
 
         String token = liveKitClient.generateToken(
@@ -81,16 +82,18 @@ public class ChatIntegrationService {
     @Transactional(readOnly = true)
     public void sendMessage(Long roomId, SendChatRequest request, Long senderId) {
         MeetingRoom room = roomRepository.findById(roomId)
-            .orElseThrow(() -> new BizException(ErrorCode.NOT_FOUND, "Room not found"));
+            .orElseThrow(() -> new BusinessException(VideoErrorCode.ROOM_NOT_FOUND));
 
         if (!room.isActive()) {
-            throw new BizException(ErrorCode.INVALID_REQUEST, "Room is not active");
+            // TODO: [VIDEO][VideoErrorCode.ROOM_NOT_ACTIVE] 에러메시지 검수 요청
+            throw new BusinessException(VideoErrorCode.ROOM_NOT_ACTIVE);
         }
 
         boolean isParticipant = participantRepository.existsByRoomIdAndUserIdAndStatusIn(
             roomId, senderId, java.util.List.of(ParticipantStatus.JOINED));
         if (!isParticipant) {
-            throw new BizException(ErrorCode.FORBIDDEN, "Not a participant of this room");
+            // TODO: [VIDEO][VideoErrorCode.NOT_PARTICIPANT_CHAT] 에러메시지 검수 요청
+            throw new BusinessException(VideoErrorCode.NOT_PARTICIPANT_CHAT);
         }
 
         String messageType = request.type() != null ? request.type() : DataChannelMessage.TYPE_CHAT;
@@ -174,20 +177,22 @@ public class ChatIntegrationService {
     private MeetingRoom resolveRoom(ChatTokenRequest request) {
         if (request.roomId() != null) {
             return roomRepository.findById(request.roomId())
-                .orElseThrow(() -> new BizException(ErrorCode.NOT_FOUND, "Room not found"));
+                .orElseThrow(() -> new BusinessException(VideoErrorCode.ROOM_NOT_FOUND));
         }
         if (request.roomCode() != null) {
             return roomRepository.findByRoomCode(request.roomCode())
-                .orElseThrow(() -> new BizException(ErrorCode.NOT_FOUND, "Room not found"));
+                .orElseThrow(() -> new BusinessException(VideoErrorCode.ROOM_NOT_FOUND));
         }
-        throw new BizException(ErrorCode.INVALID_REQUEST, "Either roomId or roomCode must be provided");
+        // TODO: [VIDEO][VideoErrorCode.ROOM_ID_OR_CODE_REQUIRED] 에러메시지 검수 요청
+        throw new BusinessException(VideoErrorCode.ROOM_ID_OR_CODE_REQUIRED);
     }
 
     private byte[] serializeMessage(DataChannelMessage message) {
         try {
             return objectMapper.writeValueAsBytes(message);
         } catch (JsonProcessingException e) {
-            throw new BizException(ErrorCode.INTERNAL_ERROR, "Failed to serialize chat message");
+            // TODO: [VIDEO][VideoErrorCode.CHAT_SERIALIZE_FAILED] 에러메시지 검수 요청
+            throw new BusinessException(VideoErrorCode.CHAT_SERIALIZE_FAILED);
         }
     }
 

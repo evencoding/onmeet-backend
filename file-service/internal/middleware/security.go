@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"com.onmeet.file/internal/config"
+	"com.onmeet.file/internal/model"
 	"github.com/gin-gonic/gin"
 )
 
@@ -35,8 +36,8 @@ func SecurityMiddleware(cfg *config.Config) gin.HandlerFunc {
 		// For now, we'll keep the original validation but add the new logging.
 		// If s.accessControl.ValidateGatewaySecret is intended, the SecurityMiddleware signature needs to change.
 		if subtle.ConstantTimeCompare([]byte(secret), []byte(cfg.GatewaySharedSecret)) != 1 {
-			log.Printf("Security Middleware: Invalid Secret for Path=%s\n", path) // Changed fmt.Printf to log.Printf
-			c.JSON(http.StatusForbidden, gin.H{"error": "Invalid Gateway Secret"})
+			log.Printf("Security Middleware: Invalid Secret for Path=%s\n", path)
+			c.JSON(http.StatusForbidden, model.ErrorResponseFromAppError(model.ErrInvalidGatewaySecret))
 			// Abort()를 호출하면 이후의 핸들러(컨트롤러) 실행이 중단됩니다.
 			c.Abort()
 			return

@@ -144,40 +144,33 @@ func (s *fileService) DeleteFile(id uint, requesterId int64, cookie string) erro
 	// 1. 권한 체크 로직 (MANAGER 이상만 가능하도록 수정)
 	requesterPerms, err := s.authClient.GetUserPermissions(requesterId, cookie)
 	if err != nil {
-		return fmt.Errorf("failed to get user permissions: %v", err)
+		return err // auth_client이 AppError를 반환하므로 그대로 전달
 	}
 
-	canDelete := false
+	hasRole := false
 	for _, role := range requesterPerms.Roles {
 		if role == "MANAGER" || role == "ADMIN" {
-			canDelete = true
+			hasRole = true
 			break
 		}
 	}
-
-	if canDelete {
-		// 파일의 소유주가 회사인 경우: 해당 회사의 ID와 관리자의 회사 ID가 같은지 확인
-		if metadata.OwnerType == "COMPANY" {
-			fileCompanyId, _ := strconv.ParseInt(metadata.OwnerID, 10, 64)
-			if requesterPerms.CompanyID != nil && *requesterPerms.CompanyID == fileCompanyId {
-				canDelete = true
-			} else {
-				canDelete = false
-			}
-		} else if metadata.UploaderID != nil {
-			// 파일의 소유주가 유저인 경우: 업로더가 관리자와 같은 회사 소속인지 확인
-			uploaderPerms, err := s.authClient.GetUserPermissions(*metadata.UploaderID, cookie)
-			if err == nil && uploaderPerms.CompanyID != nil && requesterPerms.CompanyID != nil &&
-				*uploaderPerms.CompanyID == *requesterPerms.CompanyID {
-				canDelete = true
-			} else {
-				canDelete = false
-			}
-		}
+	if !hasRole {
+		return model.ErrPermissionDenied // FILE_020: 403
 	}
 
-	if !canDelete {
-		return fmt.Errorf("permission denied: only managers can delete files by ID")
+	// 파일의 소유주가 회사인 경우: 해당 회사의 ID와 관리자의 회사 ID가 같은지 확인
+	if metadata.OwnerType == "COMPANY" {
+		fileCompanyId, _ := strconv.ParseInt(metadata.OwnerID, 10, 64)
+		if requesterPerms.CompanyID == nil || *requesterPerms.CompanyID != fileCompanyId {
+			return model.ErrCrossCompanyDenied // FILE_021: 403
+		}
+	} else if metadata.UploaderID != nil {
+		// 파일의 소유주가 유저인 경우: 업로더가 관리자와 같은 회사 소속인지 확인
+		uploaderPerms, err := s.authClient.GetUserPermissions(*metadata.UploaderID, cookie)
+		if err != nil || uploaderPerms.CompanyID == nil || requesterPerms.CompanyID == nil ||
+			*uploaderPerms.CompanyID != *requesterPerms.CompanyID {
+			return model.ErrCrossCompanyDenied // FILE_021: 403
+		}
 	}
 
 	// S3 Key 추출 (S3URL: https://domain/ownerType/ownerId/category/uuid.ext)

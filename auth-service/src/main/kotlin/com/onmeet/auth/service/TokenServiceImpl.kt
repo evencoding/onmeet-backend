@@ -2,8 +2,8 @@ package com.onmeet.auth.service
 
 import com.onmeet.auth.dto.TokenResponse
 import com.onmeet.auth.entity.RefreshToken
-import com.onmeet.auth.exception.InvalidTokenException
-import com.onmeet.auth.exception.UserNotFoundException
+import com.onmeet.common.exception.BusinessException
+import com.onmeet.common.exception.errorcode.AuthErrorCode
 import com.onmeet.auth.repository.jpa.UserRepository
 import com.onmeet.auth.repository.redis.RefreshTokenRepository
 import com.onmeet.auth.security.JwtTokenProvider
@@ -59,12 +59,14 @@ class TokenServiceImpl(
     @Transactional
     override fun refreshTokens(token: String): TokenResponse {
         val refreshTokenEntity = refreshTokenRepository.findByToken(token)
-            ?: throw InvalidTokenException("Invalid refresh token")
+            // TODO: [AUTH][AuthErrorCode.INVALID_REFRESH_TOKEN] 에러메시지 검수 요청
+            ?: throw BusinessException(AuthErrorCode.INVALID_REFRESH_TOKEN)
 
         refreshTokenRepository.delete(refreshTokenEntity)
 
         val user = userRepository.findByEmail(refreshTokenEntity.mobileOrEmail)
-            .orElseThrow { UserNotFoundException("User not found: ${refreshTokenEntity.mobileOrEmail}") }
+            // TODO: [AUTH][AuthErrorCode.USER_NOT_FOUND] 에러메시지 검수 요청
+            .orElseThrow { BusinessException(AuthErrorCode.USER_NOT_FOUND) }
 
         val authentication = UsernamePasswordAuthenticationToken(user, null, user.authorities)
         val newAccessToken = jwtTokenProvider.generateToken(authentication)

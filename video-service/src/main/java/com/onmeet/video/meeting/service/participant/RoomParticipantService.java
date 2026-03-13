@@ -1,7 +1,7 @@
 package com.onmeet.video.meeting.service.participant;
 
-import com.onmeet.video.common.exception.BizException;
-import com.onmeet.video.common.exception.ErrorCode;
+import com.onmeet.common.exception.BusinessException;
+import com.onmeet.common.exception.errorcode.VideoErrorCode;
 import com.onmeet.video.common.util.ClockProvider;
 import com.onmeet.video.infra.auth.AuthServiceClient;
 import com.onmeet.video.infra.livekit.LiveKitClient;
@@ -84,10 +84,11 @@ public class RoomParticipantService {
 
         RoomParticipant participant = participantRepository
                 .findByRoomIdAndUserIdAndStatus(roomId, targetUserId, ParticipantStatus.JOINED)
-                .orElseThrow(() -> new BizException(ErrorCode.NOT_FOUND, "Participant not found"));
+                .orElseThrow(() -> new BusinessException(VideoErrorCode.PARTICIPANT_NOT_FOUND));
 
         if (participant.getRole() == ParticipantRole.HOST) {
-            throw new BizException(ErrorCode.FORBIDDEN, "Cannot change the host's role");
+            // TODO: [VIDEO][VideoErrorCode.HOST_ROLE_CHANGE_DENIED] 에러메시지 검수 요청
+            throw new BusinessException(VideoErrorCode.HOST_ROLE_CHANGE_DENIED);
         }
 
         participant.updateRole(request.role());
@@ -100,12 +101,13 @@ public class RoomParticipantService {
         validateHostOrCoHost(roomId, room, requesterId);
 
         if (room.isHost(targetUserId)) {
-            throw new BizException(ErrorCode.FORBIDDEN, "Cannot kick the host");
+            // TODO: [VIDEO][VideoErrorCode.HOST_KICK_DENIED] 에러메시지 검수 요청
+            throw new BusinessException(VideoErrorCode.HOST_KICK_DENIED);
         }
 
         RoomParticipant participant = participantRepository
                 .findByRoomIdAndUserIdAndStatus(roomId, targetUserId, ParticipantStatus.JOINED)
-                .orElseThrow(() -> new BizException(ErrorCode.NOT_FOUND, "Participant not found"));
+                .orElseThrow(() -> new BusinessException(VideoErrorCode.PARTICIPANT_NOT_FOUND));
 
         Instant now = clockProvider.now();
         participant.kick(now);
@@ -123,7 +125,8 @@ public class RoomParticipantService {
 
         if (!participantRepository.existsByRoomIdAndUserIdAndStatusIn(
                 roomId, targetUserId, List.of(ParticipantStatus.JOINED))) {
-            throw new BizException(ErrorCode.NOT_FOUND, "Participant not found");
+            // TODO: [VIDEO][VideoErrorCode.PARTICIPANT_NOT_FOUND] 에러메시지 검수 요청
+            throw new BusinessException(VideoErrorCode.PARTICIPANT_NOT_FOUND);
         }
 
         liveKitClient.muteParticipantTrack(
@@ -137,7 +140,8 @@ public class RoomParticipantService {
 
         if (!participantRepository.existsByRoomIdAndUserIdAndStatusIn(
                 roomId, targetUserId, List.of(ParticipantStatus.JOINED))) {
-            throw new BizException(ErrorCode.NOT_FOUND, "Participant not found");
+            // TODO: [VIDEO][VideoErrorCode.PARTICIPANT_NOT_FOUND] 에러메시지 검수 요청
+            throw new BusinessException(VideoErrorCode.PARTICIPANT_NOT_FOUND);
         }
 
         liveKitClient.muteParticipantTrack(
@@ -205,11 +209,12 @@ public class RoomParticipantService {
 
         RoomParticipant participant = participantRepository
                 .findByRoomIdAndUserIdAndStatus(roomId, targetUserId, ParticipantStatus.WAITING)
-                .orElseThrow(() -> new BizException(ErrorCode.NOT_FOUND, "No waiting participant found"));
+                .orElseThrow(() -> new BusinessException(VideoErrorCode.WAITING_PARTICIPANT_NOT_FOUND));
 
         int currentCount = participantRepository.countActiveParticipants(roomId);
         if (currentCount >= room.getMaxParticipants()) {
-            throw new BizException(ErrorCode.INVALID_REQUEST, "Room is full");
+            // TODO: [VIDEO][VideoErrorCode.ROOM_FULL] 에러메시지 검수 요청
+            throw new BusinessException(VideoErrorCode.ROOM_FULL);
         }
 
         Instant now = clockProvider.now();
@@ -238,7 +243,7 @@ public class RoomParticipantService {
         // 대기실 수락 알림 (Kafka 비동기)
         notificationEventPublisher.publishNotification(
             new NotificationRequestDto(
-                targetUserId, "WAITING_ROOM_ADMITTED", "회의실 입장 수락",
+                targetUserId, null, "WAITING_ROOM_ADMITTED", "회의실 입장 수락",
                 "'" + room.getTitle() + "' 회의실 입장이 수락되었습니다.",
                 "/meeting/" + roomId, "MEETING", String.valueOf(roomId), requesterId
             )
@@ -252,7 +257,7 @@ public class RoomParticipantService {
 
         RoomParticipant participant = participantRepository
                 .findByRoomIdAndUserIdAndStatus(roomId, targetUserId, ParticipantStatus.WAITING)
-                .orElseThrow(() -> new BizException(ErrorCode.NOT_FOUND, "No waiting participant found"));
+                .orElseThrow(() -> new BusinessException(VideoErrorCode.WAITING_PARTICIPANT_NOT_FOUND));
 
         Instant now = clockProvider.now();
         participant.kick(now);
@@ -262,7 +267,7 @@ public class RoomParticipantService {
         // 대기실 거절 알림 (Kafka 비동기)
         notificationEventPublisher.publishNotification(
             new NotificationRequestDto(
-                targetUserId, "WAITING_ROOM_REJECTED", "회의실 입장 거절",
+                targetUserId, null, "WAITING_ROOM_REJECTED", "회의실 입장 거절",
                 "'" + room.getTitle() + "' 회의실 입장이 거절되었습니다.",
                 null, "MEETING", String.valueOf(roomId), requesterId
             )
@@ -338,7 +343,7 @@ public class RoomParticipantService {
 
     private MeetingRoom findRoom(Long roomId) {
         return roomRepository.findById(roomId)
-                .orElseThrow(() -> new BizException(ErrorCode.NOT_FOUND, "Room not found"));
+                .orElseThrow(() -> new BusinessException(VideoErrorCode.ROOM_NOT_FOUND));
     }
 
     private void validateHostOrCoHost(Long roomId, MeetingRoom room, Long userId) {
@@ -347,8 +352,7 @@ public class RoomParticipantService {
         }
         participantRepository.findByRoomIdAndUserIdAndStatus(roomId, userId, ParticipantStatus.JOINED)
                 .filter(p -> p.getRole() == ParticipantRole.CO_HOST)
-                .orElseThrow(
-                        () -> new BizException(ErrorCode.FORBIDDEN, "Only host or co-host can perform this action"));
+                .orElseThrow(() -> new BusinessException(VideoErrorCode.HOST_OR_COHOST_ONLY));
     }
 
     private RoomParticipantResponse toResponse(RoomParticipant p) {

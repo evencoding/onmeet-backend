@@ -20,21 +20,21 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 @Tag(name = "AI", description = "AI 관련 서비스 API")
 public class AiController {
 
-    @Operation(summary = "AI 서비스 상태/정보 조회", description = "AI 서비스의 상태 및 내 정보를 조회합니다.")
+    @Operation(summary = "AI 서비스 상태/정보 조회", description = "AI 서비스의 상태 및 인증된 사용자 정보를 조회합니다.")
     @ApiResponses(value = {
-        @ApiResponse(
-            responseCode = "200",
-            description = "AI 서비스 상태 조회 성공 - 사용자 ID와 서비스 상태 반환"
-        ),
+        @ApiResponse(responseCode = "200", description = "AI 서비스 상태 조회 성공 - 사용자 ID와 서비스 상태 반환"),
         @ApiResponse(
             responseCode = "401",
-            description = "인증 실패 - 로그인이 필요합니다",
+            description = "인증 실패 - 유효한 JWT 토큰이 없거나 만료된 경우",
             content = @Content(
                 mediaType = "application/json",
                 schema = @Schema(implementation = ErrorResponse.class),
-                examples = @ExampleObject(
-                    value = "{\"status\": 401, \"message\": \"Authentication failed\", \"timestamp\": 1234567890}"
-                )
+                examples = {
+                    @ExampleObject(name = "GATEWAY_001 - 토큰 없음",
+                        value = "{\"code\":\"GATEWAY_001\",\"status\":401,\"message\":\"인증 토큰이 없습니다.\",\"timestamp\":1710000000000}"),
+                    @ExampleObject(name = "GATEWAY_002 - 토큰 만료",
+                        value = "{\"code\":\"GATEWAY_002\",\"status\":401,\"message\":\"토큰이 만료되었습니다.\",\"timestamp\":1710000000000}")
+                }
             )
         ),
         @ApiResponse(
@@ -44,7 +44,7 @@ public class AiController {
                 mediaType = "application/json",
                 schema = @Schema(implementation = ErrorResponse.class),
                 examples = @ExampleObject(
-                    value = "{\"status\": 500, \"message\": \"Internal server error occurred\", \"timestamp\": 1234567890}"
+                    value = "{\"code\":\"INTERNAL_ERROR\",\"status\":500,\"message\":\"서버 내부 오류가 발생했습니다\",\"timestamp\":1710000000000}"
                 )
             )
         )

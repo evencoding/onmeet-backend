@@ -19,21 +19,19 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 @Tag(name = "Email", description = "이메일 전송 관련 서비스 API")
 public class EmailController {
 
-    @Operation(summary = "이메일 서비스 헬스 체크", description = "이메일 서비스의 동작 상태를 확인합니다.")
+    @Operation(
+        summary = "이메일 서비스 헬스 체크",
+        description = "이메일 서비스의 동작 상태를 확인합니다. 정상 동작 중이면 \"Email Service is running\" 문자열을 반환합니다."
+    )
     @ApiResponses(value = {
-        @ApiResponse(
-            responseCode = "200",
-            description = "이메일 서비스 정상 동작 중"
-        ),
+        @ApiResponse(responseCode = "200", description = "이메일 서비스 정상 동작 중"),
         @ApiResponse(
             responseCode = "500",
             description = "서버 내부 오류",
             content = @Content(
                 mediaType = "application/json",
                 schema = @Schema(implementation = ErrorResponse.class),
-                examples = @ExampleObject(
-                    value = "{\"status\": 500, \"message\": \"Internal server error occurred\", \"timestamp\": 1234567890}"
-                )
+                examples = @ExampleObject(value = "{\"code\":\"COMMON_INTERNAL_ERROR\",\"status\":500,\"message\":\"서버 내부 오류가 발생했습니다\",\"timestamp\":1710000000000}")
             )
         )
     })

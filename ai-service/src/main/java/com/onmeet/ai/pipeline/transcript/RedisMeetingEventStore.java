@@ -3,6 +3,8 @@ package com.onmeet.ai.pipeline.transcript;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.onmeet.ai.dto.event.ChatMessageEvent;
 import com.onmeet.ai.dto.event.VoiceSegmentCreatedEvent;
+import com.onmeet.common.exception.BusinessException;
+import com.onmeet.common.exception.errorcode.AiErrorCode;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import org.springframework.data.redis.core.StringRedisTemplate;
@@ -54,7 +56,8 @@ public class RedisMeetingEventStore {
             redis.opsForZSet().add(eventsKey(e.getRoomId()), member, (double) e.getTimestamp().toEpochMilli());
             touchTtl(e.getRoomId());
         } catch (Exception ex) {
-            throw new IllegalStateException("failed to append chat to redis", ex);
+            // TODO: [AI][AiErrorCode.REDIS_CHAT_SAVE_FAILED] 에러메시지 검수 요청
+            throw new BusinessException(AiErrorCode.REDIS_CHAT_SAVE_FAILED);
         }
     }
 
@@ -75,7 +78,8 @@ public class RedisMeetingEventStore {
             redis.opsForZSet().add(eventsKey(e.getRoomId()), member, (double) score);
             touchTtl(e.getRoomId());
         } catch (Exception ex) {
-            throw new IllegalStateException("failed to append voice to redis", ex);
+            // TODO: [AI][AiErrorCode.REDIS_VOICE_SAVE_FAILED] 에러메시지 검수 요청
+            throw new BusinessException(AiErrorCode.REDIS_VOICE_SAVE_FAILED);
         }
     }
 

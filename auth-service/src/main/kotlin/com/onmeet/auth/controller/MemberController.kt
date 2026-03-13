@@ -54,7 +54,7 @@ class MemberController(
                 mediaType = "application/json",
                 schema = Schema(implementation = ErrorResponse::class),
                 examples = [ExampleObject(
-                    value = """{"status": 401, "message": "Authentication failed", "timestamp": 1234567890}"""
+                    value = """{"code":"AUTH_004","status":401,"message":"인증에 실패했습니다","timestamp":1710000000000}"""
                 )]
             )]
         ),
@@ -65,7 +65,7 @@ class MemberController(
                 mediaType = "application/json",
                 schema = Schema(implementation = ErrorResponse::class),
                 examples = [ExampleObject(
-                    value = """{"status": 500, "message": "Internal server error occurred", "timestamp": 1234567890}"""
+                    value = """{"code":"COMMON_INTERNAL_ERROR","status":500,"message":"서버 내부 오류가 발생했습니다","timestamp":1710000000000}"""
                 )]
             )]
         )
@@ -96,7 +96,7 @@ class MemberController(
                 mediaType = "application/json",
                 schema = Schema(implementation = ErrorResponse::class),
                 examples = [ExampleObject(
-                    value = """{"status": 400, "message": "Validation failed: name: must not be blank", "timestamp": 1234567890}"""
+                    value = """{"code":"COMMON_VALIDATION_FAILED","status":400,"message":"입력값 검증 실패: name: 필수 항목입니다","timestamp":1710000000000}"""
                 )]
             )]
         ),
@@ -107,7 +107,7 @@ class MemberController(
                 mediaType = "application/json",
                 schema = Schema(implementation = ErrorResponse::class),
                 examples = [ExampleObject(
-                    value = """{"status": 401, "message": "Authentication failed", "timestamp": 1234567890}"""
+                    value = """{"code":"AUTH_004","status":401,"message":"인증에 실패했습니다","timestamp":1710000000000}"""
                 )]
             )]
         ),
@@ -118,7 +118,7 @@ class MemberController(
                 mediaType = "application/json",
                 schema = Schema(implementation = ErrorResponse::class),
                 examples = [ExampleObject(
-                    value = """{"status": 500, "message": "Internal server error occurred", "timestamp": 1234567890}"""
+                    value = """{"code":"COMMON_INTERNAL_ERROR","status":500,"message":"서버 내부 오류가 발생했습니다","timestamp":1710000000000}"""
                 )]
             )]
         )
@@ -144,7 +144,7 @@ class MemberController(
                 mediaType = "application/json",
                 schema = Schema(implementation = ErrorResponse::class),
                 examples = [ExampleObject(
-                    value = """{"status": 400, "message": "Current password is incorrect", "timestamp": 1234567890}"""
+                    value = """{"code":"AUTH_010","status":401,"message":"현재 비밀번호가 일치하지 않습니다","timestamp":1710000000000}"""
                 )]
             )]
         ),
@@ -155,7 +155,7 @@ class MemberController(
                 mediaType = "application/json",
                 schema = Schema(implementation = ErrorResponse::class),
                 examples = [ExampleObject(
-                    value = """{"status": 401, "message": "Authentication failed", "timestamp": 1234567890}"""
+                    value = """{"code":"AUTH_004","status":401,"message":"인증에 실패했습니다","timestamp":1710000000000}"""
                 )]
             )]
         ),
@@ -166,7 +166,7 @@ class MemberController(
                 mediaType = "application/json",
                 schema = Schema(implementation = ErrorResponse::class),
                 examples = [ExampleObject(
-                    value = """{"status": 500, "message": "Internal server error occurred", "timestamp": 1234567890}"""
+                    value = """{"code":"COMMON_INTERNAL_ERROR","status":500,"message":"서버 내부 오류가 발생했습니다","timestamp":1710000000000}"""
                 )]
             )]
         )
@@ -197,7 +197,7 @@ class MemberController(
                 mediaType = "application/json",
                 schema = Schema(implementation = ErrorResponse::class),
                 examples = [ExampleObject(
-                    value = """{"status": 401, "message": "Authentication failed", "timestamp": 1234567890}"""
+                    value = """{"code":"AUTH_004","status":401,"message":"인증에 실패했습니다","timestamp":1710000000000}"""
                 )]
             )]
         ),
@@ -208,7 +208,7 @@ class MemberController(
                 mediaType = "application/json",
                 schema = Schema(implementation = ErrorResponse::class),
                 examples = [ExampleObject(
-                    value = """{"status": 500, "message": "Internal server error occurred", "timestamp": 1234567890}"""
+                    value = """{"code":"COMMON_INTERNAL_ERROR","status":500,"message":"서버 내부 오류가 발생했습니다","timestamp":1710000000000}"""
                 )]
             )]
         )
@@ -232,7 +232,7 @@ class MemberController(
                 mediaType = "application/json",
                 schema = Schema(implementation = ErrorResponse::class),
                 examples = [ExampleObject(
-                    value = """{"status": 400, "message": "Password is incorrect", "timestamp": 1234567890}"""
+                    value = """{"code":"AUTH_009","status":401,"message":"비밀번호가 일치하지 않습니다","timestamp":1710000000000}"""
                 )]
             )]
         ),
@@ -243,7 +243,7 @@ class MemberController(
                 mediaType = "application/json",
                 schema = Schema(implementation = ErrorResponse::class),
                 examples = [ExampleObject(
-                    value = """{"status": 401, "message": "Authentication failed", "timestamp": 1234567890}"""
+                    value = """{"code":"AUTH_004","status":401,"message":"인증에 실패했습니다","timestamp":1710000000000}"""
                 )]
             )]
         ),
@@ -254,7 +254,7 @@ class MemberController(
                 mediaType = "application/json",
                 schema = Schema(implementation = ErrorResponse::class),
                 examples = [ExampleObject(
-                    value = """{"status": 500, "message": "Internal server error occurred", "timestamp": 1234567890}"""
+                    value = """{"code":"COMMON_INTERNAL_ERROR","status":500,"message":"서버 내부 오류가 발생했습니다","timestamp":1710000000000}"""
                 )]
             )]
         )
@@ -285,7 +285,7 @@ class MemberController(
                 mediaType = "application/json",
                 schema = Schema(implementation = ErrorResponse::class),
                 examples = [ExampleObject(
-                    value = """{"status": 401, "message": "Authentication failed", "timestamp": 1234567890}"""
+                    value = """{"code":"AUTH_004","status":401,"message":"인증에 실패했습니다","timestamp":1710000000000}"""
                 )]
             )]
         ),
@@ -296,7 +296,7 @@ class MemberController(
                 mediaType = "application/json",
                 schema = Schema(implementation = ErrorResponse::class),
                 examples = [ExampleObject(
-                    value = """{"status": 404, "message": "User not found", "timestamp": 1234567890}"""
+                    value = """{"code":"AUTH_006","status":404,"message":"해당 사용자를 찾을 수 없습니다","timestamp":1710000000000}"""
                 )]
             )]
         ),
@@ -307,7 +307,7 @@ class MemberController(
                 mediaType = "application/json",
                 schema = Schema(implementation = ErrorResponse::class),
                 examples = [ExampleObject(
-                    value = """{"status": 500, "message": "Internal server error occurred", "timestamp": 1234567890}"""
+                    value = """{"code":"COMMON_INTERNAL_ERROR","status":500,"message":"서버 내부 오류가 발생했습니다","timestamp":1710000000000}"""
                 )]
             )]
         )
@@ -336,7 +336,7 @@ class MemberController(
                 mediaType = "application/json",
                 schema = Schema(implementation = ErrorResponse::class),
                 examples = [ExampleObject(
-                    value = """{"status": 400, "message": "Validation failed: name: must not be blank", "timestamp": 1234567890}"""
+                    value = """{"code":"COMMON_VALIDATION_FAILED","status":400,"message":"입력값 검증 실패: name: 필수 항목입니다","timestamp":1710000000000}"""
                 )]
             )]
         ),
@@ -347,7 +347,7 @@ class MemberController(
                 mediaType = "application/json",
                 schema = Schema(implementation = ErrorResponse::class),
                 examples = [ExampleObject(
-                    value = """{"status": 401, "message": "Authentication failed", "timestamp": 1234567890}"""
+                    value = """{"code":"AUTH_004","status":401,"message":"인증에 실패했습니다","timestamp":1710000000000}"""
                 )]
             )]
         ),
@@ -358,7 +358,7 @@ class MemberController(
                 mediaType = "application/json",
                 schema = Schema(implementation = ErrorResponse::class),
                 examples = [ExampleObject(
-                    value = """{"status": 409, "message": "Team already exists", "timestamp": 1234567890}"""
+                    value = """{"code":"AUTH_019","status":409,"message":"이미 같은 이름의 팀이 존재합니다","timestamp":1710000000000}"""
                 )]
             )]
         ),
@@ -369,7 +369,7 @@ class MemberController(
                 mediaType = "application/json",
                 schema = Schema(implementation = ErrorResponse::class),
                 examples = [ExampleObject(
-                    value = """{"status": 500, "message": "Internal server error occurred", "timestamp": 1234567890}"""
+                    value = """{"code":"COMMON_INTERNAL_ERROR","status":500,"message":"서버 내부 오류가 발생했습니다","timestamp":1710000000000}"""
                 )]
             )]
         )
@@ -394,7 +394,7 @@ class MemberController(
                 mediaType = "application/json",
                 schema = Schema(implementation = ErrorResponse::class),
                 examples = [ExampleObject(
-                    value = """{"status": 400, "message": "User is not a member of this team", "timestamp": 1234567890}"""
+                    value = """{"code":"AUTH_030","status":400,"message":"위임할 팀장은 같은 회사에 속해야 합니다","timestamp":1710000000000}"""
                 )]
             )]
         ),
@@ -405,7 +405,7 @@ class MemberController(
                 mediaType = "application/json",
                 schema = Schema(implementation = ErrorResponse::class),
                 examples = [ExampleObject(
-                    value = """{"status": 401, "message": "Authentication failed", "timestamp": 1234567890}"""
+                    value = """{"code":"AUTH_004","status":401,"message":"인증에 실패했습니다","timestamp":1710000000000}"""
                 )]
             )]
         ),
@@ -416,7 +416,7 @@ class MemberController(
                 mediaType = "application/json",
                 schema = Schema(implementation = ErrorResponse::class),
                 examples = [ExampleObject(
-                    value = """{"status": 403, "message": "Access denied", "timestamp": 1234567890}"""
+                    value = """{"code":"COMMON_ACCESS_DENIED","status":403,"message":"접근이 거부되었습니다","timestamp":1710000000000}"""
                 )]
             )]
         ),
@@ -427,7 +427,7 @@ class MemberController(
                 mediaType = "application/json",
                 schema = Schema(implementation = ErrorResponse::class),
                 examples = [ExampleObject(
-                    value = """{"status": 404, "message": "Team not found", "timestamp": 1234567890}"""
+                    value = """{"code":"AUTH_025","status":404,"message":"해당 팀을 찾을 수 없습니다","timestamp":1710000000000}"""
                 )]
             )]
         ),
@@ -438,7 +438,7 @@ class MemberController(
                 mediaType = "application/json",
                 schema = Schema(implementation = ErrorResponse::class),
                 examples = [ExampleObject(
-                    value = """{"status": 500, "message": "Internal server error occurred", "timestamp": 1234567890}"""
+                    value = """{"code":"COMMON_INTERNAL_ERROR","status":500,"message":"서버 내부 오류가 발생했습니다","timestamp":1710000000000}"""
                 )]
             )]
         )
@@ -465,7 +465,7 @@ class MemberController(
                 mediaType = "application/json",
                 schema = Schema(implementation = ErrorResponse::class),
                 examples = [ExampleObject(
-                    value = """{"status": 401, "message": "Authentication failed", "timestamp": 1234567890}"""
+                    value = """{"code":"AUTH_004","status":401,"message":"인증에 실패했습니다","timestamp":1710000000000}"""
                 )]
             )]
         ),
@@ -476,7 +476,7 @@ class MemberController(
                 mediaType = "application/json",
                 schema = Schema(implementation = ErrorResponse::class),
                 examples = [ExampleObject(
-                    value = """{"status": 403, "message": "Access denied", "timestamp": 1234567890}"""
+                    value = """{"code":"COMMON_ACCESS_DENIED","status":403,"message":"접근이 거부되었습니다","timestamp":1710000000000}"""
                 )]
             )]
         ),
@@ -487,7 +487,7 @@ class MemberController(
                 mediaType = "application/json",
                 schema = Schema(implementation = ErrorResponse::class),
                 examples = [ExampleObject(
-                    value = """{"status": 404, "message": "Team not found", "timestamp": 1234567890}"""
+                    value = """{"code":"AUTH_025","status":404,"message":"해당 팀을 찾을 수 없습니다","timestamp":1710000000000}"""
                 )]
             )]
         ),
@@ -498,7 +498,7 @@ class MemberController(
                 mediaType = "application/json",
                 schema = Schema(implementation = ErrorResponse::class),
                 examples = [ExampleObject(
-                    value = """{"status": 500, "message": "Internal server error occurred", "timestamp": 1234567890}"""
+                    value = """{"code":"COMMON_INTERNAL_ERROR","status":500,"message":"서버 내부 오류가 발생했습니다","timestamp":1710000000000}"""
                 )]
             )]
         )
@@ -524,7 +524,7 @@ class MemberController(
                 mediaType = "application/json",
                 schema = Schema(implementation = ErrorResponse::class),
                 examples = [ExampleObject(
-                    value = """{"status": 400, "message": "Team is already approved", "timestamp": 1234567890}"""
+                    value = """{"code":"AUTH_033","status":400,"message":"승인 대기 중인 팀 요청만 취소할 수 있습니다","timestamp":1710000000000}"""
                 )]
             )]
         ),
@@ -535,7 +535,7 @@ class MemberController(
                 mediaType = "application/json",
                 schema = Schema(implementation = ErrorResponse::class),
                 examples = [ExampleObject(
-                    value = """{"status": 401, "message": "Authentication failed", "timestamp": 1234567890}"""
+                    value = """{"code":"AUTH_004","status":401,"message":"인증에 실패했습니다","timestamp":1710000000000}"""
                 )]
             )]
         ),
@@ -546,7 +546,7 @@ class MemberController(
                 mediaType = "application/json",
                 schema = Schema(implementation = ErrorResponse::class),
                 examples = [ExampleObject(
-                    value = """{"status": 403, "message": "Access denied", "timestamp": 1234567890}"""
+                    value = """{"code":"COMMON_ACCESS_DENIED","status":403,"message":"접근이 거부되었습니다","timestamp":1710000000000}"""
                 )]
             )]
         ),
@@ -557,7 +557,7 @@ class MemberController(
                 mediaType = "application/json",
                 schema = Schema(implementation = ErrorResponse::class),
                 examples = [ExampleObject(
-                    value = """{"status": 404, "message": "Team not found", "timestamp": 1234567890}"""
+                    value = """{"code":"AUTH_025","status":404,"message":"해당 팀을 찾을 수 없습니다","timestamp":1710000000000}"""
                 )]
             )]
         ),
@@ -568,7 +568,7 @@ class MemberController(
                 mediaType = "application/json",
                 schema = Schema(implementation = ErrorResponse::class),
                 examples = [ExampleObject(
-                    value = """{"status": 500, "message": "Internal server error occurred", "timestamp": 1234567890}"""
+                    value = """{"code":"COMMON_INTERNAL_ERROR","status":500,"message":"서버 내부 오류가 발생했습니다","timestamp":1710000000000}"""
                 )]
             )]
         )
@@ -597,7 +597,7 @@ class MemberController(
                 mediaType = "application/json",
                 schema = Schema(implementation = ErrorResponse::class),
                 examples = [ExampleObject(
-                    value = """{"status": 401, "message": "Authentication failed", "timestamp": 1234567890}"""
+                    value = """{"code":"AUTH_004","status":401,"message":"인증에 실패했습니다","timestamp":1710000000000}"""
                 )]
             )]
         ),
@@ -608,7 +608,7 @@ class MemberController(
                 mediaType = "application/json",
                 schema = Schema(implementation = ErrorResponse::class),
                 examples = [ExampleObject(
-                    value = """{"status": 500, "message": "Internal server error occurred", "timestamp": 1234567890}"""
+                    value = """{"code":"COMMON_INTERNAL_ERROR","status":500,"message":"서버 내부 오류가 발생했습니다","timestamp":1710000000000}"""
                 )]
             )]
         )

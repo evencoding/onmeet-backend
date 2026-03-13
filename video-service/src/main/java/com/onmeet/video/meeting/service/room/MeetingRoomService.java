@@ -1,7 +1,7 @@
 package com.onmeet.video.meeting.service.room;
 
-import com.onmeet.video.common.exception.BizException;
-import com.onmeet.video.common.exception.ErrorCode;
+import com.onmeet.common.exception.BusinessException;
+import com.onmeet.common.exception.errorcode.VideoErrorCode;
 import com.onmeet.video.common.util.ClockProvider;
 import com.onmeet.video.infra.auth.AuthServiceClient;
 import com.onmeet.video.infra.livekit.LiveKitClient;
@@ -109,10 +109,12 @@ public class MeetingRoomService {
         // Validate team existence and creator's membership when access scope is TEAM
         if (accessScope == RoomAccessScope.TEAM && request.teamId() != null) {
             if (!authServiceClient.teamExists(request.teamId())) {
-                throw new BizException(ErrorCode.NOT_FOUND, "Team not found: " + request.teamId());
+                // TODO: [VIDEO][VideoErrorCode.TEAM_NOT_FOUND] 에러메시지 검수 요청
+                throw new BusinessException(VideoErrorCode.TEAM_NOT_FOUND);
             }
             if (!authServiceClient.isTeamMember(request.teamId(), hostUserId)) {
-                throw new BizException(ErrorCode.FORBIDDEN, "Host must be a member of the team");
+                // TODO: [VIDEO][VideoErrorCode.HOST_NOT_TEAM_MEMBER] 에러메시지 검수 요청
+                throw new BusinessException(VideoErrorCode.HOST_NOT_TEAM_MEMBER);
             }
         }
 
@@ -172,7 +174,8 @@ public class MeetingRoomService {
         validateHost(room, userId);
 
         if (room.isActive()) {
-            throw new BizException(ErrorCode.INVALID_REQUEST, "Cannot delete an active room");
+            // TODO: [VIDEO][VideoErrorCode.ACTIVE_ROOM_DELETE_DENIED] 에러메시지 검수 요청
+            throw new BusinessException(VideoErrorCode.ACTIVE_ROOM_DELETE_DENIED);
         }
 
         liveKitClient.deleteRoom(room.getLivekitRoomName());
@@ -182,7 +185,7 @@ public class MeetingRoomService {
     @Transactional(readOnly = true)
     public MeetingRoomResponse findByCode(String roomCode) {
         MeetingRoom room = roomRepository.findByRoomCode(roomCode)
-                .orElseThrow(() -> new BizException(ErrorCode.NOT_FOUND, "Room not found with code: " + roomCode));
+                .orElseThrow(() -> new BusinessException(VideoErrorCode.ROOM_CODE_NOT_FOUND));
         return toResponse(room);
     }
 
@@ -202,31 +205,36 @@ public class MeetingRoomService {
         MeetingRoom room = findRoom(roomId);
 
         if (room.isEnded()) {
-            throw new BizException(ErrorCode.INVALID_REQUEST, "Room has already ended");
+            // TODO: [VIDEO][VideoErrorCode.ROOM_ALREADY_ENDED] 에러메시지 검수 요청
+            throw new BusinessException(VideoErrorCode.ROOM_ALREADY_ENDED);
         }
 
         boolean alreadyJoined = participantRepository.existsByRoomIdAndUserIdAndStatusIn(
                 roomId, userId, List.of(ParticipantStatus.JOINED, ParticipantStatus.WAITING));
         if (alreadyJoined) {
-            throw new BizException(ErrorCode.CONFLICT, "Already joined this room");
+            // TODO: [VIDEO][VideoErrorCode.ALREADY_JOINED] 에러메시지 검수 요청
+            throw new BusinessException(VideoErrorCode.ALREADY_JOINED);
         }
 
         // Validate participant's team membership when access scope is TEAM
         if (room.getAccessScope() == RoomAccessScope.TEAM && room.getTeamId() != null && !room.isHost(userId)) {
             if (!authServiceClient.isTeamMember(room.getTeamId(), userId)) {
-                throw new BizException(ErrorCode.FORBIDDEN, "Only team members can join this room");
+                // TODO: [VIDEO][VideoErrorCode.NOT_TEAM_MEMBER] 에러메시지 검수 요청
+                throw new BusinessException(VideoErrorCode.NOT_TEAM_MEMBER);
             }
         }
 
         if (room.isLocked() && !room.isHost(userId)) {
             if (request == null || request.password() == null || !request.password().equals(room.getPassword())) {
-                throw new BizException(ErrorCode.FORBIDDEN, "Incorrect room password");
+                // TODO: [VIDEO][VideoErrorCode.WRONG_PASSWORD] 에러메시지 검수 요청
+                throw new BusinessException(VideoErrorCode.WRONG_PASSWORD);
             }
         }
 
         int currentCount = participantRepository.countActiveParticipants(roomId);
         if (currentCount >= room.getMaxParticipants()) {
-            throw new BizException(ErrorCode.INVALID_REQUEST, "Room is full");
+            // TODO: [VIDEO][VideoErrorCode.ROOM_FULL] 에러메시지 검수 요청
+            throw new BusinessException(VideoErrorCode.ROOM_FULL);
         }
 
         RoomSettings settings = settingsRepository.findByRoomId(roomId).orElse(null);
@@ -269,7 +277,7 @@ public class MeetingRoomService {
         RoomParticipant participant = participantRepository
                 .findByRoomIdAndUserIdAndStatusIn(roomId, userId,
                         List.of(ParticipantStatus.JOINED, ParticipantStatus.WAITING))
-                .orElseThrow(() -> new BizException(ErrorCode.NOT_FOUND, "Not a participant of this room"));
+                .orElseThrow(() -> new BusinessException(VideoErrorCode.NOT_A_PARTICIPANT));
 
         boolean wasWaiting = participant.isWaiting();
         Instant now = clockProvider.now();
@@ -291,7 +299,8 @@ public class MeetingRoomService {
         validateHost(room, userId);
 
         if (!room.isWaiting()) {
-            throw new BizException(ErrorCode.INVALID_REQUEST, "Room can only be started from WAITING status");
+            // TODO: [VIDEO][VideoErrorCode.ROOM_NOT_WAITING] 에러메시지 검수 요청
+            throw new BusinessException(VideoErrorCode.ROOM_NOT_WAITING);
         }
 
         Instant now = clockProvider.now();
@@ -310,7 +319,8 @@ public class MeetingRoomService {
         validateHost(room, userId);
 
         if (!room.isActive()) {
-            throw new BizException(ErrorCode.INVALID_REQUEST, "Room is not active");
+            // TODO: [VIDEO][VideoErrorCode.ROOM_NOT_ACTIVE] 에러메시지 검수 요청
+            throw new BusinessException(VideoErrorCode.ROOM_NOT_ACTIVE);
         }
 
         Instant now = clockProvider.now();
@@ -357,7 +367,7 @@ public class MeetingRoomService {
     public RoomSettingsResponse getSettings(Long roomId) {
         findRoom(roomId);
         RoomSettings settings = settingsRepository.findByRoomId(roomId)
-                .orElseThrow(() -> new BizException(ErrorCode.NOT_FOUND, "Room settings not found"));
+                .orElseThrow(() -> new BusinessException(VideoErrorCode.SETTINGS_NOT_FOUND));
         return toSettingsResponse(settings);
     }
 
@@ -367,7 +377,7 @@ public class MeetingRoomService {
         validateHostOrCoHost(roomId, room, userId);
 
         RoomSettings settings = settingsRepository.findByRoomId(roomId)
-                .orElseThrow(() -> new BizException(ErrorCode.NOT_FOUND, "Room settings not found"));
+                .orElseThrow(() -> new BusinessException(VideoErrorCode.SETTINGS_NOT_FOUND));
 
         settings.update(
                 request.videoEnabled(),
@@ -387,7 +397,8 @@ public class MeetingRoomService {
         validateHost(room, userId);
 
         if (tagRepository.findByRoomIdAndTagName(roomId, request.tagName()).isPresent()) {
-            throw new BizException(ErrorCode.CONFLICT, "Tag already exists");
+            // TODO: [VIDEO][VideoErrorCode.TAG_ALREADY_EXISTS] 에러메시지 검수 요청
+            throw new BusinessException(VideoErrorCode.TAG_ALREADY_EXISTS);
         }
 
         tagRepository.save(new RoomTag(room, request.tagName()));
@@ -399,7 +410,7 @@ public class MeetingRoomService {
         validateHost(room, userId);
 
         RoomTag tag = tagRepository.findByRoomIdAndTagName(roomId, tagName)
-                .orElseThrow(() -> new BizException(ErrorCode.NOT_FOUND, "Tag not found"));
+                .orElseThrow(() -> new BusinessException(VideoErrorCode.TAG_NOT_FOUND));
 
         tagRepository.delete(tag);
     }
@@ -416,7 +427,8 @@ public class MeetingRoomService {
     public void addFavorite(Long roomId, Long userId) {
         MeetingRoom room = findRoom(roomId);
         if (favoriteRepository.existsByUserIdAndRoomId(userId, roomId)) {
-            throw new BizException(ErrorCode.CONFLICT, "Already favorited");
+            // TODO: [VIDEO][VideoErrorCode.FAVORITE_ALREADY_EXISTS] 에러메시지 검수 요청
+            throw new BusinessException(VideoErrorCode.FAVORITE_ALREADY_EXISTS);
         }
         favoriteRepository.save(new RoomFavorite(userId, room));
     }
@@ -424,7 +436,7 @@ public class MeetingRoomService {
     @Transactional
     public void removeFavorite(Long roomId, Long userId) {
         RoomFavorite favorite = favoriteRepository.findByUserIdAndRoomId(userId, roomId)
-                .orElseThrow(() -> new BizException(ErrorCode.NOT_FOUND, "Favorite not found"));
+                .orElseThrow(() -> new BusinessException(VideoErrorCode.FAVORITE_NOT_FOUND));
         favoriteRepository.delete(favorite);
     }
 
@@ -445,10 +457,12 @@ public class MeetingRoomService {
         // Validate team existence and creator's membership when access scope is TEAM
         if (accessScope == RoomAccessScope.TEAM && request.teamId() != null) {
             if (!authServiceClient.teamExists(request.teamId())) {
-                throw new BizException(ErrorCode.NOT_FOUND, "Team not found: " + request.teamId());
+                // TODO: [VIDEO][VideoErrorCode.TEAM_NOT_FOUND] 에러메시지 검수 요청
+                throw new BusinessException(VideoErrorCode.TEAM_NOT_FOUND);
             }
             if (!authServiceClient.isTeamMember(request.teamId(), userId)) {
-                throw new BizException(ErrorCode.FORBIDDEN, "Host must be a member of the team");
+                // TODO: [VIDEO][VideoErrorCode.HOST_NOT_TEAM_MEMBER] 에러메시지 검수 요청
+                throw new BusinessException(VideoErrorCode.HOST_NOT_TEAM_MEMBER);
             }
         }
 
@@ -490,13 +504,16 @@ public class MeetingRoomService {
         validateHost(room, userId);
 
         if (room.getType() != RoomType.SCHEDULED) {
-            throw new BizException(ErrorCode.INVALID_REQUEST, "Only scheduled rooms can update schedule");
+            // TODO: [VIDEO][VideoErrorCode.NOT_SCHEDULED_ROOM] 에러메시지 검수 요청
+            throw new BusinessException(VideoErrorCode.NOT_SCHEDULED_ROOM);
         }
         if (!room.isWaiting()) {
-            throw new BizException(ErrorCode.INVALID_REQUEST, "Cannot update schedule of a started or ended room");
+            // TODO: [VIDEO][VideoErrorCode.SCHEDULE_CHANGE_DENIED] 에러메시지 검수 요청
+            throw new BusinessException(VideoErrorCode.SCHEDULE_CHANGE_DENIED);
         }
         if (scheduledAt.isBefore(clockProvider.now())) {
-            throw new BizException(ErrorCode.INVALID_REQUEST, "Scheduled time must be in the future");
+            // TODO: [VIDEO][VideoErrorCode.SCHEDULE_PAST_TIME] 에러메시지 검수 요청
+            throw new BusinessException(VideoErrorCode.SCHEDULE_PAST_TIME);
         }
 
         validateNoScheduleConflict(room.getHostUserId(), scheduledAt, roomId);
@@ -511,7 +528,8 @@ public class MeetingRoomService {
         validateHost(room, userId);
 
         if (!room.isWaiting()) {
-            throw new BizException(ErrorCode.INVALID_REQUEST, "Cannot cancel a started or ended room");
+            // TODO: [VIDEO][VideoErrorCode.CANCEL_DENIED] 에러메시지 검수 요청
+            throw new BusinessException(VideoErrorCode.CANCEL_DENIED);
         }
 
         room.cancel();
@@ -633,10 +651,12 @@ public class MeetingRoomService {
         validateHost(room, userId);
 
         if (room.getType() != RoomType.SCHEDULED) {
-            throw new BizException(ErrorCode.INVALID_REQUEST, "Only scheduled rooms can send reminders");
+            // TODO: [VIDEO][VideoErrorCode.REMINDER_NOT_SCHEDULED] 에러메시지 검수 요청
+            throw new BusinessException(VideoErrorCode.REMINDER_NOT_SCHEDULED);
         }
         if (room.isEnded()) {
-            throw new BizException(ErrorCode.INVALID_REQUEST, "Cannot send reminder for an ended room");
+            // TODO: [VIDEO][VideoErrorCode.REMINDER_ROOM_ENDED] 에러메시지 검수 요청
+            throw new BusinessException(VideoErrorCode.REMINDER_ROOM_ENDED);
         }
 
         eventPublisher.publishMeetingStarted(
@@ -645,12 +665,13 @@ public class MeetingRoomService {
 
     private MeetingRoom findRoom(Long roomId) {
         return roomRepository.findById(roomId)
-                .orElseThrow(() -> new BizException(ErrorCode.NOT_FOUND, "Room not found"));
+                .orElseThrow(() -> new BusinessException(VideoErrorCode.ROOM_NOT_FOUND));
     }
 
     private void validateHost(MeetingRoom room, Long userId) {
         if (!room.isHost(userId)) {
-            throw new BizException(ErrorCode.FORBIDDEN, "Only the host can perform this action");
+            // TODO: [VIDEO][VideoErrorCode.HOST_ONLY] 에러메시지 검수 요청
+            throw new BusinessException(VideoErrorCode.HOST_ONLY);
         }
     }
 
@@ -660,13 +681,13 @@ public class MeetingRoomService {
         }
         participantRepository.findByRoomIdAndUserIdAndStatus(roomId, userId, ParticipantStatus.JOINED)
                 .filter(p -> p.getRole() == ParticipantRole.CO_HOST)
-                .orElseThrow(
-                        () -> new BizException(ErrorCode.FORBIDDEN, "Only host or co-host can perform this action"));
+                .orElseThrow(() -> new BusinessException(VideoErrorCode.HOST_OR_COHOST_ONLY));
     }
 
     private void validateAccessScope(RoomAccessScope accessScope, Long teamId) {
         if (accessScope == RoomAccessScope.TEAM && teamId == null) {
-            throw new BizException(ErrorCode.INVALID_REQUEST, "teamId is required when accessScope is TEAM");
+            // TODO: [VIDEO][VideoErrorCode.TEAM_ID_REQUIRED] 에러메시지 검수 요청
+            throw new BusinessException(VideoErrorCode.TEAM_ID_REQUIRED);
         }
     }
 
@@ -676,7 +697,8 @@ public class MeetingRoomService {
 
         if (roomRepository.existsConflictingSchedule(
                 hostUserId, RoomType.SCHEDULED, RoomStatus.WAITING, rangeStart, rangeEnd, excludeRoomId)) {
-            throw new BizException(ErrorCode.CONFLICT, "Another meeting is already scheduled within this time range");
+            // TODO: [VIDEO][VideoErrorCode.SCHEDULE_CONFLICT] 에러메시지 검수 요청
+            throw new BusinessException(VideoErrorCode.SCHEDULE_CONFLICT);
         }
     }
 

@@ -4,6 +4,8 @@ import java.util.Map;
 import java.util.Set;
 import jakarta.mail.internet.MimeMessage;
 
+import com.onmeet.common.exception.BusinessException;
+import com.onmeet.common.exception.errorcode.EmailErrorCode;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.mail.javamail.JavaMailSender;
@@ -41,7 +43,7 @@ public class EmailService {
         // [Security] templateName 화이트리스트 검증 (Path Traversal 방지)
         if (!ALLOWED_TEMPLATES.contains(templateName)) {
             log.error("Rejected illegal templateName '{}'. Allowed templates: {}", templateName, ALLOWED_TEMPLATES);
-            throw new IllegalArgumentException("Invalid template name: " + templateName);
+            throw new BusinessException(EmailErrorCode.INVALID_TEMPLATE);
         }
 
         try {
@@ -66,7 +68,7 @@ public class EmailService {
             // 메일 발송
             javaMailSender.send(message);
             log.info("Email sent successfully to: {}", to);
-        } catch (IllegalArgumentException e) {
+        } catch (BusinessException e) {
             throw e;
         } catch (Exception e) {
             log.error("Failed to send email to: {}", to, e);
@@ -78,8 +80,10 @@ public class EmailService {
             try {
                 String accessToken = tokenService.getAccessToken();
                 implementation.setPassword(accessToken);
+            } catch (BusinessException e) {
+                throw e;
             } catch (Exception e) {
-                throw new IllegalStateException("Could not configure OAuth2 token for email sender", e);
+                throw new BusinessException(EmailErrorCode.OAUTH2_TOKEN_CONFIG_FAILED);
             }
         }
     }
