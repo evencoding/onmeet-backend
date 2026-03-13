@@ -2,6 +2,8 @@ package com.onmeet.ai.pipeline.transcript;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.onmeet.ai.pipeline.storage.StorageClient;
+import com.onmeet.common.exception.BusinessException;
+import com.onmeet.common.exception.errorcode.AiErrorCode;
 import org.springframework.stereotype.Component;
 
 import java.util.Comparator;
@@ -25,7 +27,8 @@ public class TranscriptAssembler {
             String json = storageClient.readText(transcriptS3Key);
             return om.readValue(json, TranscriptDocument.class);
         } catch (Exception e) {
-            throw new IllegalStateException("failed to load transcript: " + transcriptS3Key, e);
+            // TODO: [AI][AiErrorCode.TRANSCRIPT_PARSE_FAILED] 에러메시지 검수 요청
+            throw new BusinessException(AiErrorCode.TRANSCRIPT_PARSE_FAILED);
         }
     }
 
