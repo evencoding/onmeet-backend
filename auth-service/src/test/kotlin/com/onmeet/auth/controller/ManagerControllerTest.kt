@@ -2,9 +2,12 @@ package com.onmeet.auth.controller
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.onmeet.auth.dto.InvitationRequest
+import com.onmeet.auth.dto.UpdateCompanyRequest
 import com.onmeet.auth.dto.UserResponseDto
+import com.onmeet.auth.entity.Company
 import com.onmeet.auth.entity.Invitation
 import com.onmeet.auth.service.AuthService
+import com.onmeet.auth.service.CompanyService
 import com.onmeet.auth.service.UserService
 import io.mockk.every
 import io.mockk.just
@@ -13,17 +16,17 @@ import org.junit.jupiter.api.Test
 import org.springframework.http.MediaType
 import org.springframework.test.web.servlet.MockMvc
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete
+import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put
-import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath
+import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
 import com.onmeet.auth.entity.User
 import org.springframework.web.method.support.HandlerMethodArgumentResolver
 import org.springframework.core.MethodParameter
 import org.springframework.web.context.request.NativeWebRequest
 import org.springframework.web.method.support.ModelAndViewContainer
 import org.springframework.web.bind.support.WebDataBinderFactory
-import com.onmeet.auth.entity.Company
 import org.junit.jupiter.api.BeforeEach
 import org.springframework.test.web.servlet.setup.MockMvcBuilders
 import java.time.LocalDateTime
@@ -35,6 +38,7 @@ class ManagerControllerTest {
     private lateinit var teamService: com.onmeet.auth.service.TeamService
     private lateinit var invitationService: com.onmeet.auth.service.InvitationService
     private lateinit var jobTitleService: com.onmeet.auth.service.JobTitleService
+    private lateinit var companyService: CompanyService
     private val objectMapper = ObjectMapper().apply {
         registerModule(com.fasterxml.jackson.module.kotlin.KotlinModule.Builder().build())
     }
@@ -46,9 +50,10 @@ class ManagerControllerTest {
         teamService = io.mockk.mockk()
         invitationService = io.mockk.mockk()
         jobTitleService = io.mockk.mockk()
+        companyService = io.mockk.mockk()
 
         mockMvc = MockMvcBuilders
-            .standaloneSetup(ManagerController(userService, authService, teamService, invitationService, jobTitleService))
+            .standaloneSetup(ManagerController(userService, authService, teamService, invitationService, jobTitleService, companyService))
             .setCustomArgumentResolvers(object : HandlerMethodArgumentResolver {
                 override fun supportsParameter(parameter: MethodParameter): Boolean {
                     return parameter.parameterType == User::class.java
@@ -161,5 +166,43 @@ class ManagerControllerTest {
             .andExpect(status().isOk)
             .andExpect(jsonPath("$").isArray)
             .andExpect(jsonPath("$[0]").value(100))
+    }
+
+    @Test
+    fun `updateCompany should return updated company info`() {
+        // given
+        val updatedCompany = Company(id = 1L, name = "Updated Company")
+        val request = UpdateCompanyRequest(name = "Updated Company")
+        every { companyService.updateCompany(eq(1L), eq(request)) } returns updatedCompany
+
+        // when & then
+        mockMvc.perform(
+            patch("/auth/v1/manager/company")
+                .contextPath("/auth")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(request))
+        )
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.id").value(1))
+            .andExpect(jsonPath("$.name").value("Updated Company"))
+            .andExpect(jsonPath("$.status").value("ACTIVE"))
+    }
+
+    @Test
+    fun `updateCompany should succeed with null name in request`() {
+        // given
+        val existingCompany = Company(id = 1L, name = "Existing Company")
+        val request = UpdateCompanyRequest(name = null)
+        every { companyService.updateCompany(eq(1L), eq(request)) } returns existingCompany
+
+        // when & then
+        mockMvc.perform(
+            patch("/auth/v1/manager/company")
+                .contextPath("/auth")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(request))
+        )
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.name").value("Existing Company"))
     }
 }

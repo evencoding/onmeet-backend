@@ -1,14 +1,17 @@
 package com.onmeet.auth.controller
 
+import com.onmeet.auth.dto.CompanyResponse
 import com.onmeet.auth.dto.InvitationRequest
 import com.onmeet.auth.dto.JobTitleRequest
 import com.onmeet.auth.dto.JobTitleResponse
 import com.onmeet.auth.dto.PageResponse
 import com.onmeet.auth.dto.TeamRejectRequest
+import com.onmeet.auth.dto.UpdateCompanyRequest
 import com.onmeet.auth.dto.UserResponseDto
 import com.onmeet.auth.dto.toResponseDto
 import com.onmeet.auth.entity.User
 import com.onmeet.auth.service.AuthService
+import com.onmeet.auth.service.CompanyService
 import com.onmeet.auth.service.InvitationService
 import com.onmeet.auth.service.JobTitleService
 import com.onmeet.auth.service.UserService
@@ -38,8 +41,77 @@ class ManagerController(
     private val authService: AuthService,
     private val teamService: TeamService,
     private val invitationService: InvitationService,
-    private val jobTitleService: JobTitleService
+    private val jobTitleService: JobTitleService,
+    private val companyService: CompanyService
 ) {
+
+    @Operation(summary = "회사 정보 수정", description = "현재 로그인한 관리자의 회사 정보를 수정합니다.")
+    @ApiResponses(value = [
+        ApiResponse(
+            responseCode = "200",
+            description = "회사 정보 수정 성공",
+            content = [Content(
+                mediaType = "application/json",
+                schema = Schema(implementation = CompanyResponse::class)
+            )]
+        ),
+        ApiResponse(
+            responseCode = "401",
+            description = "인증 실패 - 로그인이 필요합니다",
+            content = [Content(
+                mediaType = "application/json",
+                schema = Schema(implementation = ErrorResponse::class),
+                examples = [ExampleObject(
+                    value = """{"code":"AUTH_004","status":401,"message":"인증에 실패했습니다","timestamp":1710000000000}"""
+                )]
+            )]
+        ),
+        ApiResponse(
+            responseCode = "403",
+            description = "권한 없음 - MANAGER 또는 ADMIN 권한이 필요합니다",
+            content = [Content(
+                mediaType = "application/json",
+                schema = Schema(implementation = ErrorResponse::class),
+                examples = [ExampleObject(
+                    value = """{"code":"COMMON_ACCESS_DENIED","status":403,"message":"접근이 거부되었습니다","timestamp":1710000000000}"""
+                )]
+            )]
+        ),
+        ApiResponse(
+            responseCode = "404",
+            description = "회사를 찾을 수 없음",
+            content = [Content(
+                mediaType = "application/json",
+                schema = Schema(implementation = ErrorResponse::class),
+                examples = [ExampleObject(
+                    value = """{"code":"AUTH_035","status":404,"message":"해당 회사를 찾을 수 없습니다","timestamp":1710000000000}"""
+                )]
+            )]
+        ),
+        ApiResponse(
+            responseCode = "500",
+            description = "서버 내부 오류",
+            content = [Content(
+                mediaType = "application/json",
+                schema = Schema(implementation = ErrorResponse::class),
+                examples = [ExampleObject(
+                    value = """{"code":"COMMON_INTERNAL_ERROR","status":500,"message":"서버 내부 오류가 발생했습니다","timestamp":1710000000000}"""
+                )]
+            )]
+        )
+    ])
+    @PatchMapping("/company")
+    fun updateCompany(
+        @AuthenticationPrincipal user: User,
+        @RequestBody @jakarta.validation.Valid request: UpdateCompanyRequest
+    ): ResponseEntity<CompanyResponse> {
+        val updated = companyService.updateCompany(user.company.requireId(), request)
+        return ResponseEntity.ok(CompanyResponse(
+            id = updated.requireId(),
+            name = updated.name,
+            status = updated.status.name
+        ))
+    }
 
     @Operation(summary = "전체 사원 목록 조회", description = "현재 기업의 모든 사원 목록을 페이징하여 조회합니다.")
     @ApiResponses(value = [
