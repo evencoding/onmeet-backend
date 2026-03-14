@@ -114,9 +114,25 @@ public class AudioDecoder {
         float[] samples = new float[sampleCount];
         ByteBuffer buf = ByteBuffer.wrap(pcmBytes).order(ByteOrder.LITTLE_ENDIAN);
 
+        float maxAbs = 0f;
         for (int i = 0; i < sampleCount; i++) {
             samples[i] = buf.getShort() / 32768.0f;
+            float absVal = Math.abs(samples[i]);
+            if (absVal > maxAbs) {
+                maxAbs = absVal;
+            }
         }
+
+        // 정규화 (Normalization): 최대 진폭을 1.0으로 맞춤
+        if (maxAbs > 0.0001f) {
+            for (int i = 0; i < sampleCount; i++) {
+                samples[i] /= maxAbs;
+            }
+            System.out.println("  [AudioDecoder] Normalized audio with max amplitude: " + maxAbs);
+        } else {
+            System.out.println("  [AudioDecoder] Audio is too quiet to normalize (max: " + maxAbs + ")");
+        }
+
         return samples;
     }
 

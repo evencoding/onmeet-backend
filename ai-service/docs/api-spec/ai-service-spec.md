@@ -192,7 +192,7 @@ flowchart LR
 | `transcriptId` | `String` | 트랜스크립트 ID |
 | `transcriptS3Key` | `String` | 트랜스크립트 S3 키 |
 | `summaryS3Key` | `String` | 요약 S3 키 |
-| `summaryJson` | `String` | AI 생성 요약 JSON |
+| `summaryJson` | `String` | AI 생성 요약 JSON (참조: [Summary 스키마](#12-summary-json-구조)) |
 | `userEditedSummaryJson` | `String` | 사용자 편집 요약 JSON (nullable) |
 | `status` | `MinutesStatus` | 상태 |
 | `accessScope` | `MinutesAccessScope` | 공개 범위 |
@@ -212,7 +212,7 @@ flowchart LR
 | `transcript_id` | `VARCHAR(64)` | NOT NULL | 트랜스크립트 ID |
 | `transcript_s3_key` | `VARCHAR(512)` | NOT NULL | 트랜스크립트 S3 경로 |
 | `summary_s3_key` | `VARCHAR(512)` | — | 요약 S3 경로 |
-| `summary_json` | `LONGTEXT` | NOT NULL | AI 생성 요약 JSON |
+| `summary_json` | `LONGTEXT` | NOT NULL | AI 생성 요약 JSON (참조: [Summary 스키마](#12-summary-json-구조)) |
 | `user_edited_summary_json` | `LONGTEXT` | — | 사용자 편집 요약 JSON |
 | `status` | `VARCHAR(32)` | NOT NULL | 상태 (Enum) |
 | `access_scope` | `VARCHAR(16)` | NOT NULL | 공개 범위 (Enum) |
@@ -405,7 +405,23 @@ S3에 저장되는 트랜스크립트 JSON 문서의 스키마:
 
 ---
 
-## 12. Redis 키 규칙
+## 12. Summary JSON 구조
+
+요약본(`ClaudeSummarizerClient`의 결과물)은 단순 문자열이 아닌 다음 JSON 스키마를 따릅니다.
+시간/날짜 정보는 배제되며, 핵심 논의 사항과 향후 계획에 집중합니다.
+
+```json
+{
+  "description": "회의 전반에 대한 핵심 요약 내용",
+  "keywords": ["주요", "키워드", "목록"],
+  "decisions": ["합의된 사항 1", "결정된 사항 2"],
+  "actionItems": ["누가 무엇을 언제까지 할 것인지 (Action Plan)"]
+}
+```
+
+---
+
+## 13. Redis 키 규칙
 
 | 키 패턴 | 타입 | TTL | 용도 |
 |---|---|---|---|

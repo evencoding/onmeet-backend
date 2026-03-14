@@ -42,13 +42,25 @@ public class SttWorkerService {
     public void handleAudioChunk(AudioChunkReadyEvent e) {
         byte[] audioBytes = storageClient.readBytes(e.getS3Path());
 
-        // 1. OGG → PCM 16kHz mono float[]
-        float[] pcmSamples;
+        float[] pcmSamples = null;
         try {
             pcmSamples = audioDecoder.decode(audioBytes);
         } catch (IOException ex) {
-            log.error("Failed to decode audio: roomId={}, segmentIndex={}",
-                    e.getRoomId(), e.getSegmentIndex(), ex);
+            log.warn("Failed to decode audio for VAD, falling back to full chunk STT: roomId={}, segmentIndex={}",
+                    e.getRoomId(), e.getSegmentIndex());
+        }
+
+        // 청크 시작 시간 (video-service에서 수신한 startTime 기준)
+        long chunkStartMs = e.getStartTime() != null ? e.getStartTime().toEpochMilli() : 0L;
+        long chunkEndMs = e.getEndTime() != null ? e.getEndTime().toEpochMilli() : chunkStartMs + 600000L; // 대략 10분
+
+        // IF fallback triggered (pcmSamples == null) OR VAD disabled
+        if (pcmSamples == null) {
+            String text = sttClient.transcribe(audioBytes, "chunk-" + e.getSegmentIndex() + e.getS3Path().substring(e.getS3Path().lastIndexOf('.')), "audio/mp4").trim();
+            if (!text.isBlank()) {
+                long seq = ((long) e.getSegmentIndex()) * 1_000_000L;
+                publishVoiceSegment(e, chunkStartMs, chunkEndMs, seq, text);
+            }
             return;
         }
 
@@ -63,21 +75,27 @@ public class SttWorkerService {
         log.info("VAD detected {} speech segment(s) in chunk: roomId={}, segmentIndex={}",
                 segments.size(), e.getRoomId(), e.getSegmentIndex());
 
-        // 청크 시작 시간 (video-service에서 수신한 startTime 기준)
-        long chunkStartMs = e.getStartTime() != null ? e.getStartTime().toEpochMilli() : 0L;
+        // 청크 시작 시간은 위에서 계산된 chunkStartMs를 사용함
 
         // 3. 각 발화 구간별로 개별 STT 호출
         for (int i = 0; i < segments.size(); i++) {
             SpeechSegment seg = segments.get(i);
+            long durationMs = seg.endMs() - seg.startMs();
 
-            // 해당 발화 구간만 WAV로 인코딩
-            byte[] segmentAudio = audioDecoder.extractAndEncode(pcmSamples, seg);
-            if (segmentAudio.length == 0) {
+            // OpenAI API는 0.1초 미만의 오디오를 거절함
+            if (durationMs < 100) {
+                log.debug("Skipping too short segment: {}ms", durationMs);
                 continue;
             }
 
-            // 개별 STT 호출
-            String text = sttClient.transcribe(segmentAudio, "seg-" + i + ".wav", "audio/wav").trim();
+            // 해당 발화 구간만 WAV로 인코딩
+            byte[] segmentAudio = audioDecoder.extractAndEncode(pcmSamples, seg);
+            if (segmentAudio.length == 0) continue;
+
+            // 개별 STT 호출 (파일명에 시간 정보 포함하여 디버깅 용이성 확보)
+            String text = sttClient.transcribe(segmentAudio,
+                    String.format("seg-%d-%dms.wav", i, durationMs),
+                    "audio/wav").trim();
             if (text.isBlank()) {
                 continue;
             }
@@ -87,19 +105,23 @@ public class SttWorkerService {
             long segEndMs = chunkStartMs + seg.endMs();
             long seq = ((long) e.getSegmentIndex()) * 1_000_000L + i;
 
-            producer.publish(VoiceSegmentCreatedEvent.builder()
-                    .roomId(e.getRoomId())
-                    .segmentId(UUID.randomUUID().toString())
-                    .participantIdentity(e.getParticipantIdentity())
-                    .segmentStartMs(segStartMs)
-                    .segmentEndMs(segEndMs)
-                    .seq(seq)
-                    .text(text)
-                    .timestamp(Instant.now())
-                    .build());
-
-            log.debug("Published voice segment: roomId={}, participant={}, segmentStartMs={}, segmentEndMs={}",
-                    e.getRoomId(), e.getParticipantIdentity(), segStartMs, segEndMs);
+            publishVoiceSegment(e, segStartMs, segEndMs, seq, text);
         }
+    }
+
+    private void publishVoiceSegment(AudioChunkReadyEvent e, long startMs, long endMs, long seq, String text) {
+        producer.publish(VoiceSegmentCreatedEvent.builder()
+                .roomId(e.getRoomId())
+                .segmentId(UUID.randomUUID().toString())
+                .participantIdentity(e.getParticipantIdentity())
+                .segmentStartMs(startMs)
+                .segmentEndMs(endMs)
+                .seq(seq)
+                .text(text)
+                .timestamp(Instant.now())
+                .build());
+
+        log.debug("Published voice segment: roomId={}, participant={}, startMs={}, endMs={}",
+                e.getRoomId(), e.getParticipantIdentity(), startMs, endMs);
     }
 }

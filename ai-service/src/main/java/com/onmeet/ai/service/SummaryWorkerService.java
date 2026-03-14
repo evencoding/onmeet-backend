@@ -75,7 +75,7 @@ public class SummaryWorkerService {
             throw new BusinessException(AiErrorCode.TRANSCRIPT_EMPTY);
         }
 
-        String summaryJson = summarizerClient.summarize(plain, "ko", "default", "claude-sonnet");
+        String summaryJson = summarizerClient.summarize(plain, "ko", "default", null);
 
         String summaryS3Key = StorageKeyFactory.summaryKey(e.getRoomId(), e.getTranscriptId());
         storageClient.writeText(summaryS3Key, summaryJson, "application/json");

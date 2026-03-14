@@ -89,6 +89,7 @@ dependencies {
     testImplementation 'org.awaitility:awaitility:4.2.0'
     testImplementation 'org.springframework.kafka:spring-kafka-test'
     implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8"
+    testImplementation 'ws.schild:jave-all-deps:3.3.1'
 }
 
 tasks.named('test') {
