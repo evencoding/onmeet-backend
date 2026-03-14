@@ -63,13 +63,11 @@ class TokenServiceImpl(
     @Transactional
     override fun refreshTokens(token: String): TokenResponse {
         val refreshTokenEntity = refreshTokenRepository.findByToken(token)
-            // TODO: [AUTH][AuthErrorCode.INVALID_REFRESH_TOKEN] 에러메시지 검수 요청
             ?: throw BusinessException(AuthErrorCode.INVALID_REFRESH_TOKEN)
 
         refreshTokenRepository.delete(refreshTokenEntity)
 
         val user = userRepository.findByEmail(refreshTokenEntity.mobileOrEmail)
-            // TODO: [AUTH][AuthErrorCode.USER_NOT_FOUND] 에러메시지 검수 요청
             .orElseThrow { BusinessException(AuthErrorCode.USER_NOT_FOUND) }
 
         val authentication = UsernamePasswordAuthenticationToken(user, null, user.authorities)

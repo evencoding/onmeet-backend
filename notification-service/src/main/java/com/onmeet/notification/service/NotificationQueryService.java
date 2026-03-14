@@ -42,7 +42,6 @@ public class NotificationQueryService {
     public void markAsRead(Long recipientId, Long userId) {
         NotificationRecipient recipient = recipientRepository.findByIdAndUserId(recipientId, userId)
                 .orElseThrow(() -> {
-                    // TODO: [NOTI][NotificationErrorCode.NOTIFICATION_NOT_FOUND] 에러메시지 검수 요청
                     throw new BusinessException(NotificationErrorCode.NOTIFICATION_NOT_FOUND);
                 });
         recipient.markAsRead();
@@ -63,7 +62,6 @@ public class NotificationQueryService {
     public void deleteNotification(Long recipientId, Long userId) {
         NotificationRecipient recipient = recipientRepository.findByIdAndUserId(recipientId, userId)
                 .orElseThrow(() -> {
-                    // TODO: [NOTI][NotificationErrorCode.NOTIFICATION_NOT_FOUND] 에러메시지 검수 요청
                     throw new BusinessException(NotificationErrorCode.NOTIFICATION_NOT_FOUND);
                 });
         recipientRepository.delete(recipient);
