@@ -22,7 +22,7 @@ func TestAuthClient_GetUserPermissions_Success(t *testing.T) {
 	}
 
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		assert.Equal(t, "/users/internal/42/permissions", r.URL.Path)
+		assert.Equal(t, "/auth/v1/internal/users/42/permissions", r.URL.Path)
 		assert.Equal(t, "test-gateway-secret", r.Header.Get("X-Gateway-Secret"))
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
@@ -168,5 +168,5 @@ func TestAuthClient_GetUserPermissions_CorrectURLPath(t *testing.T) {
 
 	_, _ = c.GetUserPermissions(99)
 
-	assert.Equal(t, "/users/internal/99/permissions", calledPath)
+	assert.Equal(t, "/auth/v1/internal/users/99/permissions", calledPath)
 }
