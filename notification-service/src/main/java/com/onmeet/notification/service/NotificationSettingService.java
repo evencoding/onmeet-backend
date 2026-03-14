@@ -73,6 +73,10 @@ public class NotificationSettingService {
             // 초대 응답 관련
             case INVITATION_ACCEPTED, INVITATION_DECLINED, INVITATION_CANCELLED ->
                 setting.isMeetingNotification();
+
+            // 대기실 관련
+            case WAITING_ROOM_ADMITTED, WAITING_ROOM_REJECTED ->
+                setting.isMeetingNotification();
         };
     }
 
