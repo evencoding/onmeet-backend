@@ -7,8 +7,8 @@ import com.onmeet.auth.repository.jpa.JobTitleRepository
 import com.onmeet.auth.repository.jpa.UserRepository
 import com.onmeet.common.exception.BusinessException
 import com.onmeet.common.exception.errorcode.AuthErrorCode
+import org.slf4j.LoggerFactory
 import org.springframework.cache.annotation.CacheEvict
-import org.springframework.cache.annotation.Cacheable
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import org.springframework.data.domain.Pageable
@@ -22,6 +22,10 @@ class UserServiceImpl(
     private val fileClient: com.onmeet.auth.client.FileClient,
     private val notificationEventPublisher: NotificationEventPublisher
 ) : UserService {
+
+    companion object {
+        private val log = LoggerFactory.getLogger(UserServiceImpl::class.java)
+    }
 
     @Transactional
     @CacheEvict(value = ["userInfo"], key = "#requester.id")
@@ -71,8 +75,7 @@ class UserServiceImpl(
                     fileClient.deleteMyProfileImage()
                 } catch (e: Exception) {
                     // Log error but continue with upload (old image cleanup failed)
-                    org.slf4j.LoggerFactory.getLogger(UserServiceImpl::class.java)
-                        .error("Failed to delete old profile image for user ${user.requireId()}", e)
+                    log.error("Failed to delete old profile image for user ${user.requireId()}", e)
                 }
             }
 
@@ -177,7 +180,6 @@ class UserServiceImpl(
         return activatedUser.toResponseDto()
     }
 
-    @Cacheable(value = ["userInfo"], key = "#user.id")
     override fun getMyInfo(user: User): UserResponseDto {
         return user.toResponseDto()
     }

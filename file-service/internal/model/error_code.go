@@ -81,6 +81,10 @@ const (
 
 	// Kafka 이벤트 (FILE_049)
 	CodeKafkaPublishFail = "FILE_049"
+
+	// 입력 유효성 검사 (FILE_050 ~ FILE_051)
+	CodeInvalidOwnerField = "FILE_050"
+	CodeInvalidMIMEType   = "FILE_051"
 )
 
 // 자주 사용되는 AppError 인스턴스 (핸들러/미들웨어에서 재사용)
@@ -96,4 +100,6 @@ var (
 	ErrPermissionDenied        = NewAppError(CodePermissionDenied, http.StatusForbidden, "파일 삭제 권한이 없습니다. 관리자 이상만 삭제할 수 있습니다")
 	ErrCrossCompanyDenied      = NewAppError(CodeCrossCompanyDenied, http.StatusForbidden, "다른 회사의 파일은 삭제할 수 없습니다")
 	ErrDBNotFound              = NewAppError(CodeDBNotFound, http.StatusNotFound, "해당 ID의 파일 메타데이터를 찾을 수 없습니다")
+	ErrInvalidOwnerField       = NewAppError(CodeInvalidOwnerField, http.StatusBadRequest, "유효하지 않은 ownerType 또는 ownerId입니다")
+	ErrInvalidMIMEType         = NewAppError(CodeInvalidMIMEType, http.StatusBadRequest, "허용되지 않는 파일 형식입니다")
 )

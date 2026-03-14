@@ -13,6 +13,9 @@ import java.util.Optional
 
 @Repository
 interface UserRepository : JpaRepository<User, Long> {
+    @EntityGraph(attributePaths = ["company", "teamMemberships", "teamMemberships.team", "jobTitle", "roles"])
+    override fun findById(id: Long): Optional<User>
+
     @EntityGraph(attributePaths = ["company", "teamMemberships", "jobTitle", "roles"])
     fun findByEmail(email: String): Optional<User>
     fun existsByEmail(email: String): Boolean

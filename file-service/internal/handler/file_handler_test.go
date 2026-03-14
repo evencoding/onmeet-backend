@@ -2,7 +2,9 @@ package handler
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
+	"io"
 	"mime/multipart"
 	"net/http"
 	"net/http/httptest"
@@ -20,7 +22,7 @@ type MockFileService struct {
 	mock.Mock
 }
 
-func (m *MockFileService) UploadFiles(files []*multipart.FileHeader, category string, uploaderId *int64, ownerType, ownerId string) ([]*model.FileMetadata, error) {
+func (m *MockFileService) UploadFiles(ctx context.Context, files []*multipart.FileHeader, category string, uploaderId *int64, ownerType, ownerId string) ([]*model.FileMetadata, error) {
 	args := m.Called(files, category, uploaderId, ownerType, ownerId)
 	return args.Get(0).([]*model.FileMetadata), args.Error(1)
 }
@@ -30,26 +32,26 @@ func (m *MockFileService) GetFile(id uint) (*model.FileMetadata, error) {
 	return args.Get(0).(*model.FileMetadata), args.Error(1)
 }
 
-func (m *MockFileService) DeleteFile(id uint, requesterId int64, cookie string) error {
+func (m *MockFileService) DeleteFile(ctx context.Context, id uint, requesterId int64, cookie string) error {
 	args := m.Called(id, requesterId, cookie)
 	return args.Error(0)
 }
 
-func (m *MockFileService) UploadFileAsync(file *multipart.FileHeader, category string, uploaderId *int64, ownerType, ownerId, callbackTopic, correlationId string) {
+func (m *MockFileService) UploadFileAsync(ctx context.Context, file *multipart.FileHeader, category string, uploaderId *int64, ownerType, ownerId, callbackTopic, correlationId string) {
 	m.Called(file, category, uploaderId, ownerType, ownerId, callbackTopic, correlationId)
 }
 
-func (m *MockFileService) GenerateDefaultProfileImage(name string, color string, uploaderId *int64, ownerType, ownerId string) (*model.FileMetadata, error) {
+func (m *MockFileService) GenerateDefaultProfileImage(ctx context.Context, name string, color string, uploaderId *int64, ownerType, ownerId string) (*model.FileMetadata, error) {
 	args := m.Called(name, color, uploaderId, ownerType, ownerId)
 	return args.Get(0).(*model.FileMetadata), args.Error(1)
 }
 
-func (m *MockFileService) RenderFile(id uint) ([]byte, string, error) {
+func (m *MockFileService) RenderFile(ctx context.Context, id uint) (io.ReadCloser, int64, string, error) {
 	args := m.Called(id)
-	return args.Get(0).([]byte), args.String(1), args.Error(2)
+	return args.Get(0).(io.ReadCloser), args.Get(1).(int64), args.String(2), args.Error(3)
 }
 
-func (m *MockFileService) DeleteMyProfile(uploaderId int64) error {
+func (m *MockFileService) DeleteMyProfile(ctx context.Context, uploaderId int64) error {
 	args := m.Called(uploaderId)
 	return args.Error(0)
 }
@@ -104,11 +106,9 @@ func createMultipartRequest(t *testing.T, uri string, fields map[string]string, 
 	body := &bytes.Buffer{}
 	writer := multipart.NewWriter(body)
 
-	// 일반 필드 추가 (category, ownerType 등)
 	for k, v := range fields {
 		_ = writer.WriteField(k, v)
 	}
-	// 파일 필드 추가
 	if filename != "" {
 		part, _ := writer.CreateFormFile("files", filename)
 		part.Write(content)
@@ -116,7 +116,7 @@ func createMultipartRequest(t *testing.T, uri string, fields map[string]string, 
 	writer.Close()
 
 	req, _ := http.NewRequest("POST", uri, body)
-	req.Header.Set("Content-Type", writer.FormDataContentType()) // 바운더리 정보가 포함된 Content-Type 설정 필수
+	req.Header.Set("Content-Type", writer.FormDataContentType())
 	return req
 }
 
@@ -128,17 +128,14 @@ func TestFileHandler_Upload(t *testing.T) {
 
 	router := gin.Default()
 	router.POST("/upload", func(c *gin.Context) {
-		// 미들웨어를 통해 설정되는 userId 컬렉션을 수동으로 주입하여 인증 상태 시뮬레이션
 		c.Set("userId", "123")
 		handler.Upload(c)
 	})
 
 	expectedMetadata := []*model.FileMetadata{{FileName: "test.txt"}}
 	uploaderId := int64(123)
-	// 서비스 레이어 호출 예상 설정
 	mockService.On("UploadFiles", mock.AnythingOfType("[]*multipart.FileHeader"), "docs", &uploaderId, "USER", "user123").Return(expectedMetadata, nil)
 
-	// 멀티파트 요청 생성
 	req := createMultipartRequest(t, "/upload", map[string]string{
 		"category":  "docs",
 		"ownerType": "USER",
@@ -148,7 +145,6 @@ func TestFileHandler_Upload(t *testing.T) {
 	w := httptest.NewRecorder()
 	router.ServeHTTP(w, req)
 
-	// 응답 검증
 	assert.Equal(t, http.StatusOK, w.Code)
 	mockService.AssertExpectations(t)
 }
@@ -235,14 +231,19 @@ func TestFileHandler_RenderFile(t *testing.T) {
 	router.GET("/render/:fileId", handler.RenderFile)
 
 	content := []byte("preview data")
-	mockService.On("RenderFile", uint(1)).Return(content, "text/plain", nil)
+	mockService.On("RenderFile", uint(1)).Return(
+		io.NopCloser(bytes.NewReader(content)),
+		int64(len(content)),
+		"text/plain",
+		nil,
+	)
 
 	w := httptest.NewRecorder()
 	req, _ := http.NewRequest("GET", "/render/1", nil)
 	router.ServeHTTP(w, req)
 
 	assert.Equal(t, http.StatusOK, w.Code)
-	assert.Equal(t, "text/plain", w.Header().Get("Content-Type"))
+	assert.Contains(t, w.Header().Get("Content-Type"), "text/plain")
 	assert.Equal(t, "preview data", w.Body.String())
 	mockService.AssertExpectations(t)
 }
@@ -258,7 +259,6 @@ func TestFileHandler_Upload_InvalidMultipartForm(t *testing.T) {
 	router := gin.Default()
 	router.POST("/upload", handler.Upload)
 
-	// 잘못된 Content-Type (multipart가 아님)
 	w := httptest.NewRecorder()
 	req, _ := http.NewRequest("POST", "/upload", bytes.NewBuffer([]byte("invalid")))
 	req.Header.Set("Content-Type", "application/json")
@@ -340,7 +340,6 @@ func TestFileHandler_RenderFile_InvalidFileId(t *testing.T) {
 // ===== [Bug-7 Extreme Edge Cases] 극단적인 파싱 에러 케이스 =====
 
 func TestFileHandler_GetFileInfo_MaxUint64Overflow(t *testing.T) {
-	// [Bug-7 Extreme Edge Case] MaxUint64를 초과하는 숫자로 요청 시 400 에러 반환
 	gin.SetMode(gin.TestMode)
 	mockService := new(MockFileService)
 	handler := NewFileHandler(mockService)
@@ -348,7 +347,6 @@ func TestFileHandler_GetFileInfo_MaxUint64Overflow(t *testing.T) {
 	router := gin.Default()
 	router.GET("/:fileId", handler.GetFileInfo)
 
-	// MaxUint64 = 18446744073709551615, 이보다 큰 숫자
 	w := httptest.NewRecorder()
 	req, _ := http.NewRequest("GET", "/18446744073709551616", nil)
 	router.ServeHTTP(w, req)
@@ -358,7 +356,6 @@ func TestFileHandler_GetFileInfo_MaxUint64Overflow(t *testing.T) {
 }
 
 func TestFileHandler_DeleteFile_NegativeFileId(t *testing.T) {
-	// [Bug-7 Extreme Edge Case] 음수 파일 ID로 삭제 요청 시 400 에러 반환
 	gin.SetMode(gin.TestMode)
 	mockService := new(MockFileService)
 	handler := NewFileHandler(mockService)
@@ -375,7 +372,6 @@ func TestFileHandler_DeleteFile_NegativeFileId(t *testing.T) {
 }
 
 func TestFileHandler_RenderFile_VeryLargeNumber(t *testing.T) {
-	// [Bug-7 Extreme Edge Case] 매우 큰 숫자 문자열로 렌더링 요청 시 400 에러 반환
 	gin.SetMode(gin.TestMode)
 	mockService := new(MockFileService)
 	handler := NewFileHandler(mockService)
@@ -383,7 +379,6 @@ func TestFileHandler_RenderFile_VeryLargeNumber(t *testing.T) {
 	router := gin.Default()
 	router.GET("/render/:fileId", handler.RenderFile)
 
-	// 100자리 숫자 (ParseUint가 처리할 수 없는 크기)
 	w := httptest.NewRecorder()
 	req, _ := http.NewRequest("GET", "/render/99999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999", nil)
 	router.ServeHTTP(w, req)
@@ -393,7 +388,6 @@ func TestFileHandler_RenderFile_VeryLargeNumber(t *testing.T) {
 }
 
 func TestFileHandler_GetFileInfo_SpecialCharacters(t *testing.T) {
-	// [Bug-7 Extreme Edge Case] 특수문자가 포함된 파일 ID로 요청 시 400 에러 반환
 	gin.SetMode(gin.TestMode)
 	mockService := new(MockFileService)
 	handler := NewFileHandler(mockService)
@@ -404,9 +398,9 @@ func TestFileHandler_GetFileInfo_SpecialCharacters(t *testing.T) {
 	testCases := []string{
 		"123abc!@#",
 		"12.34",
-		"0x1234", // hexadecimal
-		"1e10",   // scientific notation
-		"",       // empty string (Gin may handle this differently)
+		"0x1234",
+		"1e10",
+		"",
 	}
 
 	for _, tc := range testCases {
@@ -414,7 +408,6 @@ func TestFileHandler_GetFileInfo_SpecialCharacters(t *testing.T) {
 		req, _ := http.NewRequest("GET", "/"+tc, nil)
 		router.ServeHTTP(w, req)
 
-		// Empty string may route to a different handler, so we only check non-empty cases
 		if tc != "" {
 			assert.Equal(t, http.StatusBadRequest, w.Code, "Failed for input: "+tc)
 			assert.Contains(t, w.Body.String(), "유효하지 않은 파일 ID입니다", "Failed for input: "+tc)
@@ -423,8 +416,6 @@ func TestFileHandler_GetFileInfo_SpecialCharacters(t *testing.T) {
 }
 
 func TestFileHandler_DeleteFile_ZeroFileId(t *testing.T) {
-	// [Bug-7 Edge Case] 0번 파일 ID는 유효한 uint이지만 실제로는 존재하지 않는 ID
-	// (DB의 auto-increment는 보통 1부터 시작)
 	gin.SetMode(gin.TestMode)
 	mockService := new(MockFileService)
 	handler := NewFileHandler(mockService)
@@ -435,14 +426,12 @@ func TestFileHandler_DeleteFile_ZeroFileId(t *testing.T) {
 		handler.DeleteFile(c)
 	})
 
-	// 0은 파싱은 성공하지만 서비스 레이어에서 NotFound로 처리될 가능성이 높음
 	mockService.On("DeleteFile", uint(0), int64(123), mock.Anything).Return(assert.AnError)
 
 	w := httptest.NewRecorder()
 	req, _ := http.NewRequest("DELETE", "/0", nil)
 	router.ServeHTTP(w, req)
 
-	// 0은 유효한 uint이므로 파싱은 성공, 하지만 서비스에서 에러 발생
-	assert.NotEqual(t, http.StatusBadRequest, w.Code) // 파싱 에러는 아님
+	assert.NotEqual(t, http.StatusBadRequest, w.Code)
 	mockService.AssertExpectations(t)
 }

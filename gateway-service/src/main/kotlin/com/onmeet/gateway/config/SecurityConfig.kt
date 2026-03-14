@@ -1,7 +1,6 @@
 package com.onmeet.gateway.config
 
 import com.onmeet.gateway.security.CookieServerAuthenticationConverter
-import com.onmeet.gateway.security.CsrfCookieFilter
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
@@ -13,8 +12,6 @@ import org.springframework.security.oauth2.server.resource.authentication.JwtGra
 import org.springframework.security.oauth2.server.resource.authentication.ReactiveJwtAuthenticationConverter
 import org.springframework.security.oauth2.server.resource.authentication.ReactiveJwtGrantedAuthoritiesConverterAdapter
 import org.springframework.security.web.server.SecurityWebFilterChain
-import org.springframework.security.web.server.csrf.CookieServerCsrfTokenRepository
-import org.springframework.security.web.server.csrf.ServerCsrfTokenRequestAttributeHandler
 import org.springframework.security.web.server.header.XFrameOptionsServerHttpHeadersWriter
 
 import org.springframework.web.cors.CorsConfiguration
@@ -29,7 +26,7 @@ class SecurityConfig(
 ) {
 
     @Bean
-    fun springSecurityFilterChain(http: ServerHttpSecurity, csrfCookieFilter: CsrfCookieFilter): SecurityWebFilterChain {
+    fun springSecurityFilterChain(http: ServerHttpSecurity): SecurityWebFilterChain {
         http
             .csrf { it.disable() }
             .cors { it.configurationSource(corsConfigurationSource()) }
@@ -99,10 +96,12 @@ class SecurityConfig(
             "https://api.onmeet.cloud", 
             "https://*.onmeet.cloud"
         )
-        configuration.allowedMethods = listOf("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH")
+        configuration.allowedMethods = listOf("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH", "HEAD")
         configuration.allowedHeaders = listOf("*")
+        configuration.exposedHeaders = listOf("Content-Disposition")
         configuration.allowCredentials = true
-        
+        configuration.maxAge = 3600L
+
         val source = UrlBasedCorsConfigurationSource()
         source.registerCorsConfiguration("/**", configuration)
         return source

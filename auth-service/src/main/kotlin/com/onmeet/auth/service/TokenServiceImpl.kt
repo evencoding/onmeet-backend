@@ -23,6 +23,10 @@ class TokenServiceImpl(
     private val redisTemplate: StringRedisTemplate
 ) : TokenService {
 
+    companion object {
+        const val GUEST_TOKEN_EXPIRY_SECONDS = 86400L // 1 day
+    }
+
     @Transactional
     override fun issueTokens(authentication: Authentication, email: String): TokenResponse {
         val accessToken = jwtTokenProvider.generateToken(authentication)
@@ -49,7 +53,7 @@ class TokenServiceImpl(
             mobileOrEmail = name,
             token = refreshTokenStr,
             authority = authorities,
-            expiration = 86400L // 1 day
+            expiration = GUEST_TOKEN_EXPIRY_SECONDS
         )
         refreshTokenRepository.save(refreshToken)
 
