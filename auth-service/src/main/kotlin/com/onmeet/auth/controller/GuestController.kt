@@ -139,7 +139,7 @@ class GuestController(
             .secure(jwtProperties.cookie.secure)
             .path("/")
             .maxAge(jwtProperties.cookie.maxAge)
-            .sameSite("Lax")
+            .sameSite(jwtProperties.cookie.sameSite)
             .build()
         responseHeaders.add(HttpHeaders.SET_COOKIE, accessTokenCookie.toString())
 
@@ -150,7 +150,7 @@ class GuestController(
                 .secure(jwtProperties.cookie.secure)
                 .path("/")
                 .maxAge(jwtProperties.refreshCookie.maxAge)
-                .sameSite("Lax")
+                .sameSite(jwtProperties.cookie.sameSite)
                 .build()
             responseHeaders.add(HttpHeaders.SET_COOKIE, refreshTokenCookie.toString())
         }

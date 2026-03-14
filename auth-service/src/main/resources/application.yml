@@ -48,6 +48,7 @@ jwt:
   cookie:
     secure: ${COOKIE_SECURE:true}
     max-age: 3600
+    same-site: ${COOKIE_SAMESITE:Lax}
   refresh-cookie:
     max-age: 604800 # 7 days
 invitation:

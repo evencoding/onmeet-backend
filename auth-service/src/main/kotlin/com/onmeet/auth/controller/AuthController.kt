@@ -446,9 +446,9 @@ class AuthController(
             .secure(jwtProperties.cookie.secure)
             .path("/")
             .maxAge(maxAge)
-            .sameSite("Lax")
+            .sameSite(jwtProperties.cookie.sameSite)
             .build()
-            
+
     @Operation(summary = "사용자 권한 정보 조회", description = "파일 서비스 등 타 서비스에서 권한 검증을 위해 사용자의 역할, 회사, 팀 정보를 조회합니다.")
     @ApiResponses(value = [
         ApiResponse(
