@@ -1,5 +1,6 @@
 package com.onmeet.auth.service
 
+import com.onmeet.auth.dto.UpdateCompanyRequest
 import com.onmeet.auth.entity.Company
 import com.onmeet.auth.entity.Team
 import com.onmeet.auth.repository.jpa.CompanyRepository
@@ -108,6 +109,46 @@ class CompanyServiceImplTest {
         // when & then
         assertThrows<BusinessException> {
             companyService.getTeam(999L)
+        }
+    }
+
+    @Test
+    fun `updateCompany should update and return company with new name`() {
+        // given
+        val company = Company(id = 1L, name = "Old Name")
+        val request = UpdateCompanyRequest(name = "New Name")
+        every { companyRepository.findById(1L) } returns Optional.of(company)
+
+        // when
+        val result = companyService.updateCompany(1L, request)
+
+        // then
+        assertEquals("New Name", result.name)
+    }
+
+    @Test
+    fun `updateCompany should not change name when request name is null`() {
+        // given
+        val company = Company(id = 1L, name = "Original Name")
+        val request = UpdateCompanyRequest(name = null)
+        every { companyRepository.findById(1L) } returns Optional.of(company)
+
+        // when
+        val result = companyService.updateCompany(1L, request)
+
+        // then
+        assertEquals("Original Name", result.name)
+    }
+
+    @Test
+    fun `updateCompany should throw BusinessException when company not found`() {
+        // given
+        val request = UpdateCompanyRequest(name = "New Name")
+        every { companyRepository.findById(999L) } returns Optional.empty()
+
+        // when & then
+        assertThrows<BusinessException> {
+            companyService.updateCompany(999L, request)
         }
     }
 }

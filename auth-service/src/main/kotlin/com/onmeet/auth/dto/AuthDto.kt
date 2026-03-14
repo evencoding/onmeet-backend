@@ -75,6 +75,22 @@ data class CompanyRequest(
     val name: String
 )
 
+@Schema(description = "회사 정보 수정 요청 (부분 수정)")
+data class UpdateCompanyRequest(
+    @Schema(description = "변경할 회사명", example = "New Company Name")
+    val name: String?
+)
+
+@Schema(description = "회사 정보 응답")
+data class CompanyResponse(
+    @Schema(description = "Company ID")
+    val id: Long,
+    @Schema(description = "회사명")
+    val name: String,
+    @Schema(description = "상태")
+    val status: String
+)
+
 @Schema(description = "팀 생성/수정 요청")
 data class TeamRequest(
     @Schema(description = "팀 이름", example = "Development")
