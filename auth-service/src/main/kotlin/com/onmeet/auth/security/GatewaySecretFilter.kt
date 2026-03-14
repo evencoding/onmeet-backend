@@ -27,9 +27,9 @@ class GatewaySecretFilter(
         )
 
         if (!isValid) {
-            response.status = HttpStatus.FORBIDDEN.value()
+            response.status = HttpStatus.UNAUTHORIZED.value()
             response.contentType = MediaType.APPLICATION_JSON_VALUE
-            response.writer.write("""{"error":"Forbidden","message":"Invalid or missing gateway secret"}""")
+            response.writer.write("""{"error":"Unauthorized","message":"Invalid or missing gateway secret"}""")
             return
         }
 
