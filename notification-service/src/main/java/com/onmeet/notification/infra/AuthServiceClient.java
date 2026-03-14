@@ -10,6 +10,9 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestTemplate;
 
+import java.util.Collections;
+import java.util.List;
+
 /**
  * auth-service의 내부 API를 호출하여 사용자 정보를 조회합니다.
  */
@@ -60,8 +63,41 @@ public class AuthServiceClient {
     }
 
     /**
+     * 여러 사용자의 정보를 일괄 조회합니다.
+     */
+    public List<UserInfoResponse> getBatchUserInfo(List<Long> userIds) {
+        if (userIds == null || userIds.isEmpty()) {
+            return Collections.emptyList();
+        }
+
+        String url = authServiceProperties.getInternalUrl() + "/auth/internal/users/batch";
+
+        try {
+            HttpHeaders headers = new HttpHeaders();
+            headers.set("X-Gateway-Secret", gatewaySharedSecret);
+            BatchUserInfoRequest request = new BatchUserInfoRequest(userIds);
+            HttpEntity<BatchUserInfoRequest> entity = new HttpEntity<>(request, headers);
+
+            ResponseEntity<BatchUserInfoResponse> response = restTemplate.exchange(
+                    url, HttpMethod.POST, entity, BatchUserInfoResponse.class);
+
+            BatchUserInfoResponse body = response.getBody();
+            return body != null ? body.users() : Collections.emptyList();
+        } catch (Exception e) {
+            log.warn("Failed to fetch batch user info: {}", e.getMessage());
+            return Collections.emptyList();
+        }
+    }
+
+    /**
      * auth-service UserInfoDto 응답 매핑
      */
     public record UserInfoResponse(Long userId, String name, String email, Long profileImageId, String fcmDeviceToken) {
+    }
+
+    public record BatchUserInfoRequest(List<Long> userIds) {
+    }
+
+    public record BatchUserInfoResponse(List<UserInfoResponse> users) {
     }
 }

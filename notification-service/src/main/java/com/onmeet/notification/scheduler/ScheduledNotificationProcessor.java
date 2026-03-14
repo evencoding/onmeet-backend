@@ -2,11 +2,16 @@ package com.onmeet.notification.scheduler;
 
 import com.onmeet.notification.entity.Notification;
 import com.onmeet.notification.entity.NotificationRecipient;
+import com.onmeet.notification.infra.AuthServiceClient;
 import com.onmeet.notification.repository.NotificationRepository;
 import com.onmeet.notification.service.NotificationService;
 import com.onmeet.notification.service.NotificationSettingService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -23,6 +28,7 @@ public class ScheduledNotificationProcessor {
     private final NotificationRepository notificationRepository;
     private final NotificationService notificationService;
     private final NotificationSettingService settingService;
+    private final AuthServiceClient authServiceClient;
 
     /**
      * 개별 알림을 독립 트랜잭션으로 처리합니다.
@@ -32,30 +38,48 @@ public class ScheduledNotificationProcessor {
     public void processOneNotification(Notification notification) {
         try {
             boolean allSent = true;
+            List<NotificationRecipient> recipients = notification.getRecipients();
 
-            for (NotificationRecipient recipient : notification.getRecipients()) {
+            // N+1 방지: 모든 수신자의 최신 FCM 토큰을 일괄 조회
+            List<Long> userIds = recipients.stream()
+                    .map(NotificationRecipient::userId)
+                    .collect(Collectors.toList());
+            
+            List<AuthServiceClient.UserInfoResponse> userInfos = authServiceClient.getBatchUserInfo(userIds);
+            Map<Long, String> userTokenMap = userInfos.stream()
+                    .filter(u -> u.fcmDeviceToken() != null && !u.fcmDeviceToken().isBlank())
+                    .collect(Collectors.toMap(AuthServiceClient.UserInfoResponse::userId, AuthServiceClient.UserInfoResponse::fcmDeviceToken, (a, b) -> a));
+
+            for (NotificationRecipient recipient : recipients) {
+                Long userId = recipient.getUserId();
+
                 // 알림 설정 검증
-                if (!settingService.shouldSendNotification(recipient.getUserId(), notification.getType())) {
+                if (!settingService.shouldSendNotification(userId, notification.getType())) {
                     log.info("Notification blocked by settings: userId={}, type={}",
-                            recipient.getUserId(), notification.getType());
+                            userId, notification.getType());
                     continue;
                 }
 
-                boolean success = notificationService.sendToClient(recipient.getUserId(), recipient);
-                if (success) {
+                // SSE 전송
+                boolean sseSuccess = notificationService.sendToClient(userId, recipient);
+                if (sseSuccess) {
                     recipient.markAsSent();
                 } else {
                     allSent = false;
-                    log.warn("SSE not connected for user: {}, notification will remain for retry",
-                            recipient.getUserId());
+                    log.warn("SSE not connected for user: {}, notification will remain for retry", userId);
                 }
 
-                // FCM 푸시도 함께 전송
+                // FCM 푸시 전송 (배치 조회된 최신 토큰 사용)
                 try {
-                    notificationService.sendFcmPush(recipient.getUserId(), notification);
+                    String latestToken = userTokenMap.get(userId);
+                    if (latestToken != null) {
+                        notificationService.sendFcmPushToToken(latestToken, notification);
+                    }
+                    // 로컬 DB 토큰으로도 보조 발송
+                    notificationService.sendFcmPushLocal(userId, notification);
                 } catch (Exception e) {
                     log.warn("FCM push failed for scheduled notification: userId={}, error={}",
-                            recipient.getUserId(), e.getMessage());
+                            userId, e.getMessage());
                 }
             }
 

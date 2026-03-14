@@ -11,7 +11,10 @@ data class UserInfoDto(
     @Schema(description = "이메일")
     val email: String,
     @Schema(description = "프로필 이미지 ID")
-    val profileImageId: Long?
+    val profileImageId: Long?,
+    // TODO: [Notification팀 요청] FCM 푸시 발송을 위해 최신 디바이스 토큰 필드 추가 필요 (fcmDeviceToken: String?)
+    @Schema(description = "FCM 디바이스 토큰")
+    val fcmDeviceToken: String? = null
 )
 
 @Schema(description = "다중 사용자 정보 조회 요청")
