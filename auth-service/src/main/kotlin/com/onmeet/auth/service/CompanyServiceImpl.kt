@@ -2,6 +2,7 @@ package com.onmeet.auth.service
 
 import com.onmeet.auth.dto.CompanyRequest
 import com.onmeet.auth.dto.TeamRequest
+import com.onmeet.auth.dto.UpdateCompanyRequest
 import com.onmeet.auth.entity.Company
 import com.onmeet.auth.entity.Team
 import com.onmeet.auth.exception.*
@@ -36,4 +37,12 @@ class CompanyServiceImpl(
     override fun getTeam(id: Long): Team =
         teamRepository.findById(id)
             .orElseThrow { BusinessException(AuthErrorCode.TEAM_NOT_FOUND) }
+
+    @Transactional
+    override fun updateCompany(companyId: Long, request: UpdateCompanyRequest): Company {
+        val company = companyRepository.findById(companyId)
+            .orElseThrow { BusinessException(AuthErrorCode.COMPANY_NOT_FOUND) }
+        request.name?.let { company.name = it }
+        return company
+    }
 }
