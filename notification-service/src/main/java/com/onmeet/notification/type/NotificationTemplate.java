@@ -67,7 +67,15 @@ public enum NotificationTemplate {
             "{title} 회의의 AI 요약이 진행 중입니다."),
     AI_SUMMARY_COMPLETED(
             "AI 요약 완료",
-            "{title} 회의의 AI 요약이 완료되었습니다.");
+            "{title} 회의의 AI 요약이 완료되었습니다."),
+
+    // ── 대기실 관련 ──
+    WAITING_ROOM_ADMITTED(
+            "대기실 입장 승인",
+            "대기실 입장이 승인되었습니다."),
+    WAITING_ROOM_REJECTED(
+            "대기실 입장 거절",
+            "대기실 입장이 거절되었습니다.");
 
     private final String defaultTitle;
     private final String bodyTemplate;

@@ -42,7 +42,7 @@ public class ScheduledNotificationProcessor {
 
             // N+1 방지: 모든 수신자의 최신 FCM 토큰을 일괄 조회
             List<Long> userIds = recipients.stream()
-                    .map(NotificationRecipient::userId)
+                    .map(NotificationRecipient::getUserId)
                     .collect(Collectors.toList());
             
             List<AuthServiceClient.UserInfoResponse> userInfos = authServiceClient.getBatchUserInfo(userIds);
