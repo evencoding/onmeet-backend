@@ -18,6 +18,7 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity
 
 import com.onmeet.auth.security.JwtAuthenticationFilter
+import org.springframework.boot.web.servlet.FilterRegistrationBean
 
 @Configuration
 @EnableWebSecurity
@@ -36,6 +37,33 @@ class SecurityConfig(
     @Bean
     fun authenticationManager(authenticationConfiguration: AuthenticationConfiguration): AuthenticationManager {
         return authenticationConfiguration.authenticationManager
+    }
+
+    // GatewaySecretFilter는 Security Filter Chain 내에서만 사용되어야 하므로
+    // 서블릿 컨테이너의 자동 필터 등록을 비활성화한다.
+    // 자동 등록되면 모든 요청에 대해 Security Chain 바깥에서도 실행되어
+    // JWKS 등 공개 엔드포인트까지 차단하는 문제가 발생한다.
+    @Bean
+    fun disableGatewaySecretFilterAutoRegistration(): FilterRegistrationBean<GatewaySecretFilter> {
+        val registration = FilterRegistrationBean(gatewaySecretFilter)
+        registration.isEnabled = false
+        return registration
+    }
+
+    // AuthGatewayPreAuthFilter도 동일하게 자동 등록 비활성화
+    @Bean
+    fun disableAuthGatewayPreAuthFilterAutoRegistration(): FilterRegistrationBean<AuthGatewayPreAuthFilter> {
+        val registration = FilterRegistrationBean(authGatewayPreAuthFilter)
+        registration.isEnabled = false
+        return registration
+    }
+
+    // JwtAuthenticationFilter도 동일하게 자동 등록 비활성화
+    @Bean
+    fun disableJwtAuthFilterAutoRegistration(): FilterRegistrationBean<JwtAuthenticationFilter> {
+        val registration = FilterRegistrationBean(jwtAuthenticationFilter)
+        registration.isEnabled = false
+        return registration
     }
 
     @Bean
