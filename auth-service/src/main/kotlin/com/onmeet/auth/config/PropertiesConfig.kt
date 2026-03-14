@@ -33,7 +33,8 @@ data class JwtProperties(
 ) {
     data class CookieProperties(
         val secure: Boolean = true,
-        val maxAge: Long = 3600
+        val maxAge: Long = 3600,
+        val sameSite: String = "Lax"
     )
 
     data class RefreshCookieProperties(
