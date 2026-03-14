@@ -429,4 +429,4 @@ export function useNotificationSSE() {
 | `NOTI_017` | 400 | 유효하지 않은 FCM 토큰입니다 | 잘못된 형식의 FCM 토큰 |
 
 > [!NOTE]  
-> 상세한 에러 코드 정의는 [ERROR_CODE_REFERENCE.md](file:///c:/back_0900_jys/evenCoding/spring/onMeet/ERROR_CODE_REFERENCE.md)를 참고하세요.
+> 상세한 에러 코드 정의는 [ERROR_CODE_REFERENCE.md](../ERROR_CODE_REFERENCE.md)를 참고하세요.
