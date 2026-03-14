@@ -327,6 +327,11 @@ jobs:
             echo "LIVEKIT_URL=${{ secrets.LIVEKIT_URL }}" >> .env
             echo "Injected LIVEKIT_URL from GitHub Secret"
 
+            # TODO: 로컬 개발용 임시 설정. 로컬 개발 완료 후 secret 제거하여 롤백할 것
+            sed -i '/^COOKIE_SAMESITE=/d' .env 2>/dev/null || true
+            echo "COOKIE_SAMESITE=${{ secrets.COOKIE_SAMESITE }}" >> .env
+            echo "Injected COOKIE_SAMESITE from GitHub Secret"
+
             # Docker Hub 로그인
             export DOCKER_API_VERSION=1.41
             export DOCKER_REGISTRY=${{ secrets.DOCKER_USERNAME }}

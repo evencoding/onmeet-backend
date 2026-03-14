@@ -8,7 +8,6 @@ import com.onmeet.auth.entity.User
 import com.onmeet.common.client.InternalRoomClient
 import com.onmeet.common.dto.RoomResponse
 import com.onmeet.common.exception.BusinessException
-import com.onmeet.auth.exception.UserNotFoundException
 import io.mockk.every
 import io.mockk.impl.annotations.MockK
 import io.mockk.junit5.MockKExtension
