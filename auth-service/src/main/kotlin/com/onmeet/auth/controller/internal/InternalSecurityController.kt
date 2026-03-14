@@ -27,7 +27,6 @@ class InternalSecurityController(
 
     private fun validateSecret(secret: String?) {
         if (secret == null || !MessageDigest.isEqual(secret.toByteArray(), sharedSecret.toByteArray())) {
-            // TODO: [AUTH][AuthErrorCode.INVALID_INTERNAL_SECRET] 에러메시지 검수 요청
             throw BusinessException(AuthErrorCode.INVALID_INTERNAL_SECRET)
         }
     }
