@@ -3,6 +3,7 @@ package com.onmeet.auth.controller
 import com.onmeet.auth.security.JwtAuthenticationFilter
 import com.onmeet.auth.security.JwtTokenProvider
 import com.onmeet.auth.service.AuthService
+import com.onmeet.auth.service.CompanyService
 import com.onmeet.auth.service.UserService
 import com.onmeet.auth.service.TeamService
 import com.onmeet.auth.service.InvitationService
@@ -35,6 +36,7 @@ class CookieAuthenticationTest {
     private val teamService: TeamService = mockk(relaxed = true)
     private val invitationService: InvitationService = mockk(relaxed = true)
     private val jobTitleService: JobTitleService = mockk(relaxed = true)
+    private val companyService: CompanyService = mockk(relaxed = true)
     private val jwtTokenProvider: JwtTokenProvider = mockk(relaxed = true)
     private val redisTemplate: StringRedisTemplate = mockk(relaxed = true)
 
@@ -84,7 +86,7 @@ class CookieAuthenticationTest {
         )
 
         val mockMvc = MockMvcBuilders
-            .standaloneSetup(ManagerController(userService, authService, teamService, invitationService, jobTitleService))
+            .standaloneSetup(ManagerController(userService, authService, teamService, invitationService, jobTitleService, companyService))
             .build()
 
         every { authService.resetUserProfileImage(userId, userEmail) } returns Unit
