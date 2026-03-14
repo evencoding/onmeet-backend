@@ -3,6 +3,7 @@ package service
 import (
 	"bytes"
 	"context"
+	"errors"
 	"io"
 	"mime/multipart"
 	"net/http"
@@ -96,8 +97,8 @@ type MockAuthClient struct {
 	mock.Mock
 }
 
-func (m *MockAuthClient) GetUserPermissions(userId int64, cookie string) (*client.UserPermissionResponse, error) {
-	args := m.Called(userId, cookie)
+func (m *MockAuthClient) GetUserPermissions(userId int64) (*client.UserPermissionResponse, error) {
+	args := m.Called(userId)
 	if res, ok := args.Get(0).(*client.UserPermissionResponse); ok {
 		return res, args.Error(1)
 	}
@@ -177,14 +178,23 @@ func TestFileService_UploadFiles(t *testing.T) {
 		uploaderId := int64(456)
 		correlationId := "async-corr-id"
 
+		// Use a channel to synchronize goroutine completion instead of time.Sleep
+		done := make(chan struct{})
+
 		s3Mock.On("UploadFile", mock.AnythingOfType("string"), mock.Anything, mock.AnythingOfType("string")).Return(nil)
 		repoMock.On("Save", mock.AnythingOfType("*model.FileMetadata")).Return(nil)
-		epMock.On("SendFileUploadEvent", mock.AnythingOfType("string"), mock.AnythingOfType("uint"), mock.AnythingOfType("string"), mock.AnythingOfType("string"), uploaderId, correlationId).Return(nil)
+		epMock.On("SendFileUploadEvent", mock.AnythingOfType("string"), mock.AnythingOfType("uint"), mock.AnythingOfType("string"), mock.AnythingOfType("string"), uploaderId, correlationId).
+			Run(func(args mock.Arguments) { close(done) }).
+			Return(nil)
 
 		fs.UploadFileAsync(context.Background(), header, "async_docs", &uploaderId, "USER", "456", "topic", correlationId)
 
-		// Wait briefly for goroutine to process
-		time.Sleep(100 * time.Millisecond)
+		select {
+		case <-done:
+			// goroutine completed
+		case <-time.After(2 * time.Second):
+			t.Fatal("timeout: async upload goroutine did not complete")
+		}
 
 		s3Mock.AssertExpectations(t)
 		repoMock.AssertExpectations(t)
@@ -226,7 +236,7 @@ func TestFileService_DeleteFile(t *testing.T) {
 
 		companyId := int64(1)
 		repoMock.On("FindByID", uint(1)).Return(meta, nil)
-		authMock.On("GetUserPermissions", int64(123), "cookie").Return(&client.UserPermissionResponse{
+		authMock.On("GetUserPermissions", int64(123)).Return(&client.UserPermissionResponse{
 			UserID:    123,
 			CompanyID: &companyId,
 			Roles:     []string{"MANAGER"},
@@ -234,7 +244,7 @@ func TestFileService_DeleteFile(t *testing.T) {
 		s3Mock.On("DeleteFile", "USER/123/docs/test.pdf").Return(nil)
 		repoMock.On("Delete", uint(1)).Return(nil)
 
-		err := fs.DeleteFile(context.Background(), 1, 123, "cookie")
+		err := fs.DeleteFile(context.Background(), 1, 123)
 
 		assert.NoError(t, err)
 		repoMock.AssertExpectations(t)
@@ -253,12 +263,12 @@ func TestFileService_DeleteFile(t *testing.T) {
 		}
 
 		repoMock.On("FindByID", uint(1)).Return(meta, nil)
-		authMock.On("GetUserPermissions", int64(456), "cookie").Return(&client.UserPermissionResponse{
+		authMock.On("GetUserPermissions", int64(456)).Return(&client.UserPermissionResponse{
 			UserID: 456,
 			Roles:  []string{"USER"},
 		}, nil)
 
-		err := fs.DeleteFile(context.Background(), 1, 456, "cookie")
+		err := fs.DeleteFile(context.Background(), 1, 456)
 
 		assert.Error(t, err)
 		assert.Contains(t, err.Error(), "파일 삭제 권한이 없습니다")
@@ -376,17 +386,76 @@ func TestFileService_UploadFileAsync_GoroutineSafety(t *testing.T) {
 
 	uploaderId := int64(789)
 
+	// Use channel synchronization instead of time.Sleep
+	done := make(chan struct{})
+
 	s3Mock.On("UploadFile", mock.AnythingOfType("string"), mock.Anything, mock.AnythingOfType("string")).Return(nil)
 	repoMock.On("Save", mock.AnythingOfType("*model.FileMetadata")).Return(nil)
-	epMock.On("SendFileUploadEvent", mock.AnythingOfType("string"), mock.AnythingOfType("uint"), mock.AnythingOfType("string"), mock.AnythingOfType("string"), uploaderId, "corr-id").Return(nil)
+	epMock.On("SendFileUploadEvent", mock.AnythingOfType("string"), mock.AnythingOfType("uint"), mock.AnythingOfType("string"), mock.AnythingOfType("string"), uploaderId, "corr-id").
+		Run(func(args mock.Arguments) { close(done) }).
+		Return(nil)
 
 	fs.UploadFileAsync(context.Background(), header, "safe_docs", &uploaderId, "USER", "789", "topic", "corr-id")
 
-	time.Sleep(200 * time.Millisecond)
+	select {
+	case <-done:
+		// goroutine completed
+	case <-time.After(2 * time.Second):
+		t.Fatal("timeout: async upload goroutine did not complete")
+	}
 
 	s3Mock.AssertExpectations(t)
 	repoMock.AssertExpectations(t)
 	epMock.AssertExpectations(t)
+}
+
+func TestFileService_UploadFiles_S3Failure_ShouldNotSaveToDB(t *testing.T) {
+	// When S3 upload fails, repo.Save must NOT be called (no partial state in DB)
+	repoMock := new(mockFileRepository)
+	s3Mock := new(MockS3Service)
+	cfg := &config.Config{CloudFrontDomain: "cdn.test.com"}
+	fs := NewFileService(repoMock, s3Mock, nil, nil, cfg)
+
+	pngContent := append([]byte{0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A}, make([]byte, 512)...)
+	header, err := createMultipartFileHeader("fail.png", pngContent)
+	assert.NoError(t, err)
+
+	uploaderId := int64(123)
+	s3Mock.On("UploadFile", mock.AnythingOfType("string"), mock.Anything, mock.AnythingOfType("string")).
+		Return(errors.New("S3 service unavailable"))
+
+	_, uploadErr := fs.UploadFiles(context.Background(), []*multipart.FileHeader{header}, "docs", &uploaderId, "USER", "123")
+
+	assert.Error(t, uploadErr)
+	repoMock.AssertNotCalled(t, "Save", mock.Anything)
+	s3Mock.AssertExpectations(t)
+}
+
+func TestFileService_UploadFiles_DBFailure_ShouldRollbackS3(t *testing.T) {
+	// When DB save fails after S3 upload, S3 rollback (DeleteFile) must be called
+	repoMock := new(mockFileRepository)
+	s3Mock := new(MockS3Service)
+	cfg := &config.Config{CloudFrontDomain: "cdn.test.com"}
+	fs := NewFileService(repoMock, s3Mock, nil, nil, cfg)
+
+	pngContent := append([]byte{0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A}, make([]byte, 512)...)
+	header, err := createMultipartFileHeader("rollback.png", pngContent)
+	assert.NoError(t, err)
+
+	uploaderId := int64(123)
+	dbErr := errors.New("DB connection lost")
+
+	s3Mock.On("UploadFile", mock.AnythingOfType("string"), mock.Anything, mock.AnythingOfType("string")).Return(nil)
+	repoMock.On("Save", mock.AnythingOfType("*model.FileMetadata")).Return(dbErr)
+	// Rollback: S3 DeleteFile must be called with the same key that was uploaded
+	s3Mock.On("DeleteFile", mock.AnythingOfType("string")).Return(nil)
+
+	_, uploadErr := fs.UploadFiles(context.Background(), []*multipart.FileHeader{header}, "docs", &uploaderId, "USER", "123")
+
+	assert.Error(t, uploadErr)
+	s3Mock.AssertCalled(t, "DeleteFile", mock.AnythingOfType("string"))
+	s3Mock.AssertExpectations(t)
+	repoMock.AssertExpectations(t)
 }
 
 func TestFileService_RenderFile_CacheTTLExpiration(t *testing.T) {
