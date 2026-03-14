@@ -24,7 +24,7 @@ class UserRepositoryIntegrationTest : BaseIntegrationTest() {
         fun isDockerAvailable(): Boolean {
             return try {
                 val process = ProcessBuilder("docker", "info").start()
-                process.waitFor() == 0
+                process.waitFor(5, java.util.concurrent.TimeUnit.SECONDS) && process.exitValue() == 0
             } catch (e: Exception) {
                 false
             }
