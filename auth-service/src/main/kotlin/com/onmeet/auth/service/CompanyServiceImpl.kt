@@ -24,7 +24,6 @@ class CompanyServiceImpl(
     @Transactional
     override fun createCompany(name: String): Company =
         if (companyRepository.findByName(name) != null) {
-            // TODO: [AUTH][AuthErrorCode.COMPANY_ALREADY_EXISTS] 에러메시지 검수 요청
             throw BusinessException(AuthErrorCode.COMPANY_ALREADY_EXISTS)
         } else {
             companyRepository.save(Company(name = name))
@@ -32,11 +31,9 @@ class CompanyServiceImpl(
 
     override fun getCompany(id: Long): Company =
         companyRepository.findById(id)
-            // TODO: [AUTH][AuthErrorCode.COMPANY_NOT_FOUND] 에러메시지 검수 요청
             .orElseThrow { BusinessException(AuthErrorCode.COMPANY_NOT_FOUND) }
 
     override fun getTeam(id: Long): Team =
         teamRepository.findById(id)
-            // TODO: [AUTH][AuthErrorCode.TEAM_NOT_FOUND] 에러메시지 검수 요청
             .orElseThrow { BusinessException(AuthErrorCode.TEAM_NOT_FOUND) }
 }
