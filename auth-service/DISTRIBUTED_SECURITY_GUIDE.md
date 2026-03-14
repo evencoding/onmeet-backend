@@ -15,6 +15,14 @@
   4. `auth-service`에서 권한 확인 후 응답
   5. 검증 성공 시 비즈니스 로직 수행
 
+### 지원하는 권한 검증 타입
+
+| 메소드 | 내부 API | 설명 |
+|---|---|---|
+| `teamSecurity.isLeaderOf(teamId, principal)` | `/internal/v1/security/teams/{teamId}/leader-check` | 팀장 권한 확인 |
+| `teamSecurity.isMemberOf(teamId, principal)` | `/internal/v1/security/teams/{teamId}/member-check` | 팀 멤버십 확인 |
+| `teamSecurity.belongsToSameCompany(teamId, principal)` | `/internal/v1/security/teams/{teamId}/company-check` | 동일 회사 여부 확인 |
+
 ---
 
 ## 2. 서비스 통합 단계 (Integration Steps)
@@ -22,7 +30,7 @@
 타 서비스(Video, Chat 등)에서 보안 기능을 활성화하려면 다음 단계를 따르십시오.
 
 ### 2.1. 의존성 추가 (`build.gradle`)
-Feign Client 및 LoadBalancer가 필요합니다.
+Feign Client 및 공통 모듈이 필요합니다.
 
 ```gradle
 dependencies {
@@ -87,6 +95,15 @@ public void updateConfig(@PathVariable Long teamId) {
 }
 ```
 
+### 3.3. 동일 회사 여부 확인
+```java
+@PostMapping("/teams/{teamId}/approve")
+@PreAuthorize("hasRole('MANAGER') and @teamSecurity.belongsToSameCompany(#teamId, principal)")
+public void approveTeam(@PathVariable Long teamId) {
+    // 로직 수행
+}
+```
+
 ---
 
 ## 4. 보안 프로토콜 (Internal Protocol)
@@ -96,10 +113,27 @@ public void updateConfig(@PathVariable Long teamId) {
 - **인증 헤더**: 모든 내부 보안 요청에는 `X-Internal-Secret` 헤더가 포함되어야 합니다.
 - **검증**: `auth-service`는 헤더의 값이 `gateway.shared-secret`과 일치하는지 확인합니다.
 - **데이터 타입**: 사용자 ID(`principal`)는 객체 타입에 따라 자동으로 `Long`으로 변환되어 처리됩니다.
+- **응답 형식**: `SecurityCheckResponse { authorized: Boolean }`
 
 ---
 
-## 5. 관련 파일 링크
+## 5. auth-service 내부 API 목록
+
+| HTTP Method | Path | 설명 |
+|---|---|---|
+| GET | `/internal/v1/security/teams/{teamId}/leader-check?userId={userId}` | 팀장 권한 확인 |
+| GET | `/internal/v1/security/teams/{teamId}/member-check?userId={userId}` | 팀 멤버십 확인 |
+| GET | `/internal/v1/security/teams/{teamId}/company-check?userId={userId}` | 동일 회사 여부 확인 |
+| GET | `/internal/users/{userId}` | 사용자 정보 조회 (Gateway Secret) |
+| POST | `/internal/users/batch` | 다중 사용자 정보 조회 (Gateway Secret) |
+| GET | `/internal/users/{userId}/exists` | 사용자 존재 여부 확인 (Gateway Secret) |
+| POST | `/internal/users/exists/batch` | 다중 사용자 존재 여부 확인 (Gateway Secret) |
+| GET | `/internal/teams/{teamId}/exists` | 팀 존재 여부 확인 (Gateway Secret) |
+| POST | `/internal/teams/membership/check` | 팀 멤버십 확인 (Gateway Secret) |
+
+---
+
+## 6. 관련 파일 링크
 - [InternalSecurityClient.kt (onmeet-common)](file:///Users/sprtms16/IdeaProjects/onmeet-backend/onmeet-common/src/main/kotlin/com/onmeet/common/client/InternalSecurityClient.kt)
 - [RemoteTeamSecurity.kt (onmeet-common)](file:///Users/sprtms16/IdeaProjects/onmeet-backend/onmeet-common/src/main/kotlin/com/onmeet/common/security/RemoteTeamSecurity.kt)
 - [InternalSecurityController.kt (auth-service)](file:///Users/sprtms16/IdeaProjects/onmeet-backend/auth-service/src/main/kotlin/com/onmeet/auth/controller/internal/InternalSecurityController.kt)

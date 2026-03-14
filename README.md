@@ -50,7 +50,7 @@ B2B 화상 회의 + AI 요약 + 알림 서비스 (MSA w/ Spring Boot 3 & Kotlin)
 | **Video Service** | `8083` | Java | 화상 회의 관리, WebRTC 시그널링 | MySQL |
 | **Notification Service** | `8085` | Java | 실시간 알림 (SSE) | MySQL |
 | **File Service** | `8086` | Go | 파일 업로드/다운로드, S3, 프로필 이미지 | PostgreSQL |
-| **Email Service** | `8087` | Java | 이메일 발송 (AWS SES) | - |
+| **Email Service** | `8087` | Java | 이메일 발송 (Gmail SMTP OAuth2) | - |
 
 > **참고**: File Service는 성능 최적화를 위해 Kotlin에서 Go로 전환되었으며, **약 100배 이상 빠른 API 응답 속도**를 달성했습니다.
 
@@ -143,13 +143,23 @@ JWT_SECRET_KEY=your-secret-key-must-be-long-enough
 AUTH_ENCRYPTION_KEY=encryption-key
 GATEWAY_SHARED_SECRET=shared-secret-for-internal-auth
 
+# 쿠키 설정
+COOKIE_SAMESITE=Lax          # 크로스사이트 환경(프로덕션)에서는 None으로 설정
+COOKIE_SECURE=true
+
 # 데이터베이스 (전역 또는 서비스별)
 DB_ROOT_PASSWORD=root
 DB_USERNAME=root
 
-# AWS / 외부 서비스
+# AWS (S3/CloudFront - file-service)
 AWS_ACCESS_KEY_ID=...
 AWS_SECRET_ACCESS_KEY=...
+
+# Gmail OAuth2 (email-service)
+GMAIL_CLIENT_ID=...
+GMAIL_CLIENT_SECRET=...
+GMAIL_REFRESH_TOKEN=...
+SPRING_MAIL_USERNAME=your-gmail-address@gmail.com
 ```
 
 ---
@@ -166,7 +176,7 @@ AWS_SECRET_ACCESS_KEY=...
 | **Video** | `/video/**` | [API_REFERENCE.md](video-service/API_REFERENCE.md) | [Link](http://localhost:8083/swagger-ui.html) |
 | **Notification** | `/notification/**` | [API_REFERENCE.md](notification-service/API_REFERENCE.md) | [Link](http://localhost:8085/swagger-ui.html) |
 | **File** | `/file/**` | [API_REFERENCE.md](file-service/API_REFERENCE.md) | [Link](http://localhost:8086/swagger-ui.html) |
-| **Email** | - | [API_REFERENCE.md](email-service/API_REFERENCE.md) | [Link](http://localhost:8087/swagger-ui.html) |
+| **Email** | `/email/v1/**` | [API_REFERENCE.md](email-service/API_REFERENCE.md) | - |
 
 ### 상태 확인 (Health Check)
 - `GET /actuator/health` (모든 서비스 공통)
