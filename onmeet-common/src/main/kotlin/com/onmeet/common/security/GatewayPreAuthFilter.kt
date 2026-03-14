@@ -6,6 +6,7 @@ import jakarta.servlet.http.HttpServletResponse
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken
 import org.springframework.security.core.authority.SimpleGrantedAuthority
 import org.springframework.security.core.context.SecurityContextHolder
+import org.springframework.util.AntPathMatcher
 import org.springframework.web.filter.OncePerRequestFilter
 import java.security.MessageDigest
 
@@ -18,16 +19,21 @@ open class GatewayPreAuthFilter(
             "/actuator/health",
             "/actuator/info"
         )
+        // AntPathMatcher-based patterns prevent path bypass attacks like /api/swagger-ui-exploit
+        private val EXCLUDED_PATTERNS = listOf(
+            "/v3/api-docs/**",
+            "/swagger-ui/**",
+            "/swagger-ui.html"
+        )
+        private val antPathMatcher = AntPathMatcher()
     }
 
     override fun shouldNotFilter(request: HttpServletRequest): Boolean {
         val path = request.requestURI
         return ALLOWED_PATHS.contains(path) ||
                 path.startsWith("/actuator/") ||
-                path.contains("/v3/api-docs") ||
-                path.contains("/swagger-ui") ||
                 path.endsWith("/doc.json") ||
-                path == "/swagger-ui.html"
+                EXCLUDED_PATTERNS.any { antPathMatcher.match(it, path) }
     }
 
     override fun doFilterInternal(
