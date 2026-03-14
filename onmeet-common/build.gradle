@@ -26,6 +26,9 @@ dependencies {
     api 'io.micrometer:micrometer-registry-prometheus'
     api 'io.micrometer:micrometer-tracing-bridge-brave'
     api 'io.zipkin.reporter2:zipkin-reporter-brave'
+
+    // Test
+    testImplementation 'org.springframework.boot:spring-boot-starter-test'
 }
 
 java {
@@ -46,4 +49,14 @@ compileKotlin {
     kotlinOptions {
         jvmTarget = "17"
     }
+}
+
+compileTestKotlin {
+    kotlinOptions {
+        jvmTarget = "17"
+    }
+}
+
+tasks.named('test') {
+    useJUnitPlatform()
 }

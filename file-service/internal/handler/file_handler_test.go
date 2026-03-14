@@ -32,8 +32,8 @@ func (m *MockFileService) GetFile(id uint) (*model.FileMetadata, error) {
 	return args.Get(0).(*model.FileMetadata), args.Error(1)
 }
 
-func (m *MockFileService) DeleteFile(ctx context.Context, id uint, requesterId int64, cookie string) error {
-	args := m.Called(id, requesterId, cookie)
+func (m *MockFileService) DeleteFile(ctx context.Context, id uint, requesterId int64) error {
+	args := m.Called(id, requesterId)
 	return args.Error(0)
 }
 
@@ -211,7 +211,7 @@ func TestFileHandler_DeleteFile(t *testing.T) {
 		handler.DeleteFile(c)
 	})
 
-	mockService.On("DeleteFile", uint(1), int64(123), mock.Anything).Return(nil)
+	mockService.On("DeleteFile", uint(1), int64(123)).Return(nil)
 
 	w := httptest.NewRecorder()
 	req, _ := http.NewRequest("DELETE", "/1", nil)
@@ -426,12 +426,86 @@ func TestFileHandler_DeleteFile_ZeroFileId(t *testing.T) {
 		handler.DeleteFile(c)
 	})
 
-	mockService.On("DeleteFile", uint(0), int64(123), mock.Anything).Return(assert.AnError)
+	mockService.On("DeleteFile", uint(0), int64(123)).Return(assert.AnError)
 
 	w := httptest.NewRecorder()
 	req, _ := http.NewRequest("DELETE", "/0", nil)
 	router.ServeHTTP(w, req)
 
 	assert.NotEqual(t, http.StatusBadRequest, w.Code)
+	mockService.AssertExpectations(t)
+}
+
+func TestFileHandler_DeleteMyProfile_Unauthenticated(t *testing.T) {
+	// When no X-User-Id header/context value, DeleteMyProfile must return 401
+	gin.SetMode(gin.TestMode)
+	mockService := new(MockFileService)
+	handler := NewFileHandler(mockService)
+
+	router := gin.Default()
+	// No userId injected in context
+	router.DELETE("/me/profile", handler.DeleteMyProfile)
+
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest("DELETE", "/me/profile", nil)
+	router.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusUnauthorized, w.Code)
+	assert.Contains(t, w.Body.String(), "FILE_008")
+	// Service should never be called when user is unauthenticated
+	mockService.AssertNotCalled(t, "DeleteMyProfile", mock.Anything)
+}
+
+func TestFileHandler_DeleteMyProfile_Authenticated_Success(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	mockService := new(MockFileService)
+	handler := NewFileHandler(mockService)
+
+	router := gin.Default()
+	router.DELETE("/me/profile", func(c *gin.Context) {
+		c.Set("userId", "55")
+		handler.DeleteMyProfile(c)
+	})
+
+	mockService.On("DeleteMyProfile", int64(55)).Return(nil)
+
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest("DELETE", "/me/profile", nil)
+	router.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusNoContent, w.Code)
+	mockService.AssertExpectations(t)
+}
+
+func TestFileHandler_RenderFile_LargeFile_StreamedWithoutCache(t *testing.T) {
+	// Large files (>= 1MB) are streamed directly; service returns the reader without caching.
+	// The handler must forward the full content and correct Content-Type.
+	gin.SetMode(gin.TestMode)
+	mockService := new(MockFileService)
+	handler := NewFileHandler(mockService)
+
+	router := gin.Default()
+	router.GET("/render/:fileId", handler.RenderFile)
+
+	// Simulate a large 2MB payload
+	largeContent := make([]byte, 2*1024*1024)
+	for i := range largeContent {
+		largeContent[i] = byte(i % 256)
+	}
+
+	mockService.On("RenderFile", uint(7)).Return(
+		io.NopCloser(bytes.NewReader(largeContent)),
+		int64(len(largeContent)),
+		"application/octet-stream",
+		nil,
+	)
+
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest("GET", "/render/7", nil)
+	router.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusOK, w.Code)
+	assert.Contains(t, w.Header().Get("Content-Type"), "application/octet-stream")
+	assert.Equal(t, len(largeContent), w.Body.Len())
 	mockService.AssertExpectations(t)
 }

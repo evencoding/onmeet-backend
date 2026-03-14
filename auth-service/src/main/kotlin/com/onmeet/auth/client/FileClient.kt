@@ -18,8 +18,9 @@ data class FileMetadataResponse(
 @Service
 class FileClient(
     restTemplate: RestTemplate,
-    @Value("\${onmeet.file.internal-url}") private val fileServiceUrl: String
-) : BaseServiceClient(restTemplate) {
+    @Value("\${onmeet.file.internal-url}") private val fileServiceUrl: String,
+    @Value("\${gateway.shared-secret}") gatewaySecret: String
+) : BaseServiceClient(restTemplate, gatewaySecret) {
 
     /**
      * 기본 프로필 이미지를 생성 요청합니다.

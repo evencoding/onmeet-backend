@@ -20,36 +20,34 @@ type UserPermissionResponse struct {
 
 // AuthClient는 auth-service와 통신하여 유저 정보를 가져오는 역할을 합니다.
 type AuthClient interface {
-	GetUserPermissions(userId int64, cookie string) (*UserPermissionResponse, error)
+	GetUserPermissions(userId int64) (*UserPermissionResponse, error)
 }
 
 type authClient struct {
-	baseURL string
-	client  *http.Client
+	baseURL             string
+	gatewaySharedSecret string
+	client              *http.Client
 }
 
 func NewAuthClient(cfg *config.Config) AuthClient {
 	return &authClient{
-		baseURL: cfg.AuthServiceURL,
+		baseURL:             cfg.AuthServiceURL,
+		gatewaySharedSecret: cfg.GatewaySharedSecret,
 		client: &http.Client{
 			Timeout: 5 * time.Second,
 		},
 	}
 }
 
-func (c *authClient) GetUserPermissions(userId int64, cookie string) (*UserPermissionResponse, error) {
+func (c *authClient) GetUserPermissions(userId int64) (*UserPermissionResponse, error) {
 	url := fmt.Sprintf("%s/users/internal/%d/permissions", c.baseURL, userId)
 
-	// http.NewRequest를 사용하여 헤더를 제어할 수 있는 요청 객체를 생성합니다.
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
 		return nil, model.NewAppError(model.CodeAuthRequestFail, http.StatusInternalServerError, "auth-service 요청 객체 생성에 실패했습니다")
 	}
 
-	// 획득한 쿠키를 요청 헤더에 설정합니다. (BaseServiceClient.kt의 역할과 동일)
-	if cookie != "" {
-		req.Header.Set("Cookie", cookie)
-	}
+	req.Header.Set("X-Gateway-Secret", c.gatewaySharedSecret)
 
 	resp, err := c.client.Do(req)
 	if err != nil {

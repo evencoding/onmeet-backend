@@ -2,6 +2,7 @@ package com.onmeet.email.service;
 
 import java.util.Map;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -20,6 +21,8 @@ import org.springframework.test.util.ReflectionTestUtils;
 import org.thymeleaf.TemplateEngine;
 import org.thymeleaf.context.Context;
 
+import com.onmeet.common.exception.BusinessException;
+import com.onmeet.common.exception.errorcode.EmailErrorCode;
 import jakarta.mail.internet.MimeMessage;
 
 @ExtendWith(MockitoExtension.class)
@@ -67,16 +70,17 @@ class EmailServiceTest {
     }
 
     @Test
-    void sendEmail_WithInvalidTemplate_ShouldThrowException() {
+    void sendEmail_WithInvalidTemplate_ShouldThrowBusinessException() {
         // Given
         String to = "user@example.com";
         String subject = "Test Subject";
         String maliciousTemplateName = "../../../etc/passwd";
 
-        // When & Then: 허용 목록에 없는 template은 IllegalArgumentException을 발생시켜야 함
-        assertThrows(IllegalArgumentException.class, ()
+        // When & Then: 허용 목록에 없는 template은 BusinessException(INVALID_TEMPLATE)을 발생시켜야 함
+        BusinessException ex = assertThrows(BusinessException.class, ()
                 -> emailService.sendEmail(to, subject, maliciousTemplateName, null)
         );
+        assertEquals(EmailErrorCode.INVALID_TEMPLATE, ex.getErrorCode());
 
         // 악의적인 templateName으로 인해 tokenService나 javaMailSender가 호출되면 안 됨
         verify(tokenService, never()).getAccessToken();
