@@ -206,7 +206,7 @@ class AuthService(
             } catch (e: Exception) {
                 // 파일 삭제 실패가 비즈니스 로직을 방해하지 않도록 로그만 남김
                 // 실제 운영에서는 재시도 큐에 넣거나 처리가 필요할 수 있음
-                // log.warn("Failed to delete old profile image: $oldImageId", e)
+                log.warn("Failed to delete old profile image: $oldImageId", e)
             }
         }
 

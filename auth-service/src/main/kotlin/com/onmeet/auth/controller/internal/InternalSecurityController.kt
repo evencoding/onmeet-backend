@@ -5,6 +5,7 @@ import com.onmeet.common.dto.SecurityCheckResponse
 import com.onmeet.common.dto.ErrorResponse
 import com.onmeet.common.exception.BusinessException
 import com.onmeet.common.exception.errorcode.AuthErrorCode
+import java.security.MessageDigest
 import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.responses.ApiResponse
 import io.swagger.v3.oas.annotations.responses.ApiResponses

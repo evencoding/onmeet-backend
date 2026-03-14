@@ -89,6 +89,8 @@ data class TeamRequest(
     val leaderId: Long? = null
 )
 
+data class TeamRejectRequest(val reason: String?)
+
 @Schema(description = "초대 요청")
 data class InvitationRequest(
     @field:jakarta.validation.constraints.NotEmpty(message = "At least one email is required")

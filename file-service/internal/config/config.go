@@ -17,6 +17,7 @@ type Config struct {
 	CloudFrontDomain    string
 	KafkaBrokers        string
 	AuthServiceURL      string
+	CORSAllowedOrigins  string
 }
 
 // LoadConfig는 환경 변수에서 설정을 읽어와 Config 객체를 생성합니다.
@@ -33,6 +34,7 @@ func LoadConfig() *Config {
 		CloudFrontDomain:    getEnv("CLOUDFRONT_DOMAIN", ""),
 		KafkaBrokers:        getEnv("KAFKA_BROKERS", "kafka:9092"),
 		AuthServiceURL:      getEnv("AUTH_SERVICE_URL", "http://auth-service:8081"),
+		CORSAllowedOrigins:  getEnv("CORS_ALLOWED_ORIGINS", "http://localhost:8080"),
 	}
 }
 
