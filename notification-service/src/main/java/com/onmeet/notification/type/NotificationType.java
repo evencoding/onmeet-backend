@@ -23,5 +23,9 @@ public enum NotificationType {
     // 회의 초대 상세
     INVITATION_ACCEPTED,
     INVITATION_DECLINED,
-    INVITATION_CANCELLED
+    INVITATION_CANCELLED,
+
+    // 대기실 관련
+    WAITING_ROOM_ADMITTED,
+    WAITING_ROOM_REJECTED
 }
