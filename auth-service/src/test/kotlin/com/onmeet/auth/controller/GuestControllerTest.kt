@@ -1,57 +1,39 @@
 package com.onmeet.auth.controller
 
 import com.fasterxml.jackson.databind.ObjectMapper
-import com.ninjasquad.springmockk.MockkBean
 import com.onmeet.auth.config.JwtProperties
 import com.onmeet.auth.dto.GuestInviteRequestDto
 import com.onmeet.auth.dto.GuestJoinResultDto
 import com.onmeet.auth.service.GuestService
 import io.mockk.every
+import io.mockk.mockk
+import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
-import org.springframework.beans.factory.annotation.Autowired
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc
-import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest
 import org.springframework.http.MediaType
 import org.springframework.test.web.servlet.MockMvc
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.*
+import org.springframework.test.web.servlet.setup.MockMvcBuilders
 
-@WebMvcTest(GuestController::class)
-@AutoConfigureMockMvc(addFilters = false)
 class GuestControllerTest {
 
-    @Autowired
     private lateinit var mockMvc: MockMvc
+    private val guestService: GuestService = mockk()
+    private val jwtProperties: JwtProperties = mockk()
+    private val objectMapper = ObjectMapper()
 
-    @MockkBean
-    private lateinit var guestService: GuestService
-
-    @MockkBean
-    private lateinit var jwtProperties: JwtProperties
-
-    @MockkBean
-    private lateinit var keyManager: com.onmeet.auth.security.KeyManager
-
-    @MockkBean
-    private lateinit var jwtTokenProvider: com.onmeet.auth.security.JwtTokenProvider
-
-    @MockkBean
-    private lateinit var gatewayProperties: com.onmeet.auth.config.GatewayProperties
-
-    @MockkBean
-    private lateinit var authGatewayPreAuthFilter: com.onmeet.auth.security.AuthGatewayPreAuthFilter
-
-    @MockkBean
-    private lateinit var jwtAuthenticationFilter: com.onmeet.auth.security.JwtAuthenticationFilter
-
-    @Autowired
-    private lateinit var objectMapper: ObjectMapper
+    @BeforeEach
+    fun setup() {
+        mockMvc = MockMvcBuilders
+            .standaloneSetup(GuestController(guestService, jwtProperties, "http://localhost:3000"))
+            .build()
+    }
 
     @Test
     fun `inviteGuest should return 200 OK`() {
         val request = GuestInviteRequestDto("guest@example.com", "room123", "Test Room")
-        
+
         every { guestService.inviteGuest(any(), "host@example.com") } returns Unit
 
         mockMvc.perform(
