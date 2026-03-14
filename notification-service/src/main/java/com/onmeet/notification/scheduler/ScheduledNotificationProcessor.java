@@ -69,14 +69,10 @@ public class ScheduledNotificationProcessor {
                     log.warn("SSE not connected for user: {}, notification will remain for retry", userId);
                 }
 
-                // FCM 푸시 전송 (배치 조회된 최신 토큰 사용)
+                // FCM 푸시 전송 (최신 토큰 & 로컬 토큰 합집합으로 중복 방지)
                 try {
                     String latestToken = userTokenMap.get(userId);
-                    if (latestToken != null) {
-                        notificationService.sendFcmPushToToken(latestToken, notification);
-                    }
-                    // 로컬 DB 토큰으로도 보조 발송
-                    notificationService.sendFcmPushLocal(userId, notification);
+                    notificationService.sendFcmPushToUniqueTokens(userId, notification, latestToken);
                 } catch (Exception e) {
                     log.warn("FCM push failed for scheduled notification: userId={}, error={}",
                             userId, e.getMessage());
