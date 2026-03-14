@@ -33,13 +33,11 @@ class GuestService(
     @Transactional
     fun inviteGuest(request: GuestInviteRequestDto, inviterEmail: String) {
         val user = userRepository.findByEmail(inviterEmail)
-            // TODO: [AUTH][AuthErrorCode.GUEST_INVITER_NOT_FOUND] 에러메시지 검수 요청
             .orElseThrow { BusinessException(AuthErrorCode.GUEST_INVITER_NOT_FOUND) }
 
         // [Security] [IDOR 방어] video-service 연동을 통해 초대자가 해당 roomId의 호스트인지 검증
         val room = internalRoomClient.getRoomByCode(request.roomId, gatewaySecret)
         if (room.hostUserId != (user.id ?: 0L)) {
-            // TODO: [AUTH][AuthErrorCode.GUEST_INVITE_FORBIDDEN] 에러메시지 검수 요청
             throw BusinessException(AuthErrorCode.GUEST_INVITE_FORBIDDEN)
         }
 
@@ -68,11 +66,9 @@ class GuestService(
     @Transactional(readOnly = true)
     fun joinMeeting(uuid: String): GuestJoinResultDto {
         val invitation = guestInvitationRepository.findByUuid(uuid)
-            // TODO: [AUTH][AuthErrorCode.GUEST_LINK_INVALID] 에러메시지 검수 요청
             .orElseThrow { BusinessException(AuthErrorCode.GUEST_LINK_INVALID) }
 
         if (invitation.expiresAt.isBefore(LocalDateTime.now())) {
-            // TODO: [AUTH][AuthErrorCode.GUEST_LINK_EXPIRED] 에러메시지 검수 요청
             throw BusinessException(AuthErrorCode.GUEST_LINK_EXPIRED)
         }
 

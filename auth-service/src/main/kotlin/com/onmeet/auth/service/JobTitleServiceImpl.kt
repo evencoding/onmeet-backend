@@ -41,11 +41,9 @@ class JobTitleServiceImpl(
     override fun updateJobTitle(manager: User, id: Long, request: JobTitleRequest): JobTitle {
         validateManager(manager)
         val jobTitle = jobTitleRepository.findById(id)
-            // TODO: [AUTH][AuthErrorCode.JOB_TITLE_NOT_FOUND] 에러메시지 검수 요청
             .orElseThrow { BusinessException(AuthErrorCode.JOB_TITLE_NOT_FOUND) }
 
         if (jobTitle.company.requireId() != manager.company.requireId()) {
-            // TODO: [AUTH][AuthErrorCode.JOB_TITLE_CROSS_COMPANY] 에러메시지 검수 요청
             throw BusinessException(AuthErrorCode.JOB_TITLE_CROSS_COMPANY)
         }
 
@@ -58,7 +56,6 @@ class JobTitleServiceImpl(
             val hasOtherDefault = jobTitleRepository.findAllByCompany(manager.company)
                 .any { it.id != jobTitle.id && it.isDefault }
             if (!hasOtherDefault) {
-                // TODO: [AUTH][AuthErrorCode.JOB_TITLE_DEFAULT_REQUIRED] 에러메시지 검수 요청
                 throw BusinessException(AuthErrorCode.JOB_TITLE_DEFAULT_REQUIRED)
             }
             jobTitle.isDefault = false
@@ -71,11 +68,9 @@ class JobTitleServiceImpl(
     override fun deleteJobTitle(manager: User, id: Long) {
         validateManager(manager)
         val jobTitle = jobTitleRepository.findById(id)
-            // TODO: [AUTH][AuthErrorCode.JOB_TITLE_NOT_FOUND] 에러메시지 검수 요청
             .orElseThrow { BusinessException(AuthErrorCode.JOB_TITLE_NOT_FOUND) }
 
         if (jobTitle.company.requireId() != manager.company.requireId()) {
-            // TODO: [AUTH][AuthErrorCode.JOB_TITLE_CROSS_COMPANY] 에러메시지 검수 요청
             throw BusinessException(AuthErrorCode.JOB_TITLE_CROSS_COMPANY)
         }
 
@@ -83,7 +78,6 @@ class JobTitleServiceImpl(
             val hasOtherDefault = jobTitleRepository.findAllByCompany(manager.company)
                 .any { it.id != jobTitle.id && it.isDefault }
             if (!hasOtherDefault) {
-                // TODO: [AUTH][AuthErrorCode.JOB_TITLE_DEFAULT_REQUIRED] 에러메시지 검수 요청
                 throw BusinessException(AuthErrorCode.JOB_TITLE_DEFAULT_REQUIRED)
             }
         }
@@ -109,7 +103,6 @@ class JobTitleServiceImpl(
 
     private fun validateManager(user: User) {
         if (!user.hasRole(User.Role.MANAGER)) {
-            // TODO: [AUTH][AuthErrorCode.JOB_TITLE_MANAGE_FORBIDDEN] 에러메시지 검수 요청
             throw BusinessException(AuthErrorCode.JOB_TITLE_MANAGE_FORBIDDEN)
         }
     }

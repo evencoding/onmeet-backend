@@ -382,7 +382,6 @@ class AuthController(
         @CookieValue(name = JwtConstants.REFRESH_TOKEN_COOKIE_NAME, required = false) cookieRefreshToken: String?,
         @RequestBody(required = false) request: RefreshRequest?
     ): ResponseEntity<TokenResponse> {
-        // TODO: [AUTH][AuthErrorCode.INVALID_REFRESH_TOKEN] 에러메시지 검수 요청
         val refreshToken = cookieRefreshToken ?: request?.refreshToken
             ?: throw BusinessException(AuthErrorCode.INVALID_REFRESH_TOKEN)
 
