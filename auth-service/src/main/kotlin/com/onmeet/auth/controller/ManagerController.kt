@@ -103,7 +103,7 @@ class ManagerController(
     @PatchMapping("/company")
     fun updateCompany(
         @AuthenticationPrincipal user: User,
-        @RequestBody request: UpdateCompanyRequest
+        @RequestBody @jakarta.validation.Valid request: UpdateCompanyRequest
     ): ResponseEntity<CompanyResponse> {
         val updated = companyService.updateCompany(user.company.requireId(), request)
         return ResponseEntity.ok(CompanyResponse(
