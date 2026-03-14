@@ -6,17 +6,20 @@ import com.onmeet.auth.entity.Company
 import com.onmeet.auth.entity.Team
 import com.onmeet.auth.entity.TeamMember
 import com.onmeet.auth.entity.User
-import com.onmeet.auth.exception.CompanyMismatchException
-import com.onmeet.auth.exception.TeamAlreadyExistsException
 import com.onmeet.auth.repository.jpa.CompanyRepository
 import com.onmeet.auth.repository.jpa.TeamMemberRepository
 import com.onmeet.auth.repository.jpa.TeamRepository
 import com.onmeet.auth.repository.jpa.UserRepository
+import com.onmeet.common.exception.BusinessException
 import io.mockk.every
 import io.mockk.impl.annotations.InjectMockKs
 import io.mockk.impl.annotations.MockK
 import io.mockk.junit5.MockKExtension
+import io.mockk.justRun
+import io.mockk.mockkStatic
+import io.mockk.unmockkStatic
 import io.mockk.verify
+import org.springframework.data.repository.findByIdOrNull
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
@@ -42,6 +45,15 @@ class TeamServiceImplTest {
 
     @MockK
     private lateinit var teamProperties: TeamProperties
+
+    @MockK
+    private lateinit var notificationEventPublisher: NotificationEventPublisher
+
+    @MockK
+    private lateinit var managerTeamCreationStrategy: ManagerTeamCreationStrategy
+
+    @MockK
+    private lateinit var memberTeamCreationStrategy: MemberTeamCreationStrategy
 
     @InjectMockKs
     private lateinit var teamService: TeamServiceImpl
@@ -82,7 +94,7 @@ class TeamServiceImplTest {
         val team = Team(name = request.name, description = request.description, color = request.color, company = company, leader = normalUser, status = Team.TeamStatus.PENDING_APPROVAL)
         
         every { teamRepository.findByNameAndCompanyId(request.name, company.id!!) } returns null
-        every { teamRepository.save(any()) } returns team
+        every { memberTeamCreationStrategy.create(normalUser, request) } returns team
 
         // when
         val result = teamService.createTeam(normalUser, request)
@@ -90,7 +102,7 @@ class TeamServiceImplTest {
         // then
         assertEquals(Team.TeamStatus.PENDING_APPROVAL, result.status)
         assertEquals(normalUser, result.leader)
-        verify(exactly = 1) { teamRepository.save(any()) }
+        verify(exactly = 1) { memberTeamCreationStrategy.create(normalUser, request) }
     }
 
     @Test
@@ -102,17 +114,14 @@ class TeamServiceImplTest {
         val team = Team(name = request.name, description = request.description, color = request.color, company = company, leader = normalUser, status = Team.TeamStatus.ACTIVE)
         
         every { teamRepository.findByNameAndCompanyId(request.name, company.id!!) } returns null
-        every { userRepository.findAllById(request.memberIds!!) } returns listOf(normalUser, managerUser)
-        every { teamRepository.save(any()) } returns team
-        every { teamMemberRepository.save(any()) } returnsArgument 0
+        every { managerTeamCreationStrategy.create(managerUser, request) } returns team
 
         // when
         val result = teamService.createTeam(managerUser, request)
 
         // then
         assertEquals(Team.TeamStatus.ACTIVE, result.status)
-        verify(exactly = 1) { teamRepository.save(any()) }
-        verify(exactly = 2) { teamMemberRepository.save(any()) }
+        verify(exactly = 1) { managerTeamCreationStrategy.create(managerUser, request) }
     }
 
     @Test
@@ -124,7 +133,7 @@ class TeamServiceImplTest {
         every { teamRepository.findByNameAndCompanyId(request.name, company.id!!) } returns Team(name = "Existing Team", company = company)
 
         // when / then
-        assertThrows<TeamAlreadyExistsException> {
+        assertThrows<BusinessException> {
             teamService.createTeam(normalUser, request)
         }
     }
@@ -136,10 +145,10 @@ class TeamServiceImplTest {
         val request = TeamRequest("New Team", "Description", "#FFF", listOf(1L, 3L), 1L)
         
         every { teamRepository.findByNameAndCompanyId(request.name, company.id!!) } returns null
-        every { userRepository.findAllById(request.memberIds!!) } returns listOf(normalUser, otherCompanyUser)
+        every { managerTeamCreationStrategy.create(managerUser, request) } throws BusinessException(com.onmeet.common.exception.errorcode.AuthErrorCode.TEAM_MEMBER_COMPANY_MISMATCH)
 
         // when / then
-        assertThrows<CompanyMismatchException> {
+        assertThrows<BusinessException> {
             teamService.createTeam(managerUser, request)
         }
     }
@@ -154,6 +163,7 @@ class TeamServiceImplTest {
         every { teamRepository.findById(100L) } returns Optional.of(team)
         every { teamMemberRepository.save(any()) } returnsArgument 0
         every { teamRepository.save(any()) } returns team
+        justRun { notificationEventPublisher.publishNotification(any()) }
 
         // when
         teamService.approveTeam(100L, managerUser)
@@ -168,7 +178,7 @@ class TeamServiceImplTest {
     @DisplayName("매니저가 아닌 사용자가 팀을 승인하려고 하면 예외 발생")
     fun approveTeamInsufficientPermission() {
         // when / then
-        assertThrows<com.onmeet.common.exception.InsufficientPermissionException> {
+        assertThrows<BusinessException> {
             teamService.approveTeam(100L, normalUser)
         }
     }
@@ -190,7 +200,7 @@ class TeamServiceImplTest {
         every { teamRepository.findById(100L) } returns Optional.of(team)
 
         // when / then
-        assertThrows<CompanyMismatchException> {
+        assertThrows<BusinessException> {
             teamService.approveTeam(100L, otherCompanyManager)
         }
     }
@@ -204,7 +214,7 @@ class TeamServiceImplTest {
         every { teamRepository.findById(100L) } returns Optional.of(team)
 
         // when / then
-        assertThrows<IllegalStateException> {
+        assertThrows<BusinessException> {
             teamService.approveTeam(100L, managerUser)
         }
     }
@@ -217,6 +227,7 @@ class TeamServiceImplTest {
 
         every { teamRepository.findById(100L) } returns Optional.of(team)
         every { teamRepository.save(any()) } returns team
+        justRun { notificationEventPublisher.publishNotification(any()) }
 
         teamService.rejectTeam(100L, managerUser, reason)
 
@@ -229,7 +240,7 @@ class TeamServiceImplTest {
     @DisplayName("매니저가 아닌 사용자가 팀을 거절하려고 하면 예외 발생")
     fun rejectTeamInsufficientPermission() {
         // when / then
-        assertThrows<com.onmeet.common.exception.InsufficientPermissionException> {
+        assertThrows<BusinessException> {
             teamService.rejectTeam(100L, normalUser, "No reason")
         }
     }
@@ -251,7 +262,7 @@ class TeamServiceImplTest {
         every { teamRepository.findById(100L) } returns Optional.of(team)
 
         // when / then
-        assertThrows<CompanyMismatchException> {
+        assertThrows<BusinessException> {
             teamService.rejectTeam(100L, otherCompanyManager, "Reason")
         }
     }
@@ -265,7 +276,7 @@ class TeamServiceImplTest {
         every { teamRepository.findById(100L) } returns Optional.of(team)
 
         // when / then
-        assertThrows<IllegalStateException> {
+        assertThrows<BusinessException> {
             teamService.rejectTeam(100L, managerUser, "Reason")
         }
     }
@@ -277,19 +288,25 @@ class TeamServiceImplTest {
         val oldLeaderMembership = TeamMember(id = 1L, user = normalUser, team = team, role = TeamMember.TeamRole.LEADER)
         val newLeaderMembership = TeamMember(id = 2L, user = managerUser, team = team, role = TeamMember.TeamRole.MEMBER)
 
-        every { teamRepository.findById(100L) } returns Optional.of(team)
-        every { userRepository.findById(managerUser.id!!) } returns Optional.of(managerUser)
-        every { teamMemberRepository.findLeaderByTeamId(100L) } returns oldLeaderMembership
-        every { teamMemberRepository.findByUserIdAndTeamId(managerUser.id!!, 100L) } returns newLeaderMembership
-        every { teamMemberRepository.save(any()) } returnsArgument 0
-        every { teamRepository.save(any()) } returns team
+        mockkStatic("org.springframework.data.repository.CrudRepositoryExtensionsKt")
+        try {
+            every { teamRepository.findByIdOrNull(100L) } returns team
+            every { userRepository.findByIdOrNull(managerUser.id!!) } returns managerUser
+            every { teamMemberRepository.findLeaderByTeamId(100L) } returns oldLeaderMembership
+            every { teamMemberRepository.findByUserIdAndTeamId(managerUser.id!!, 100L) } returns newLeaderMembership
+            every { teamMemberRepository.save(any()) } returnsArgument 0
+            every { teamRepository.save(any()) } returns team
+            justRun { notificationEventPublisher.publishNotification(any()) }
 
-        teamService.assignLeader(100L, managerUser, managerUser.id!!)
+            teamService.assignLeader(100L, managerUser, managerUser.id!!)
 
-        assertEquals(managerUser, team.leader)
-        assertEquals(TeamMember.TeamRole.MEMBER, oldLeaderMembership.role)
-        assertEquals(TeamMember.TeamRole.LEADER, newLeaderMembership.role)
-        verify(exactly = 2) { teamMemberRepository.save(any()) }
+            assertEquals(managerUser, team.leader)
+            assertEquals(TeamMember.TeamRole.MEMBER, oldLeaderMembership.role)
+            assertEquals(TeamMember.TeamRole.LEADER, newLeaderMembership.role)
+            verify(exactly = 2) { teamMemberRepository.save(any()) }
+        } finally {
+            unmockkStatic("org.springframework.data.repository.CrudRepositoryExtensionsKt")
+        }
     }
 
     @Test
@@ -297,19 +314,25 @@ class TeamServiceImplTest {
     fun delegateLeaderSuccess() {
         val team = Team(id = 100L, name = "Team A", company = company, leader = normalUser, status = Team.TeamStatus.ACTIVE)
         val currentLeaderMembership = TeamMember(id = 1L, user = normalUser, team = team, role = TeamMember.TeamRole.LEADER)
-        
-        every { teamRepository.findById(100L) } returns Optional.of(team)
-        every { userRepository.findById(managerUser.id!!) } returns Optional.of(managerUser)
-        every { teamMemberRepository.findByUserIdAndTeamId(normalUser.id!!, 100L) } returns currentLeaderMembership
-        every { teamMemberRepository.findByUserIdAndTeamId(managerUser.id!!, 100L) } returns null // 새 팀장은 아직 팀에 없다고 가정
-        every { teamMemberRepository.save(any()) } returnsArgument 0
-        every { teamRepository.save(any()) } returns team
 
-        teamService.delegateLeader(100L, normalUser, managerUser.id!!)
+        mockkStatic("org.springframework.data.repository.CrudRepositoryExtensionsKt")
+        try {
+            every { teamRepository.findByIdOrNull(100L) } returns team
+            every { userRepository.findByIdOrNull(managerUser.id!!) } returns managerUser
+            every { teamMemberRepository.findByUserIdAndTeamId(normalUser.id!!, 100L) } returns currentLeaderMembership
+            every { teamMemberRepository.findByUserIdAndTeamId(managerUser.id!!, 100L) } returns null // 새 팀장은 아직 팀에 없다고 가정
+            every { teamMemberRepository.save(any()) } returnsArgument 0
+            every { teamRepository.save(any()) } returns team
+            justRun { notificationEventPublisher.publishNotification(any()) }
 
-        assertEquals(managerUser, team.leader)
-        assertEquals(TeamMember.TeamRole.MEMBER, currentLeaderMembership.role)
-        verify(exactly = 2) { teamMemberRepository.save(any()) }
+            teamService.delegateLeader(100L, normalUser, managerUser.id!!)
+
+            assertEquals(managerUser, team.leader)
+            assertEquals(TeamMember.TeamRole.MEMBER, currentLeaderMembership.role)
+            verify(exactly = 2) { teamMemberRepository.save(any()) }
+        } finally {
+            unmockkStatic("org.springframework.data.repository.CrudRepositoryExtensionsKt")
+        }
     }
 
     @Test
@@ -317,9 +340,13 @@ class TeamServiceImplTest {
     fun dissolveTeamSuccess() {
         val team = Team(id = 100L, name = "Team A", company = company, leader = normalUser, status = Team.TeamStatus.ACTIVE)
 
+        val member = TeamMember(user = normalUser, team = team, role = TeamMember.TeamRole.MEMBER)
+
         every { teamRepository.findById(100L) } returns Optional.of(team)
+        every { teamMemberRepository.findByTeamId(100L) } returns listOf(member)
         every { teamMemberRepository.deleteAllByTeamId(100L) } returns Unit
         every { teamRepository.delete(team) } returns Unit
+        justRun { notificationEventPublisher.publishNotification(any()) }
 
         teamService.dissolveTeam(100L, managerUser)
 
@@ -336,7 +363,7 @@ class TeamServiceImplTest {
         every { teamRepository.findById(100L) } returns Optional.of(team)
 
         // when / then
-        assertThrows<CompanyMismatchException> {
+        assertThrows<BusinessException> {
             teamService.dissolveTeam(100L, otherCompanyUser)
         }
     }
@@ -359,7 +386,7 @@ class TeamServiceImplTest {
         val team = Team(id = 100L, name = "Active Team", company = company, leader = normalUser, status = Team.TeamStatus.ACTIVE)
         every { teamRepository.findById(100L) } returns Optional.of(team)
 
-        assertThrows<IllegalStateException> {
+        assertThrows<BusinessException> {
             teamService.cancelTeamRequest(100L, normalUser)
         }
     }
@@ -371,7 +398,7 @@ class TeamServiceImplTest {
         val otherUser = User(id = 999L, email = "other@test.com", passwordHash = "hash", name = "Other", company = company)
         every { teamRepository.findById(100L) } returns Optional.of(team)
 
-        assertThrows<com.onmeet.common.exception.InsufficientPermissionException> {
+        assertThrows<BusinessException> {
             teamService.cancelTeamRequest(100L, otherUser)
         }
     }
@@ -395,7 +422,7 @@ class TeamServiceImplTest {
         every { teamRepository.findById(100L) } returns Optional.of(team)
 
         // when & then
-        assertThrows<CompanyMismatchException> {
+        assertThrows<BusinessException> {
             teamService.approveTeam(100L, extremeCompanyManager)
         }
         verify(exactly = 0) { teamMemberRepository.save(any()) }
@@ -419,7 +446,7 @@ class TeamServiceImplTest {
         every { teamRepository.findById(100L) } returns Optional.of(team)
 
         // when & then
-        assertThrows<CompanyMismatchException> {
+        assertThrows<BusinessException> {
             teamService.rejectTeam(100L, extremeCompanyManager, "Invalid request")
         }
         verify(exactly = 0) { teamRepository.save(any()) }
@@ -442,7 +469,7 @@ class TeamServiceImplTest {
         every { teamRepository.findById(100L) } returns Optional.of(team)
 
         // when & then
-        assertThrows<CompanyMismatchException> {
+        assertThrows<BusinessException> {
             teamService.dissolveTeam(100L, extremeCompanyUser)
         }
         verify(exactly = 0) { teamMemberRepository.deleteAllByTeamId(any()) }
@@ -467,6 +494,7 @@ class TeamServiceImplTest {
         every { teamRepository.findById(100L) } returns Optional.of(team)
         every { teamMemberRepository.save(any()) } returnsArgument 0
         every { teamRepository.save(any()) } returns team
+        justRun { notificationEventPublisher.publishNotification(any()) }
 
         // when - 회사 ID가 같으므로 정상적으로 승인되어야 함
         teamService.approveTeam(100L, spoofedManager)

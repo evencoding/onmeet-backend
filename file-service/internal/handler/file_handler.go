@@ -180,9 +180,7 @@ func (h *FileHandler) DeleteFile(c *gin.Context) {
 		requesterId = *idPtr
 	}
 
-	cookie := c.GetHeader("Cookie")
-
-	err = h.svc.DeleteFile(c.Request.Context(), uint(id), requesterId, cookie)
+	err = h.svc.DeleteFile(c.Request.Context(), uint(id), requesterId)
 	if err != nil {
 		respondError(c, err, model.NewAppError(model.CodeDeleteFail, http.StatusInternalServerError, "파일 삭제에 실패했습니다"))
 		return
