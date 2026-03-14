@@ -84,6 +84,13 @@ abstract class BaseGlobalExceptionHandler {
             .body(ErrorResponse(code = "COMMON_METHOD_NOT_ALLOWED", status = HttpStatus.METHOD_NOT_ALLOWED.value(), message = "'${e.method}' 메서드는 지원하지 않습니다"))
     }
 
+    @ExceptionHandler(org.springframework.web.servlet.NoHandlerFoundException::class)
+    fun handleNoHandlerFoundException(e: org.springframework.web.servlet.NoHandlerFoundException): ResponseEntity<ErrorResponse> {
+        logger.warn("No handler found: {} {}", e.httpMethod, e.requestURL)
+        return ResponseEntity.status(HttpStatus.NOT_FOUND)
+            .body(ErrorResponse(code = "COMMON_NOT_FOUND", status = HttpStatus.NOT_FOUND.value(), message = "요청한 리소스를 찾을 수 없습니다"))
+    }
+
     @ExceptionHandler(Exception::class)
     fun handleException(e: Exception): ResponseEntity<ErrorResponse> {
         logger.error("Unhandled Exception: ", e)
