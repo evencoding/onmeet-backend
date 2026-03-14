@@ -40,7 +40,7 @@ func NewAuthClient(cfg *config.Config) AuthClient {
 }
 
 func (c *authClient) GetUserPermissions(userId int64) (*UserPermissionResponse, error) {
-	url := fmt.Sprintf("%s/users/internal/%d/permissions", c.baseURL, userId)
+	url := fmt.Sprintf("%s/auth/v1/internal/users/%d/permissions", c.baseURL, userId)
 
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
