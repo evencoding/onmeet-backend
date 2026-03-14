@@ -48,7 +48,7 @@ var numericOnlyRe = regexp.MustCompile(`^\d+$`)
 type FileService interface {
 	UploadFiles(ctx context.Context, files []*multipart.FileHeader, category string, uploaderId *int64, ownerType, ownerId string) ([]*model.FileMetadata, error)
 	GetFile(id uint) (*model.FileMetadata, error)
-	DeleteFile(ctx context.Context, id uint, requesterId int64, cookie string) error
+	DeleteFile(ctx context.Context, id uint, requesterId int64) error
 	DeleteMyProfile(ctx context.Context, uploaderId int64) error
 	UploadFileAsync(ctx context.Context, file *multipart.FileHeader, category string, uploaderId *int64, ownerType, ownerId, callbackTopic, correlationId string)
 	GenerateDefaultProfileImage(ctx context.Context, name string, color string, uploaderId *int64, ownerType, ownerId string) (*model.FileMetadata, error)
@@ -193,14 +193,14 @@ func (s *fileService) GetFile(id uint) (*model.FileMetadata, error) {
 	return s.repo.FindByID(id)
 }
 
-func (s *fileService) DeleteFile(ctx context.Context, id uint, requesterId int64, cookie string) error {
+func (s *fileService) DeleteFile(ctx context.Context, id uint, requesterId int64) error {
 	metadata, err := s.repo.FindByID(id)
 	if err != nil {
 		return err
 	}
 
 	// 1. 권한 체크 (MANAGER 이상만 가능)
-	requesterPerms, err := s.authClient.GetUserPermissions(requesterId, cookie)
+	requesterPerms, err := s.authClient.GetUserPermissions(requesterId)
 	if err != nil {
 		return err
 	}
@@ -222,7 +222,7 @@ func (s *fileService) DeleteFile(ctx context.Context, id uint, requesterId int64
 			return model.ErrCrossCompanyDenied
 		}
 	} else if metadata.UploaderID != nil {
-		uploaderPerms, err := s.authClient.GetUserPermissions(*metadata.UploaderID, cookie)
+		uploaderPerms, err := s.authClient.GetUserPermissions(*metadata.UploaderID)
 		if err != nil || uploaderPerms.CompanyID == nil || requesterPerms.CompanyID == nil ||
 			*uploaderPerms.CompanyID != *requesterPerms.CompanyID {
 			return model.ErrCrossCompanyDenied
