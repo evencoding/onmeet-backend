@@ -60,6 +60,15 @@ public class FcmService {
         log.info("FCM token unregistered: userId={}", userId);
     }
 
+    /**
+     * 해당 유저의 모든 디바이스 토큰 목록을 조회합니다.
+     */
+    public List<String> getTokensByUserId(Long userId) {
+        return fcmTokenRepository.findByUserId(userId).stream()
+                .map(FcmToken::getToken)
+                .toList();
+    }
+
     // ──────────────────────────────────────────────
     // Push Notification
     // ──────────────────────────────────────────────
@@ -85,9 +94,9 @@ public class FcmService {
     }
 
     /**
-     * 해당 유저의 모든 디바이스에 푸시 알림을 전송합니다.
+     * 해당 유저의 로컬 DB에 저장된 모든 디바이스에 푸시 알림을 전송합니다.
      */
-    public void sendPush(Long userId, String title, String body, String deeplink) {
+    public void sendPushToLocalTokens(Long userId, String title, String body, String deeplink) {
         if (FirebaseApp.getApps().isEmpty()) {
             log.debug("Firebase not initialized, skipping FCM push for userId={}", userId);
             return;

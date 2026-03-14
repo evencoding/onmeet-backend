@@ -21,8 +21,10 @@ import java.io.IOException;
 import java.time.LocalDateTime;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
@@ -104,6 +106,7 @@ public class NotificationService {
             List<Long> targetUserIds = dto.getUserIds();
             List<AuthServiceClient.UserInfoResponse> userInfos = authServiceClient.getBatchUserInfo(targetUserIds);
             Map<Long, String> userTokenMap = userInfos.stream()
+                    // TODO: [Auth 담당자] UserInfoDto 배치 조회 시 'fcmDeviceToken' 필드를 응답에 포함해주시면 이 필드를 통해 최신 토큰 발송이 가능해집니다.
                     .filter(u -> u.fcmDeviceToken() != null && !u.fcmDeviceToken().isBlank())
                     .collect(Collectors.toMap(AuthServiceClient.UserInfoResponse::userId, AuthServiceClient.UserInfoResponse::fcmDeviceToken, (a, b) -> a));
 
@@ -118,6 +121,7 @@ public class NotificationService {
             try {
                 AuthServiceClient.UserInfoResponse userInfo = authServiceClient.getUserInfo(dto.getUserId());
                 if (userInfo != null) {
+                    // TODO: [Auth 담당자] UserInfoDto 단건 조회 시 'fcmDeviceToken' 필드를 응답에 포함해주시면 이 필드를 통해 최신 토큰 발송이 가능해집니다.
                     latestToken = userInfo.fcmDeviceToken();
                 }
             } catch (Exception e) {
@@ -219,16 +223,9 @@ public class NotificationService {
                 recipient.markAsSent();
             }
 
-            // FCM 푸시 발송 (Auth 최신 토큰 우선, 실패 시 로컬 DB 토큰 사용)
+            // FCM 푸시 발송 (Auth 최신 토큰 + 로컬 DB 토큰의 합집합으로 중복 방지)
             try {
-                if (latestToken != null && !latestToken.isBlank()) {
-                    fcmService.sendPushToToken(latestToken, notification.getTitle(),
-                            notification.getBody(), notification.getDeeplink());
-                }
-                
-                // notification-service 로컬 DB에 저장된 토큰들로도 발송 (기존 로직 유지)
-                fcmService.sendPush(dto.getUserId(), notification.getTitle(),
-                        notification.getBody(), notification.getDeeplink());
+                sendFcmPushToUniqueTokens(dto.getUserId(), notification, latestToken);
             } catch (Exception e) {
                 log.warn("FCM push failed but notification was saved: userId={}, error={}",
                         dto.getUserId(), e.getMessage());
@@ -284,29 +281,52 @@ public class NotificationService {
      * 로컬 DB에 저장된 유저의 모든 토큰으로 푸시를 발송합니다.
      */
     public void sendFcmPushLocal(Long userId, Notification notification) {
-        fcmService.sendPush(userId, notification.getTitle(),
+        fcmService.sendPushToLocalTokens(userId, notification.getTitle(),
                 notification.getBody(), notification.getDeeplink());
     }
 
     /**
-     * 유저의 정보를 조회하여 최신 토큰(Auth)과 로컬 토큰으로 모두 발송합니다.
+     * Auth 서비스에서 받은 최신 토큰과 로컬 DB의 토큰들을 합쳐서 중복 없이 발송합니다.
+     */
+    public void sendFcmPushToUniqueTokens(Long userId, Notification notification, String latestToken) {
+        Set<String> uniqueTokens = new HashSet<>();
+
+        // 1. Auth 서비스에서 받은 최신 토큰 추가
+        if (latestToken != null && !latestToken.isBlank()) {
+            uniqueTokens.add(latestToken);
+        }
+
+        // 2. 로컬 DB에 저장된 토큰들 추가 (중복은 Set에 의해 자동 제거됨)
+        uniqueTokens.addAll(fcmService.getTokensByUserId(userId));
+
+        if (uniqueTokens.isEmpty()) {
+            log.debug("No FCM tokens found for userId={}", userId);
+            return;
+        }
+
+        // 3. 유니크한 토큰들에 대해서만 발송
+        for (String token : uniqueTokens) {
+            fcmService.sendPushToToken(token, notification.getTitle(),
+                    notification.getBody(), notification.getDeeplink());
+        }
+    }
+
+    /**
+     * 유저의 정보를 조회하여 최신 토큰(Auth)과 로컬 토큰으로 중복 없이 발송합니다.
      */
     public void sendFcmPush(Long userId, Notification notification) {
         String latestToken = null;
         try {
             AuthServiceClient.UserInfoResponse userInfo = authServiceClient.getUserInfo(userId);
             if (userInfo != null) {
+                // TODO: [Auth 담당자] UserInfoDto 조회 시 'fcmDeviceToken' 필드를 응답에 포함해주시면 스케줄러에서도 최신 토큰으로 발송이 가능해집니다.
                 latestToken = userInfo.fcmDeviceToken();
             }
         } catch (Exception e) {
             log.warn("Failed to fetch latest token for notification: userId={}", userId);
         }
 
-        if (latestToken != null && !latestToken.isBlank()) {
-            sendFcmPushToToken(latestToken, notification);
-        }
-
-        sendFcmPushLocal(userId, notification);
+        sendFcmPushToUniqueTokens(userId, notification, latestToken);
     }
 
     // ──────────────────────────────────────────────

@@ -228,7 +228,4 @@ class InternalUserController(
         return ResponseEntity.ok(BatchUserExistsResponse(users))
     }
 
-    // TODO: [Notification팀 요청] FCM 푸시 성능 최적화를 위한 유저 정보 연동 개선
-    // 1. UserInfoDto 데이터 구조에 'fcmDeviceToken' 필드를 추가하여 일괄 조회 시 함께 내려주세요.
-    // 2. 만약 별도의 토큰 발송이 필요한 경우, 아래에 POST /internal/users/batch/fcm-tokens API를 추가 구현 부탁드립니다.
 }
