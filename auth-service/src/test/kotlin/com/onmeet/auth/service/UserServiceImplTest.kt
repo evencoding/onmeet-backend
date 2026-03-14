@@ -496,4 +496,78 @@ class UserServiceImplTest {
         verify(exactly = 0) { fileClient.uploadProfileImage(any(), any()) }
         verify { userRepository.save(user) }
     }
+
+    // ===== getBatchFcmTokens =====
+
+    @Test
+    fun `getBatchFcmTokens should return tokens for users that have fcmDeviceToken`() {
+        // given
+        val company = Company(id = 1L, name = "TestCo")
+        val user1 = User(id = 1L, email = "user1@test.com", passwordHash = "hash", name = "User1",
+                        company = company, fcmDeviceToken = "token-aaa")
+        val user2 = User(id = 2L, email = "user2@test.com", passwordHash = "hash", name = "User2",
+                        company = company, fcmDeviceToken = "token-bbb")
+        val userIds = listOf(1L, 2L)
+
+        every { userRepository.findAllById(userIds) } returns listOf(user1, user2)
+
+        // when
+        val result = userService.getBatchFcmTokens(userIds)
+
+        // then
+        assertEquals(2, result.size)
+        assertEquals(listOf("token-aaa"), result[1L])
+        assertEquals(listOf("token-bbb"), result[2L])
+    }
+
+    @Test
+    fun `getBatchFcmTokens should exclude users without fcmDeviceToken`() {
+        // given
+        val company = Company(id = 1L, name = "TestCo")
+        val user1 = User(id = 1L, email = "user1@test.com", passwordHash = "hash", name = "User1",
+                        company = company, fcmDeviceToken = "token-aaa")
+        val user2 = User(id = 2L, email = "user2@test.com", passwordHash = "hash", name = "User2",
+                        company = company, fcmDeviceToken = null)
+        val userIds = listOf(1L, 2L)
+
+        every { userRepository.findAllById(userIds) } returns listOf(user1, user2)
+
+        // when
+        val result = userService.getBatchFcmTokens(userIds)
+
+        // then
+        assertEquals(1, result.size)
+        assertEquals(listOf("token-aaa"), result[1L])
+        assertFalse(result.containsKey(2L))
+    }
+
+    @Test
+    fun `getBatchFcmTokens should return empty map when no users have fcmDeviceToken`() {
+        // given
+        val company = Company(id = 1L, name = "TestCo")
+        val user1 = User(id = 1L, email = "user1@test.com", passwordHash = "hash", name = "User1",
+                        company = company, fcmDeviceToken = null)
+        val userIds = listOf(1L)
+
+        every { userRepository.findAllById(userIds) } returns listOf(user1)
+
+        // when
+        val result = userService.getBatchFcmTokens(userIds)
+
+        // then
+        assertTrue(result.isEmpty())
+    }
+
+    @Test
+    fun `getBatchFcmTokens should return empty map when userIds is empty`() {
+        // given
+        val userIds = emptyList<Long>()
+        every { userRepository.findAllById(userIds) } returns emptyList()
+
+        // when
+        val result = userService.getBatchFcmTokens(userIds)
+
+        // then
+        assertTrue(result.isEmpty())
+    }
 }

@@ -228,4 +228,48 @@ class InternalUserController(
         return ResponseEntity.ok(BatchUserExistsResponse(users))
     }
 
+    @Operation(
+        summary = "FCM 디바이스 토큰 일괄 조회",
+        description = "여러 사용자의 FCM 디바이스 토큰을 일괄 조회합니다. 토큰이 등록되지 않은 사용자는 응답에 포함되지 않습니다. (내부 서비스 전용)"
+    )
+    @ApiResponses(value = [
+        ApiResponse(
+            responseCode = "200",
+            description = "FCM 토큰 일괄 조회 성공",
+            content = [Content(
+                mediaType = "application/json",
+                schema = Schema(implementation = BatchFcmTokenResponse::class)
+            )]
+        ),
+        ApiResponse(
+            responseCode = "401",
+            description = "내부 인증 실패 - 유효하지 않은 Gateway Secret",
+            content = [Content(
+                mediaType = "application/json",
+                schema = Schema(implementation = ErrorResponse::class),
+                examples = [ExampleObject(
+                    value = """{"code":"AUTH_046","status":401,"message":"유효하지 않은 내부 인증 시크릿입니다","timestamp":1710000000000}"""
+                )]
+            )]
+        ),
+        ApiResponse(
+            responseCode = "500",
+            description = "서버 내부 오류",
+            content = [Content(
+                mediaType = "application/json",
+                schema = Schema(implementation = ErrorResponse::class),
+                examples = [ExampleObject(
+                    value = """{"code":"COMMON_INTERNAL_ERROR","status":500,"message":"서버 내부 오류가 발생했습니다","timestamp":1710000000000}"""
+                )]
+            )]
+        )
+    ])
+    @PostMapping("/fcm-tokens/batch")
+    fun getBatchFcmTokens(
+        @RequestBody request: BatchFcmTokenRequest
+    ): ResponseEntity<BatchFcmTokenResponse> {
+        val tokens = userService.getBatchFcmTokens(request.userIds)
+        return ResponseEntity.ok(BatchFcmTokenResponse(tokens))
+    }
+
 }

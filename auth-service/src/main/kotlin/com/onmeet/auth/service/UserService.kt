@@ -25,4 +25,5 @@ interface UserService {
     fun getBatchUserInfo(userIds: List<Long>): List<UserInfoDto>
     fun existsById(userId: Long): Boolean
     fun existsByIds(userIds: List<Long>): Map<Long, Boolean>
+    fun getBatchFcmTokens(userIds: List<Long>): Map<Long, List<String>>
 }

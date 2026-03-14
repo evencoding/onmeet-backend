@@ -71,3 +71,15 @@ data class TeamMembershipResponse(
     @Schema(description = "팀 멤버 여부")
     val isMember: Boolean
 )
+
+@Schema(description = "FCM 디바이스 토큰 일괄 조회 요청")
+data class BatchFcmTokenRequest(
+    @Schema(description = "조회할 사용자 ID 목록")
+    val userIds: List<Long>
+)
+
+@Schema(description = "FCM 디바이스 토큰 일괄 조회 응답")
+data class BatchFcmTokenResponse(
+    @Schema(description = "사용자 ID별 FCM 토큰 목록 (토큰이 없는 사용자는 포함되지 않음)")
+    val tokens: Map<Long, List<String>>
+)

@@ -195,6 +195,14 @@ class UserServiceImpl(
         return userIds.associateWith { it in existingIds }
     }
 
+    // Internal API - No permission check
+    override fun getBatchFcmTokens(userIds: List<Long>): Map<Long, List<String>> {
+        val users = userRepository.findAllById(userIds)
+        return users
+            .filter { it.fcmDeviceToken != null }
+            .associate { it.requireId() to listOf(it.fcmDeviceToken!!) }
+    }
+
     private fun validateManagerPermission(manager: User, targetUser: User) {
         if (!manager.isManager()) {
             throw BusinessException(AuthErrorCode.USER_STATUS_CHANGE_FORBIDDEN)
