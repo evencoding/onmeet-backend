@@ -25,4 +25,12 @@ interface UserRepository : JpaRepository<User, Long> {
 
     @Query("SELECT u FROM User u WHERE u.company.id = :companyId AND :role MEMBER OF u.roles")
     fun findByCompanyIdAndRole(@Param("companyId") companyId: Long, @Param("role") role: User.Role): List<User>
+
+    @Query("SELECT u.id as id, u.fcmDeviceToken as fcmDeviceToken FROM User u WHERE u.id IN :userIds AND u.fcmDeviceToken IS NOT NULL")
+    fun findFcmTokensByUserIds(@Param("userIds") userIds: List<Long>): List<UserFcmTokenProjection>
+}
+
+interface UserFcmTokenProjection {
+    val id: Long
+    val fcmDeviceToken: String
 }

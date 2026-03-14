@@ -5,6 +5,7 @@ import com.onmeet.auth.entity.Company
 import com.onmeet.auth.entity.JobTitle
 import com.onmeet.auth.entity.User
 import com.onmeet.auth.repository.jpa.JobTitleRepository
+import com.onmeet.auth.repository.jpa.UserFcmTokenProjection
 import com.onmeet.auth.repository.jpa.UserRepository
 import com.onmeet.common.exception.BusinessException
 import com.onmeet.common.exception.errorcode.AuthErrorCode
@@ -502,14 +503,17 @@ class UserServiceImplTest {
     @Test
     fun `getBatchFcmTokens should return tokens for users that have fcmDeviceToken`() {
         // given
-        val company = Company(id = 1L, name = "TestCo")
-        val user1 = User(id = 1L, email = "user1@test.com", passwordHash = "hash", name = "User1",
-                        company = company, fcmDeviceToken = "token-aaa")
-        val user2 = User(id = 2L, email = "user2@test.com", passwordHash = "hash", name = "User2",
-                        company = company, fcmDeviceToken = "token-bbb")
         val userIds = listOf(1L, 2L)
+        val projection1 = mockk<UserFcmTokenProjection> {
+            every { id } returns 1L
+            every { fcmDeviceToken } returns "token-aaa"
+        }
+        val projection2 = mockk<UserFcmTokenProjection> {
+            every { id } returns 2L
+            every { fcmDeviceToken } returns "token-bbb"
+        }
 
-        every { userRepository.findAllById(userIds) } returns listOf(user1, user2)
+        every { userRepository.findFcmTokensByUserIds(userIds) } returns listOf(projection1, projection2)
 
         // when
         val result = userService.getBatchFcmTokens(userIds)
@@ -523,14 +527,13 @@ class UserServiceImplTest {
     @Test
     fun `getBatchFcmTokens should exclude users without fcmDeviceToken`() {
         // given
-        val company = Company(id = 1L, name = "TestCo")
-        val user1 = User(id = 1L, email = "user1@test.com", passwordHash = "hash", name = "User1",
-                        company = company, fcmDeviceToken = "token-aaa")
-        val user2 = User(id = 2L, email = "user2@test.com", passwordHash = "hash", name = "User2",
-                        company = company, fcmDeviceToken = null)
         val userIds = listOf(1L, 2L)
+        val projection1 = mockk<UserFcmTokenProjection> {
+            every { id } returns 1L
+            every { fcmDeviceToken } returns "token-aaa"
+        }
 
-        every { userRepository.findAllById(userIds) } returns listOf(user1, user2)
+        every { userRepository.findFcmTokensByUserIds(userIds) } returns listOf(projection1)
 
         // when
         val result = userService.getBatchFcmTokens(userIds)
@@ -544,12 +547,9 @@ class UserServiceImplTest {
     @Test
     fun `getBatchFcmTokens should return empty map when no users have fcmDeviceToken`() {
         // given
-        val company = Company(id = 1L, name = "TestCo")
-        val user1 = User(id = 1L, email = "user1@test.com", passwordHash = "hash", name = "User1",
-                        company = company, fcmDeviceToken = null)
         val userIds = listOf(1L)
 
-        every { userRepository.findAllById(userIds) } returns listOf(user1)
+        every { userRepository.findFcmTokensByUserIds(userIds) } returns emptyList()
 
         // when
         val result = userService.getBatchFcmTokens(userIds)
@@ -562,12 +562,12 @@ class UserServiceImplTest {
     fun `getBatchFcmTokens should return empty map when userIds is empty`() {
         // given
         val userIds = emptyList<Long>()
-        every { userRepository.findAllById(userIds) } returns emptyList()
 
         // when
         val result = userService.getBatchFcmTokens(userIds)
 
         // then
         assertTrue(result.isEmpty())
+        verify(exactly = 0) { userRepository.findFcmTokensByUserIds(any()) }
     }
 }

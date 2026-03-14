@@ -197,10 +197,9 @@ class UserServiceImpl(
 
     // Internal API - No permission check
     override fun getBatchFcmTokens(userIds: List<Long>): Map<Long, List<String>> {
-        val users = userRepository.findAllById(userIds)
-        return users
-            .filter { it.fcmDeviceToken != null }
-            .associate { it.requireId() to listOf(it.fcmDeviceToken!!) }
+        if (userIds.isEmpty()) return emptyMap()
+        val tokens = userRepository.findFcmTokensByUserIds(userIds)
+        return tokens.associate { it.id to listOf(it.fcmDeviceToken) }
     }
 
     private fun validateManagerPermission(manager: User, targetUser: User) {
