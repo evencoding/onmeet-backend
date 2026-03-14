@@ -6,15 +6,30 @@ import com.onmeet.auth.repository.jpa.CompanyRepository
 import com.onmeet.auth.repository.jpa.UserRepository
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.condition.EnabledIf
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.transaction.annotation.Transactional
 
 /**
  * UserRepository 통합 테스트.
  * 실제 MySQL 컨테이너를 사용하여 JPA 쿼리가 정상 동작하는지 검증합니다.
+ * Docker가 실행 중이지 않으면 자동으로 스킵됩니다.
  */
 @Transactional
+@EnabledIf("isDockerAvailable")
 class UserRepositoryIntegrationTest : BaseIntegrationTest() {
+
+    companion object {
+        @JvmStatic
+        fun isDockerAvailable(): Boolean {
+            return try {
+                val process = ProcessBuilder("docker", "info").start()
+                process.waitFor() == 0
+            } catch (e: Exception) {
+                false
+            }
+        }
+    }
 
     @Autowired
     private lateinit var userRepository: UserRepository

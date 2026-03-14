@@ -1,123 +1,102 @@
 package com.onmeet.auth.controller
 
-import com.onmeet.auth.config.JwtProperties
-import com.onmeet.auth.config.PropertiesConfig
 import com.onmeet.auth.security.JwtAuthenticationFilter
 import com.onmeet.auth.security.JwtTokenProvider
 import com.onmeet.auth.service.AuthService
+import com.onmeet.auth.service.UserService
+import com.onmeet.auth.service.TeamService
+import com.onmeet.auth.service.InvitationService
+import com.onmeet.auth.service.JobTitleService
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
+import org.junit.jupiter.api.Assertions.*
+import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
-import org.springframework.beans.factory.annotation.Autowired
-import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest
-import org.springframework.boot.test.context.TestConfiguration
-import org.springframework.context.annotation.Bean
-import org.springframework.context.annotation.Import
 import org.springframework.data.redis.core.StringRedisTemplate
 import org.springframework.http.MediaType
+import org.springframework.mock.web.MockFilterChain
+import org.springframework.mock.web.MockHttpServletRequest
+import org.springframework.mock.web.MockHttpServletResponse
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken
-import org.springframework.security.config.annotation.web.builders.HttpSecurity
-import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity
 import org.springframework.security.core.authority.SimpleGrantedAuthority
-import org.springframework.security.web.SecurityFilterChain
-import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter
+import org.springframework.security.core.context.SecurityContextHolder
 import org.springframework.test.web.servlet.MockMvc
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
+import org.springframework.test.web.servlet.setup.MockMvcBuilders
 import jakarta.servlet.http.Cookie
 import java.util.Collections
 
-@WebMvcTest(ManagerController::class)
-@Import(CookieAuthenticationTest.TestSecurityConfig::class, JwtAuthenticationFilter::class, PropertiesConfig::class)
 class CookieAuthenticationTest {
 
-    @Autowired
-    private lateinit var mockMvc: MockMvc
-
-    @Autowired
-    private lateinit var authService: AuthService
-
-    @Autowired
-    private lateinit var jwtTokenProvider: JwtTokenProvider
-
-    @Autowired
-    private lateinit var redisTemplate: StringRedisTemplate
-
-
+    private val authService: AuthService = mockk(relaxed = true)
+    private val userService: UserService = mockk(relaxed = true)
+    private val teamService: TeamService = mockk(relaxed = true)
+    private val invitationService: InvitationService = mockk(relaxed = true)
+    private val jobTitleService: JobTitleService = mockk(relaxed = true)
+    private val jwtTokenProvider: JwtTokenProvider = mockk(relaxed = true)
+    private val redisTemplate: StringRedisTemplate = mockk(relaxed = true)
 
     @Test
-    // [Essential] 쿠키 기반 인증 필터 검증 - 세션/토큰 관리의 핵심 로직
-    fun `resetProfileImage should authenticate via cookie and call service`() {
+    fun `JwtAuthenticationFilter should extract token from cookie and set SecurityContext`() {
         // given
         val token = "valid_token_value"
-        val userId = 123L
         val userEmail = "manager@example.com"
-        val cookie = Cookie("accessToken", token).apply {
-            path = "/"
-            isHttpOnly = true
-        }
+        val jwtFilter = JwtAuthenticationFilter(jwtTokenProvider, redisTemplate)
 
-        // Mock AuthService logic
-        every { authService.resetUserProfileImage(userId, userEmail) } returns Unit
-
-        // Mock Redis (Blacklist check)
         every { redisTemplate.hasKey("blacklist:$token") } returns false
-
-        // Mock JWT Validation and Parsing
         every { jwtTokenProvider.validateToken(token) } returns true
         val authentication = UsernamePasswordAuthenticationToken(
-            userEmail,
-            null,
+            userEmail, null,
             Collections.singletonList(SimpleGrantedAuthority("ROLE_MANAGER"))
         )
         every { jwtTokenProvider.getAuthentication(token) } returns authentication
 
+        val request = MockHttpServletRequest().apply {
+            setCookies(Cookie("accessToken", token))
+        }
+        val response = MockHttpServletResponse()
+        val filterChain = MockFilterChain()
+
         // when
+        jwtFilter.doFilter(request, response, filterChain)
+
+        // then
+        val contextAuth = SecurityContextHolder.getContext().authentication
+        assertNotNull(contextAuth)
+        assertEquals(userEmail, contextAuth.name)
+        verify { jwtTokenProvider.validateToken(token) }
+        verify { jwtTokenProvider.getAuthentication(token) }
+
+        // cleanup
+        SecurityContextHolder.clearContext()
+    }
+
+    @Test
+    fun `resetProfileImage should call service when authenticated via principal`() {
+        // given
+        val userId = 123L
+        val userEmail = "manager@example.com"
+        val authentication = UsernamePasswordAuthenticationToken(
+            userEmail, null,
+            Collections.singletonList(SimpleGrantedAuthority("ROLE_MANAGER"))
+        )
+
+        val mockMvc = MockMvcBuilders
+            .standaloneSetup(ManagerController(userService, authService, teamService, invitationService, jobTitleService))
+            .build()
+
+        every { authService.resetUserProfileImage(userId, userEmail) } returns Unit
+
+        // when & then
         mockMvc.perform(
             delete("/v1/manager/employees/$userId/profile-image")
-                .cookie(cookie)
+                .principal(authentication)
                 .contentType(MediaType.APPLICATION_JSON)
         )
             .andExpect(status().isNoContent)
 
-        // then
         verify { authService.resetUserProfileImage(userId, userEmail) }
-        verify { jwtTokenProvider.validateToken(token) }
-        verify { jwtTokenProvider.getAuthentication(token) }
-    }
-
-    @TestConfiguration
-    @EnableWebSecurity
-    class TestSecurityConfig {
-        @Bean
-        fun authService(): AuthService = mockk(relaxed = true)
-
-        @Bean
-        fun userService(): com.onmeet.auth.service.UserService = mockk(relaxed = true)
-
-        @Bean
-        fun teamService(): com.onmeet.auth.service.TeamService = mockk(relaxed = true)
-
-        @Bean
-        fun invitationService(): com.onmeet.auth.service.InvitationService = mockk(relaxed = true)
-
-        @Bean
-        fun jobTitleService(): com.onmeet.auth.service.JobTitleService = mockk(relaxed = true)
-
-        @Bean
-        fun jwtTokenProvider(): JwtTokenProvider = mockk(relaxed = true)
-
-        @Bean
-        fun redisTemplate(): StringRedisTemplate = mockk(relaxed = true)
-
-        @Bean
-        fun filterChain(http: HttpSecurity, jwtFilter: JwtAuthenticationFilter): SecurityFilterChain {
-            http
-                .csrf { it.disable() }
-                .authorizeHttpRequests { it.anyRequest().permitAll() }
-                .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter::class.java)
-            return http.build()
-        }
     }
 }
