@@ -323,6 +323,13 @@ jobs:
             echo "LIVEKIT_EXTERNAL_IP=${{ secrets.LIVEKIT_EXTERNAL_IP }}" >> .env
             echo "Injected LIVEKIT_EXTERNAL_IP from GitHub Secret"
 
+            # Video-service: LiveKit/Kafka 실제 구현체 활성화
+            sed -i '/^LIVEKIT_ENABLED=/d' .env 2>/dev/null || true
+            echo "LIVEKIT_ENABLED=true" >> .env
+
+            sed -i '/^KAFKA_ENABLED=/d' .env 2>/dev/null || true
+            echo "KAFKA_ENABLED=true" >> .env
+
             sed -i '/^LIVEKIT_URL=/d' .env 2>/dev/null || true
             echo "LIVEKIT_URL=${{ secrets.LIVEKIT_URL }}" >> .env
             echo "Injected LIVEKIT_URL from GitHub Secret"
@@ -331,6 +338,26 @@ jobs:
             sed -i '/^COOKIE_SAMESITE=/d' .env 2>/dev/null || true
             echo "COOKIE_SAMESITE=${{ secrets.COOKIE_SAMESITE }}" >> .env
             echo "Injected COOKIE_SAMESITE from GitHub Secret"
+
+            # Firebase Service Account (FCM 푸시 알림용)
+            sed -i '/^FIREBASE_CREDENTIALS_JSON=/d' .env 2>/dev/null || true
+            FIREBASE_JSON=$(echo "${{ secrets.FIREBASE_SERVICE_ACCOUNT_BASE64 }}" | base64 -d | tr -d '\n')
+            echo "FIREBASE_CREDENTIALS_JSON=${FIREBASE_JSON}" >> .env
+            echo "Injected FIREBASE_CREDENTIALS_JSON from GitHub Secret"
+
+            # AI Service API Keys
+            sed -i '/^OPENAI_API_KEY=/d' .env 2>/dev/null || true
+            echo "OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }}" >> .env
+            echo "Injected OPENAI_API_KEY from GitHub Secret"
+
+            sed -i '/^ANTHROPIC_API_KEY=/d' .env 2>/dev/null || true
+            echo "ANTHROPIC_API_KEY=${{ secrets.ANTHROPIC_API_KEY }}" >> .env
+            echo "Injected ANTHROPIC_API_KEY from GitHub Secret"
+
+            # Email Service 설정
+            sed -i '/^SPRING_MAIL_USERNAME=/d' .env 2>/dev/null || true
+            echo "SPRING_MAIL_USERNAME=evenhancoding@gmail.com" >> .env
+            echo "Injected SPRING_MAIL_USERNAME"
 
             # Docker Hub 로그인
             export DOCKER_API_VERSION=1.41
