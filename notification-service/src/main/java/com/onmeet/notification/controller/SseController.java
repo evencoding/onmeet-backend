@@ -19,7 +19,7 @@ import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 @Slf4j
 @RestController
 @RequiredArgsConstructor
-@RequestMapping("/notification/v1/sse")
+@RequestMapping("/v1/sse")
 @Tag(name = "SSE", description = "실시간 알림 SSE 구독 API")
 public class SseController {
 
