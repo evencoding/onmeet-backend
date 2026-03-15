@@ -2,6 +2,7 @@ package com.onmeet.ai.pipeline.stt;
 
 import com.onmeet.ai.pipeline.storage.StorageClient;
 import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.web.reactive.function.client.WebClientAutoConfiguration;
@@ -20,6 +21,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  * OpenAI STT API 연동 테스트
  * 실제 API 키가 필요하므로 로컬 테스트 시에만 사용 권장
  */
+@Tag("integration")
 @ActiveProfiles("test")
 @SpringBootTest(classes = {
         OpenAiSttClient.class

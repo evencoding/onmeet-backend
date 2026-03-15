@@ -10,6 +10,7 @@ import com.onmeet.ai.pipeline.storage.StorageClient;
 import com.onmeet.ai.repository.MinutesRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -33,6 +34,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 // CHECK [frontend-담당자]: AI API URL 패턴이 Backend에서 Frontend 계약에 맞게 변경됨.
 // Frontend의 /ai/v1/rooms/{roomId}/minutes 호출이 정상 동작하는지 E2E 테스트 필요.
+@Tag("integration")
 @ActiveProfiles("test")
 @SpringBootTest
 @AutoConfigureMockMvc(addFilters = false)

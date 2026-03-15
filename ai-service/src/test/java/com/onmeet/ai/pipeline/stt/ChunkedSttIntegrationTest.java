@@ -3,6 +3,7 @@ package com.onmeet.ai.pipeline.stt;
 import com.onmeet.ai.pipeline.storage.StorageClient;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.web.reactive.function.client.WebClientAutoConfiguration;
@@ -27,6 +28,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 /**
  * 청크 분할 STT 통합 테스트
  */
+@Tag("integration")
 @ActiveProfiles("test")
 @SpringBootTest(classes = { OpenAiSttClient.class, ChunkedSttIntegrationTest.Config.class })
 @Import(WebClientAutoConfiguration.class)

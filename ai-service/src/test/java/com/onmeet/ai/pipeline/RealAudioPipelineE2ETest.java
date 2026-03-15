@@ -8,6 +8,7 @@ import com.onmeet.ai.service.TranscriptBuilderService;
 import com.onmeet.common.dto.event.AudioChunkReadyEvent;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -41,6 +42,7 @@ import static org.mockito.Mockito.when;
  * m4a 실제 음성 파일을 VAD를 거쳐 분할한 뒤 STT -> 요약까지 수행하는 E2E 풀 테스트
  * (JAVE 라이브러리를 이용하여 m4a를 16kHz mono wav로 변환한 후 VAD에 주입합니다)
  */
+@Tag("integration")
 @ActiveProfiles("test")
 @SpringBootTest
 @EmbeddedKafka(partitions = 1, topics = {
