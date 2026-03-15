@@ -166,13 +166,66 @@ goto :end
 REM =============================================================================
 :deploy
 set "VERSION=%~2"
-if "%VERSION%"=="" (
-    echo [onmeet] 버전을 지정하세요. 예: onmeet deploy v0.3.0
-    goto :end
-)
-echo [onmeet] 배포 시작: %VERSION%
 
+REM develop 브랜치로 전환
+for /f "tokens=*" %%b in ('git branch --show-current') do set "CURRENT_BRANCH=%%b"
+if not "%CURRENT_BRANCH%"=="develop" (
+    echo [onmeet] 현재 브랜치: %CURRENT_BRANCH% - develop으로 전환합니다.
+    git checkout develop
+)
 git pull origin develop
+
+if "%VERSION%"=="" (
+    REM 자동 버전 감지
+    set "LATEST=0.0.0"
+    for /f "tokens=*" %%v in ('git branch -r --list "origin/release/v*" 2^>nul ^| sort ^| findstr /r "v[0-9]"') do (
+        for /f "tokens=2 delims=v" %%x in ("%%v") do set "LATEST=%%x"
+    )
+
+    REM 커밋 분석으로 bump 타입 결정
+    set "BUMP=patch"
+    git log --oneline -20 > "%TEMP%\onmeet_commits.txt" 2>nul
+    findstr /i "feat" "%TEMP%\onmeet_commits.txt" >nul 2>&1 && set "BUMP=minor"
+    del "%TEMP%\onmeet_commits.txt" 2>nul
+
+    REM 버전 계산
+    for /f "tokens=1,2,3 delims=." %%a in ("!LATEST!") do (
+        set "MAJOR=%%a"
+        set "MINOR=%%b"
+        set "PATCH=%%c"
+    )
+
+    if "!BUMP!"=="minor" (
+        set /a "MINOR=!MINOR!+1"
+        set "PATCH=0"
+        set "NEXT_VER=v!MAJOR!.!MINOR!.!PATCH!"
+    ) else (
+        set /a "PATCH=!PATCH!+1"
+        set "NEXT_VER=v!MAJOR!.!MINOR!.!PATCH!"
+    )
+
+    echo.
+    echo [onmeet] 현재 최신 버전: v!LATEST!
+    echo [onmeet] 커밋 분석 결과: !BUMP! bump 추천
+    echo [onmeet] 다음 버전: !NEXT_VER!
+    echo.
+    set /p "CONFIRM=이 버전으로 배포할까요? (Y/n): "
+    if /i "!CONFIRM!"=="n" (
+        set /p "VERSION=버전을 입력하세요 (예: v0.4.0): "
+    ) else (
+        set "VERSION=!NEXT_VER!"
+    )
+)
+
+REM v 접두사 보정
+set "VERSION=!VERSION:~0,1!"
+if not "!VERSION!"=="v" (
+    set "VERSION=v%~2"
+    if "%~2"=="" set "VERSION=!NEXT_VER!"
+)
+set "VERSION=%VERSION%"
+
+echo [onmeet] 배포 시작: %VERSION%
 git checkout -b release/%VERSION% 2>nul || git checkout release/%VERSION%
 git push -u origin release/%VERSION%
 
@@ -204,7 +257,8 @@ echo     ps                   컨테이너 상태 확인
 echo     status               서비스 상태 + 헬스체크
 echo.
 echo   배포:
-echo     deploy ^<version^>     release 브랜치 생성 및 배포 트리거
+echo     deploy [version]     release 브랜치 생성 및 배포 트리거
+echo                          버전 생략 시 자동 감지
 echo.
 echo   정리:
 echo     clean                컨테이너, 볼륨, 이미지 정리

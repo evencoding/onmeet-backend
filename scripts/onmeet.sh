@@ -237,11 +237,58 @@ cmd_status() {
     done
 }
 
-cmd_deploy() {
-    local version="${1:?버전을 지정하세요 (예: v0.3.0)}"
-    info "배포 시작: $version"
+get_latest_version() {
+    # release 브랜치에서 최신 버전 추출
+    git fetch --prune origin >/dev/null 2>&1 || true
+    local latest
+    latest=$(git branch -r --list 'origin/release/v*' \
+        | sed 's|.*origin/release/v||' \
+        | sort -t. -k1,1n -k2,2n -k3,3n \
+        | tail -1)
+    if [ -z "$latest" ]; then
+        echo "0.0.0"
+    else
+        echo "$latest"
+    fi
+}
 
-    # 현재 브랜치 확인
+bump_version() {
+    local current="$1"
+    local bump_type="$2"
+    local major minor patch
+    IFS='.' read -r major minor patch <<< "$current"
+
+    case "$bump_type" in
+        patch) echo "${major}.${minor}.$((patch + 1))" ;;
+        minor) echo "${major}.$((minor + 1)).0" ;;
+        major) echo "$((major + 1)).0.0" ;;
+    esac
+}
+
+detect_bump_type() {
+    # 마지막 release 브랜치 이후의 커밋 메시지를 분석하여 bump 타입 결정
+    local latest_version="$1"
+    local latest_branch="origin/release/v${latest_version}"
+    local commits
+
+    if git rev-parse --verify "$latest_branch" >/dev/null 2>&1; then
+        commits=$(git log "${latest_branch}..HEAD" --oneline 2>/dev/null || echo "")
+    else
+        commits=$(git log --oneline -20 2>/dev/null || echo "")
+    fi
+
+    # feat이 있으면 minor, fix/chore/refactor만 있으면 patch
+    if echo "$commits" | grep -qiE '^[a-f0-9]+ feat'; then
+        echo "minor"
+    else
+        echo "patch"
+    fi
+}
+
+cmd_deploy() {
+    local version="${1:-}"
+
+    # 현재 브랜치 확인 및 develop 전환
     local current_branch
     current_branch=$(git branch --show-current)
 
@@ -256,13 +303,72 @@ cmd_deploy() {
         git pull origin develop
     fi
 
+    # 버전이 지정되지 않은 경우 자동 결정
+    if [ -z "$version" ]; then
+        local current_ver
+        current_ver=$(get_latest_version)
+        local bump_type
+        bump_type=$(detect_bump_type "$current_ver")
+        local next_patch next_minor
+
+        next_patch=$(bump_version "$current_ver" "patch")
+        next_minor=$(bump_version "$current_ver" "minor")
+
+        echo ""
+        info "현재 최신 버전: ${CYAN}v${current_ver}${NC}"
+        info "커밋 분석 결과: ${YELLOW}${bump_type}${NC} bump 추천"
+        echo ""
+        echo -e "  ${GREEN}1)${NC} v${next_patch}  (patch - 버그 수정, 소규모 변경)"
+        echo -e "  ${GREEN}2)${NC} v${next_minor}  (minor - 기능 추가, 리팩토링)"
+        echo -e "  ${GREEN}3)${NC} 직접 입력"
+        echo ""
+
+        # 추천 기본값 설정
+        local default_choice
+        if [ "$bump_type" = "minor" ]; then
+            default_choice="2"
+        else
+            default_choice="1"
+        fi
+
+        read -rp "선택 [${default_choice}]: " choice
+        choice="${choice:-$default_choice}"
+
+        case "$choice" in
+            1) version="v${next_patch}" ;;
+            2) version="v${next_minor}" ;;
+            3)
+                read -rp "버전 입력 (예: v0.4.0): " version
+                if [ -z "$version" ]; then
+                    error "버전이 입력되지 않았습니다."
+                    exit 1
+                fi
+                ;;
+            *)
+                error "잘못된 선택입니다."
+                exit 1
+                ;;
+        esac
+    fi
+
+    # v 접두사 보정
+    version="${version#v}"
+    version="v${version}"
+
+    info "배포 시작: $version"
+
     # release 브랜치 생성 및 push
     local branch="release/${version}"
-    if git rev-parse --verify "$branch" >/dev/null 2>&1; then
+    if git rev-parse --verify "$branch" >/dev/null 2>&1 || \
+       git rev-parse --verify "origin/$branch" >/dev/null 2>&1; then
         warn "브랜치 '$branch'가 이미 존재합니다."
-        read -rp "기존 브랜치를 사용할까요? (y/N): " yn
+        read -rp "기존 브랜치에 develop을 머지할까요? (y/N): " yn
         case "$yn" in
-            [Yy]*) git checkout "$branch" && git merge develop && git push origin "$branch" ;;
+            [Yy]*)
+                git checkout "$branch" 2>/dev/null || git checkout -b "$branch" "origin/$branch"
+                git merge develop
+                git push origin "$branch"
+                ;;
             *) error "다른 버전을 지정하세요."; exit 1 ;;
         esac
     else
@@ -305,8 +411,9 @@ cmd_help() {
     status               서비스 상태 + 헬스체크
 
   배포:
-    deploy <version>     release 브랜치 생성 및 배포 트리거
-                         예: deploy v0.3.0
+    deploy [version]     release 브랜치 생성 및 배포 트리거
+                         버전 생략 시 자동 감지 (커밋 분석)
+                         예: deploy, deploy v0.4.0
 
   정리:
     clean                컨테이너, 볼륨, 이미지 정리
