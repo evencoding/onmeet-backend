@@ -37,7 +37,15 @@ public interface MeetingRoomRepository extends JpaRepository<MeetingRoom, Long> 
 
     List<MeetingRoom> findByHostUserIdAndTypeAndStatusNot(Long hostUserId, RoomType type, RoomStatus status);
 
+    // CHECK [video-담당자]: Page 반환 메서드 추가
+    Page<MeetingRoom> findByHostUserIdAndTypeAndStatusNot(Long hostUserId, RoomType type, RoomStatus status, Pageable pageable);
+
     List<MeetingRoom> findByHostUserIdOrderByCreatedAtDesc(Long hostUserId);
+
+    Page<MeetingRoom> findByHostUserIdOrderByCreatedAtDesc(Long hostUserId, Pageable pageable);
+
+    @Query("SELECT r FROM MeetingRoom r JOIN RoomTag t ON t.room = r WHERE t.tagName = :tagName")
+    Page<MeetingRoom> findByTagName(@Param("tagName") String tagName, Pageable pageable);
 
     List<MeetingRoom> findByStatusIn(List<RoomStatus> statuses);
 

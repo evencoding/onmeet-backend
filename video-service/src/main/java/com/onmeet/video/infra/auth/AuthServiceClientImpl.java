@@ -53,8 +53,10 @@ public class AuthServiceClientImpl implements AuthServiceClient {
 
             return response.getBody();
         } catch (Exception e) {
-            logger.error("Failed to fetch user info for userId: {}", userId, e);
-            return new UserInfo(userId, "Unknown User", "unknown@example.com", null);
+            // CHECK [auth-담당자]: "Unknown User" 더미 폴백 제거 → 예외 전파로 변경.
+            // auth-service 장애 시 상위 레이어가 적절한 에러 처리를 하도록 예외를 그대로 던짐.
+            logger.error("Failed to fetch user info from auth-service for userId: {}", userId, e);
+            throw new RuntimeException("auth-service 호출 실패: userId=" + userId, e);
         }
     }
 
@@ -81,10 +83,10 @@ public class AuthServiceClientImpl implements AuthServiceClient {
             BatchUserInfoResponse body = response.getBody();
             return body != null ? body.users() : Collections.emptyList();
         } catch (Exception e) {
-            logger.error("Failed to fetch batch user info for userIds: {}", userIds, e);
-            return userIds.stream()
-                    .map(id -> new UserInfo(id, "Unknown User", "unknown@example.com", null))
-                    .toList();
+            // CHECK [auth-담당자]: batch "Unknown User" 더미 폴백 제거 → 예외 전파로 변경.
+            // auth-service 장애 시 상위 레이어가 적절한 에러 처리를 하도록 예외를 그대로 던짐.
+            logger.error("Failed to fetch batch user info from auth-service for userIds: {}", userIds, e);
+            throw new RuntimeException("auth-service 배치 호출 실패: userIds=" + userIds, e);
         }
     }
 

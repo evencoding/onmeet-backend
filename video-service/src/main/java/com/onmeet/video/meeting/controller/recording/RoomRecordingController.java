@@ -28,7 +28,7 @@ public class RoomRecordingController {
         this.recordingService = recordingService;
     }
 
-    @Operation(summary = "녹화 시작", description = "진행 중인 회의의 녹화를 시작합니다. 녹화가 비활성화된 방이거나 이미 녹화 중인 경우 불가합니다. 호스트만 수행 가능합니다.")
+    @Operation(summary = "녹화 시작", description = "진행 중인 회의의 녹화를 시작합니다.")
     @ApiResponses(value = {
         @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "녹화 시작 성공"),
         @io.swagger.v3.oas.annotations.responses.ApiResponse(
@@ -36,11 +36,6 @@ public class RoomRecordingController {
             content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class),
                 examples = @ExampleObject(name = "VIDEO_041 - 진행 중인 회의만 녹화 가능",
                     value = "{\"code\": \"VIDEO_041\", \"status\": 400, \"message\": \"진행 중인 회의실에서만 녹음을 시작할 수 있습니다\", \"timestamp\": 1710000000000}"))
-        ),
-        @io.swagger.v3.oas.annotations.responses.ApiResponse(
-            responseCode = "401", description = "인증 필요",
-            content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class),
-                examples = @ExampleObject(value = "{\"code\": \"GATEWAY_001\", \"status\": 401, \"message\": \"인증 토큰이 없습니다.\", \"timestamp\": 1710000000000}"))
         ),
         @io.swagger.v3.oas.annotations.responses.ApiResponse(
             responseCode = "403",
@@ -64,27 +59,19 @@ public class RoomRecordingController {
             content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class),
                 examples = @ExampleObject(name = "VIDEO_043 - 녹화 중복",
                     value = "{\"code\": \"VIDEO_043\", \"status\": 409, \"message\": \"녹음이 이미 진행 중입니다\", \"timestamp\": 1710000000000}"))
-        ),
-        @io.swagger.v3.oas.annotations.responses.ApiResponse(
-            responseCode = "500", description = "서버 내부 오류",
-            content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class),
-                examples = @ExampleObject(value = "{\"code\": \"INTERNAL_ERROR\", \"status\": 500, \"message\": \"서버 내부 오류가 발생했습니다\", \"timestamp\": 1710000000000}"))
         )
     })
+    // CHECK [recording-담당자]: startRecording 반환 타입 List<RoomRecordingResponse> -> void
     @PostMapping("/api/rooms/{roomId}/recording/start")
-    public ApiResponse<List<RoomRecordingResponse>> startRecording(@PathVariable Long roomId,
-                                                                   @RequestHeader("X-User-Id") Long userId) {
-        return ApiResponse.ok(recordingService.startRecording(roomId, userId));
+    public ApiResponse<Void> startRecording(@PathVariable Long roomId,
+                                            @RequestHeader("X-User-Id") Long userId) {
+        recordingService.startRecording(roomId, userId);
+        return ApiResponse.ok(null);
     }
 
     @Operation(summary = "녹화 중지", description = "진행 중인 녹화를 중지합니다. 호스트만 수행 가능합니다.")
     @ApiResponses(value = {
         @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "녹화 중지 성공"),
-        @io.swagger.v3.oas.annotations.responses.ApiResponse(
-            responseCode = "401", description = "인증 필요",
-            content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class),
-                examples = @ExampleObject(value = "{\"code\": \"GATEWAY_001\", \"status\": 401, \"message\": \"인증 토큰이 없습니다.\", \"timestamp\": 1710000000000}"))
-        ),
         @io.swagger.v3.oas.annotations.responses.ApiResponse(
             responseCode = "403", description = "호스트만 수행할 수 있는 작업",
             content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class),
@@ -101,11 +88,6 @@ public class RoomRecordingController {
                     @ExampleObject(name = "VIDEO_044 - 진행 중인 녹화 없음",
                         value = "{\"code\": \"VIDEO_044\", \"status\": 404, \"message\": \"진행 중인 녹음을 찾을 수 없습니다\", \"timestamp\": 1710000000000}")
                 })
-        ),
-        @io.swagger.v3.oas.annotations.responses.ApiResponse(
-            responseCode = "500", description = "서버 내부 오류",
-            content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class),
-                examples = @ExampleObject(value = "{\"code\": \"INTERNAL_ERROR\", \"status\": 500, \"message\": \"서버 내부 오류가 발생했습니다\", \"timestamp\": 1710000000000}"))
         )
     })
     @PostMapping("/api/rooms/{roomId}/recording/stop")
@@ -119,45 +101,26 @@ public class RoomRecordingController {
     @ApiResponses(value = {
         @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "상태 조회 성공"),
         @io.swagger.v3.oas.annotations.responses.ApiResponse(
-            responseCode = "401", description = "인증 필요",
-            content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class),
-                examples = @ExampleObject(value = "{\"code\": \"GATEWAY_001\", \"status\": 401, \"message\": \"인증 토큰이 없습니다.\", \"timestamp\": 1710000000000}"))
-        ),
-        @io.swagger.v3.oas.annotations.responses.ApiResponse(
             responseCode = "404", description = "존재하지 않는 roomId로 요청한 경우",
             content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class),
                 examples = @ExampleObject(name = "VIDEO_004 - 회의실 없음",
                     value = "{\"code\": \"VIDEO_004\", \"status\": 404, \"message\": \"존재하지 않는 회의실입니다\", \"timestamp\": 1710000000000}"))
-        ),
-        @io.swagger.v3.oas.annotations.responses.ApiResponse(
-            responseCode = "500", description = "서버 내부 오류",
-            content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class),
-                examples = @ExampleObject(value = "{\"code\": \"INTERNAL_ERROR\", \"status\": 500, \"message\": \"서버 내부 오류가 발생했습니다\", \"timestamp\": 1710000000000}"))
         )
     })
+    // CHECK [recording-담당자]: getRecordingStatus 반환 타입 List -> 단일 RoomRecordingResponse
     @GetMapping("/api/rooms/{roomId}/recording/status")
-    public ApiResponse<List<RoomRecordingResponse>> getRecordingStatus(@PathVariable Long roomId) {
-        return ApiResponse.ok(recordingService.getRecordingStatus(roomId));
+    public ApiResponse<RoomRecordingResponse> getRecordingStatus(@PathVariable Long roomId) {
+        return ApiResponse.ok(recordingService.getActiveRecording(roomId));
     }
 
     @Operation(summary = "녹화 목록 조회", description = "회의방의 완료된 녹화 파일 목록을 조회합니다.")
     @ApiResponses(value = {
         @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "목록 조회 성공"),
         @io.swagger.v3.oas.annotations.responses.ApiResponse(
-            responseCode = "401", description = "인증 필요",
-            content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class),
-                examples = @ExampleObject(value = "{\"code\": \"GATEWAY_001\", \"status\": 401, \"message\": \"인증 토큰이 없습니다.\", \"timestamp\": 1710000000000}"))
-        ),
-        @io.swagger.v3.oas.annotations.responses.ApiResponse(
             responseCode = "404", description = "존재하지 않는 roomId로 요청한 경우",
             content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class),
                 examples = @ExampleObject(name = "VIDEO_004 - 회의실 없음",
                     value = "{\"code\": \"VIDEO_004\", \"status\": 404, \"message\": \"존재하지 않는 회의실입니다\", \"timestamp\": 1710000000000}"))
-        ),
-        @io.swagger.v3.oas.annotations.responses.ApiResponse(
-            responseCode = "500", description = "서버 내부 오류",
-            content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class),
-                examples = @ExampleObject(value = "{\"code\": \"INTERNAL_ERROR\", \"status\": 500, \"message\": \"서버 내부 오류가 발생했습니다\", \"timestamp\": 1710000000000}"))
         )
     })
     @GetMapping("/api/rooms/{roomId}/recordings")
@@ -165,20 +128,9 @@ public class RoomRecordingController {
         return ApiResponse.ok(recordingService.listRecordings(roomId));
     }
 
-    @Operation(summary = "녹화 파일 다운로드 URL 조회", description = "녹화 파일의 임시 다운로드 URL을 반환합니다. 녹화가 완료되어야 하며 S3에 업로드된 경우에만 가능합니다.")
+    @Operation(summary = "녹화 파일 다운로드 URL 조회", description = "녹화 파일의 임시 다운로드 URL을 반환합니다.")
     @ApiResponses(value = {
         @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "다운로드 URL 조회 성공"),
-        @io.swagger.v3.oas.annotations.responses.ApiResponse(
-            responseCode = "400", description = "녹화가 아직 완료되지 않은 경우",
-            content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class),
-                examples = @ExampleObject(name = "VIDEO_046 - 녹화 미완료",
-                    value = "{\"code\": \"VIDEO_046\", \"status\": 400, \"message\": \"녹음이 아직 완료되지 않았습니다\", \"timestamp\": 1710000000000}"))
-        ),
-        @io.swagger.v3.oas.annotations.responses.ApiResponse(
-            responseCode = "401", description = "인증 필요",
-            content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class),
-                examples = @ExampleObject(value = "{\"code\": \"GATEWAY_001\", \"status\": 401, \"message\": \"인증 토큰이 없습니다.\", \"timestamp\": 1710000000000}"))
-        ),
         @io.swagger.v3.oas.annotations.responses.ApiResponse(
             responseCode = "404",
             description = "녹화 파일 없음 또는 S3 업로드 미완료",
@@ -189,11 +141,6 @@ public class RoomRecordingController {
                     @ExampleObject(name = "VIDEO_047 - S3 업로드 미완료",
                         value = "{\"code\": \"VIDEO_047\", \"status\": 404, \"message\": \"녹음 파일이 아직 업로드되지 않았습니다\", \"timestamp\": 1710000000000}")
                 })
-        ),
-        @io.swagger.v3.oas.annotations.responses.ApiResponse(
-            responseCode = "500", description = "서버 내부 오류",
-            content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class),
-                examples = @ExampleObject(value = "{\"code\": \"INTERNAL_ERROR\", \"status\": 500, \"message\": \"서버 내부 오류가 발생했습니다\", \"timestamp\": 1710000000000}"))
         )
     })
     @GetMapping("/api/recordings/{recordingId}/download")
@@ -205,11 +152,6 @@ public class RoomRecordingController {
     @ApiResponses(value = {
         @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "삭제 성공"),
         @io.swagger.v3.oas.annotations.responses.ApiResponse(
-            responseCode = "401", description = "인증 필요",
-            content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class),
-                examples = @ExampleObject(value = "{\"code\": \"GATEWAY_001\", \"status\": 401, \"message\": \"인증 토큰이 없습니다.\", \"timestamp\": 1710000000000}"))
-        ),
-        @io.swagger.v3.oas.annotations.responses.ApiResponse(
             responseCode = "403", description = "호스트만 수행할 수 있는 작업",
             content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class),
                 examples = @ExampleObject(name = "VIDEO_015 - 호스트 전용",
@@ -220,11 +162,6 @@ public class RoomRecordingController {
             content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class),
                 examples = @ExampleObject(name = "VIDEO_045 - 녹화 파일 없음",
                     value = "{\"code\": \"VIDEO_045\", \"status\": 404, \"message\": \"녹음 파일을 찾을 수 없습니다\", \"timestamp\": 1710000000000}"))
-        ),
-        @io.swagger.v3.oas.annotations.responses.ApiResponse(
-            responseCode = "500", description = "서버 내부 오류",
-            content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class),
-                examples = @ExampleObject(value = "{\"code\": \"INTERNAL_ERROR\", \"status\": 500, \"message\": \"서버 내부 오류가 발생했습니다\", \"timestamp\": 1710000000000}"))
         )
     })
     @DeleteMapping("/api/recordings/{recordingId}")

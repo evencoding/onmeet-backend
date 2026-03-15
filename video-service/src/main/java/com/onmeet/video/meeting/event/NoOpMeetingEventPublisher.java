@@ -7,9 +7,11 @@ import com.onmeet.video.meeting.event.room.MeetingEvent;
 import com.onmeet.video.meeting.event.screenshare.ScreenShareEvent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
 
 @Component
+@Profile("local")
 public class NoOpMeetingEventPublisher implements MeetingEventPublisher {
 
     private static final Logger log = LoggerFactory.getLogger(NoOpMeetingEventPublisher.class);
