@@ -20,7 +20,7 @@ class SecureInternalFilter(
     private val logger = LoggerFactory.getLogger(SecureInternalFilter::class.java)
 
     override fun filter(exchange: ServerWebExchange, chain: GatewayFilterChain): Mono<Void> {
-        logger.debug("Applying X-Gateway-Secret to request: ${exchange.request.uri.path}")
+        logger.debug("Applying X-Gateway-Secret to request: {}", exchange.request.uri.path)
 
         val decoratedRequest = object : ServerHttpRequestDecorator(exchange.request) {
             override fun getHeaders(): HttpHeaders {
