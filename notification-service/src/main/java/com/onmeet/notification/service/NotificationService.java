@@ -106,7 +106,6 @@ public class NotificationService {
             List<Long> targetUserIds = dto.getUserIds();
             List<AuthServiceClient.UserInfoResponse> userInfos = authServiceClient.getBatchUserInfo(targetUserIds);
             Map<Long, String> userTokenMap = userInfos.stream()
-                    // TODO: [Auth 담당자] UserInfoDto 배치 조회 시 'fcmDeviceToken' 필드를 응답에 포함해주시면 이 필드를 통해 최신 토큰 발송이 가능해집니다.
                     .filter(u -> u.fcmDeviceToken() != null && !u.fcmDeviceToken().isBlank())
                     .collect(Collectors.toMap(AuthServiceClient.UserInfoResponse::userId, AuthServiceClient.UserInfoResponse::fcmDeviceToken, (a, b) -> a));
 
@@ -121,7 +120,6 @@ public class NotificationService {
             try {
                 AuthServiceClient.UserInfoResponse userInfo = authServiceClient.getUserInfo(dto.getUserId());
                 if (userInfo != null) {
-                    // TODO: [Auth 담당자] UserInfoDto 단건 조회 시 'fcmDeviceToken' 필드를 응답에 포함해주시면 이 필드를 통해 최신 토큰 발송이 가능해집니다.
                     latestToken = userInfo.fcmDeviceToken();
                 }
             } catch (Exception e) {
@@ -319,7 +317,6 @@ public class NotificationService {
         try {
             AuthServiceClient.UserInfoResponse userInfo = authServiceClient.getUserInfo(userId);
             if (userInfo != null) {
-                // TODO: [Auth 담당자] UserInfoDto 조회 시 'fcmDeviceToken' 필드를 응답에 포함해주시면 스케줄러에서도 최신 토큰으로 발송이 가능해집니다.
                 latestToken = userInfo.fcmDeviceToken();
             }
         } catch (Exception e) {
