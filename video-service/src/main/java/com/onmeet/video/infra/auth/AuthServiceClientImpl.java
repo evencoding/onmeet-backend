@@ -53,8 +53,10 @@ public class AuthServiceClientImpl implements AuthServiceClient {
 
             return response.getBody();
         } catch (Exception e) {
-            logger.error("Failed to fetch user info for userId: {}", userId, e);
-            return new UserInfo(userId, "Unknown User", "unknown@example.com", null);
+            // CHECK [auth-담당자]: "Unknown User" 더미 폴백 제거 → 예외 전파로 변경.
+            // auth-service 장애 시 상위 레이어가 적절한 에러 처리를 하도록 예외를 그대로 던짐.
+            logger.error("Failed to fetch user info from auth-service for userId: {}", userId, e);
+            throw new RuntimeException("auth-service 호출 실패: userId=" + userId, e);
         }
     }
 
@@ -81,10 +83,10 @@ public class AuthServiceClientImpl implements AuthServiceClient {
             BatchUserInfoResponse body = response.getBody();
             return body != null ? body.users() : Collections.emptyList();
         } catch (Exception e) {
-            logger.error("Failed to fetch batch user info for userIds: {}", userIds, e);
-            return userIds.stream()
-                    .map(id -> new UserInfo(id, "Unknown User", "unknown@example.com", null))
-                    .toList();
+            // CHECK [auth-담당자]: batch "Unknown User" 더미 폴백 제거 → 예외 전파로 변경.
+            // auth-service 장애 시 상위 레이어가 적절한 에러 처리를 하도록 예외를 그대로 던짐.
+            logger.error("Failed to fetch batch user info from auth-service for userIds: {}", userIds, e);
+            throw new RuntimeException("auth-service 배치 호출 실패: userIds=" + userIds, e);
         }
     }
 
@@ -106,6 +108,10 @@ public class AuthServiceClientImpl implements AuthServiceClient {
             UserExistsResponse body = response.getBody();
             return body != null && body.exists();
         } catch (Exception e) {
+            // CHECK [auth-담당자]: userExists 폴백 false 반환 — 의도적 fail-closed 설계.
+            // auth-service 장애 시 존재하지 않는 사용자로 처리하여 잘못된 접근 차단.
+            // getUserInfo/getBatchUserInfo와 달리 권한 체크 목적이므로 false 반환이 안전함.
+            // 일관성이 필요하다면 예외 전파로 변경 가능.
             logger.error("Failed to check if user exists for userId: {}", userId, e);
             return false;
         }
@@ -141,6 +147,9 @@ public class AuthServiceClientImpl implements AuthServiceClient {
             }
             return Collections.emptyMap();
         } catch (Exception e) {
+            // CHECK [auth-담당자]: batchUserExists 폴백 — 모든 userId를 false로 반환하는 의도적 fail-closed 설계.
+            // auth-service 장애 시 존재하지 않는 사용자로 처리하여 잘못된 접근 차단.
+            // 일관성이 필요하다면 예외 전파로 변경 가능.
             logger.error("Failed to check batch user exists for userIds: {}", userIds, e);
             Map<Long, Boolean> result = new HashMap<>();
             for (Long userId : userIds) {
@@ -168,6 +177,8 @@ public class AuthServiceClientImpl implements AuthServiceClient {
             TeamExistsResponse body = response.getBody();
             return body != null && body.exists();
         } catch (Exception e) {
+            // CHECK [auth-담당자]: teamExists 폴백 false 반환 — 의도적 fail-closed 설계.
+            // auth-service 장애 시 팀이 존재하지 않는 것으로 처리. 일관성 필요 시 예외 전파로 변경 가능.
             logger.error("Failed to check if team exists for teamId: {}", teamId, e);
             return false;
         }
@@ -192,6 +203,8 @@ public class AuthServiceClientImpl implements AuthServiceClient {
             TeamMembershipResponse body = response.getBody();
             return body != null && body.isMember();
         } catch (Exception e) {
+            // CHECK [auth-담당자]: isTeamMember 폴백 false 반환 — 의도적 fail-closed 설계.
+            // auth-service 장애 시 팀 멤버가 아닌 것으로 처리하여 잘못된 접근 차단. 일관성 필요 시 예외 전파로 변경 가능.
             logger.error("Failed to check team membership for teamId: {}, userId: {}", teamId, userId, e);
             return false;
         }

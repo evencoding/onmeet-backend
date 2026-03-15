@@ -18,7 +18,6 @@ import com.onmeet.video.meeting.repository.participant.RoomParticipantRepository
 import com.onmeet.video.meeting.repository.recording.RoomRecordingRepository;
 import com.onmeet.video.meeting.repository.room.RoomSettingsRepository;
 import java.time.Instant;
-import java.util.ArrayList;
 import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -52,28 +51,24 @@ public class RoomRecordingService {
         this.clockProvider = clockProvider;
     }
 
+    // CHECK [recording-담당자]: startRecording 반환 타입 List<RoomRecordingResponse> -> void
     @Transactional
-    public List<RoomRecordingResponse> startRecording(Long roomId, Long userId) {
+    public void startRecording(Long roomId, Long userId) {
         MeetingRoom room = findRoom(roomId);
         validateHostOrCoHost(roomId, room, userId);
         validateRecordingPreconditions(roomId, room);
 
         List<ParticipantInfo> participants = liveKitClient.listParticipants(room.getLivekitRoomName());
         Instant now = clockProvider.now();
-        List<RoomRecording> recordings = new ArrayList<>();
 
         for (ParticipantInfo participant : participants) {
             for (TrackInfo track : participant.tracks()) {
                 if (!MICROPHONE_SOURCE.equals(track.source())) {
                     continue;
                 }
-                RoomRecording recording = startTrackEgressForParticipant(
-                    room, roomId, participant.identity(), track.sid(), now);
-                recordings.add(recording);
+                startTrackEgressForParticipant(room, roomId, participant.identity(), track.sid(), now);
             }
         }
-
-        return recordings.stream().map(this::toResponse).toList();
     }
 
     @Transactional
@@ -115,6 +110,16 @@ public class RoomRecordingService {
             liveKitClient.stopEgress(recording.getEgressId());
             recording.markProcessing();
         }
+    }
+
+    // CHECK [recording-담당자]: getActiveRecording 추가 - 진행 중인 녹화 단건 반환
+    @Transactional(readOnly = true)
+    public RoomRecordingResponse getActiveRecording(Long roomId) {
+        findRoom(roomId);
+        return recordingRepository.findByRoomIdAndStatus(roomId, RecordingStatus.RECORDING).stream()
+            .findFirst()
+            .map(this::toResponse)
+            .orElse(null);
     }
 
     @Transactional(readOnly = true)

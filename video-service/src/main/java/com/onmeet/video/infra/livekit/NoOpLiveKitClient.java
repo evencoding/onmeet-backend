@@ -4,9 +4,12 @@ import java.util.List;
 import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 
+// CHECK [video-담당자]: NoOp은 기본 활성화(livekit.enabled 미설정 or false 시 사용)
 @Component
+@ConditionalOnProperty(name = "livekit.enabled", havingValue = "false", matchIfMissing = true)
 public class NoOpLiveKitClient implements LiveKitClient {
 
     private static final Logger log = LoggerFactory.getLogger(NoOpLiveKitClient.class);

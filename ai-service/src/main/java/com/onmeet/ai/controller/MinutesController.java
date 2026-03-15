@@ -3,6 +3,7 @@ package com.onmeet.ai.controller;
 import com.onmeet.ai.dto.request.MinutesPatchRequest;
 import com.onmeet.ai.dto.request.MinutesRegenerateRequest;
 import com.onmeet.ai.dto.response.MinutesResponse;
+import com.onmeet.ai.dto.response.TranscriptResponse;
 import com.onmeet.ai.service.MinutesService;
 import com.onmeet.common.dto.ErrorResponse;
 import io.swagger.v3.oas.annotations.Operation;
@@ -12,12 +13,17 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.*;
 
+// CHECK [ai-담당자]: MinutesController URL 패턴이 /v1/rooms/{roomId}/minutes로 변경됨.
+// Frontend에서 /ai/v1/rooms/{roomId}/minutes로 호출하면 Gateway가 /ai/v1 strip 후
+// /rooms/{roomId}/minutes → 이 컨트롤러로 매핑됨. Gateway strip prefix 동작 확인 필요.
+
+// CHECK [frontend-담당자]: AI API URL 패턴이 Backend에서 Frontend 계약에 맞게 변경됨.
+// Frontend의 /ai/v1/rooms/{roomId}/minutes 호출이 정상 동작하는지 E2E 테스트 필요.
 @Tag(name = "Minutes", description = "회의록 조회/수정/재생성 API")
 @RestController
-@RequestMapping("/v1/minutes")
+@RequestMapping("/v1/rooms")
 public class MinutesController {
 
     private final MinutesService minutesService;
@@ -54,7 +60,7 @@ public class MinutesController {
                 })
         )
     })
-    @GetMapping("/{roomId}")
+    @GetMapping("/{roomId}/minutes")
     public MinutesResponse get(@PathVariable Long roomId) {
         return minutesService.get(roomId);
     }
@@ -108,7 +114,7 @@ public class MinutesController {
                     value = "{\"code\":\"AI_021\",\"status\":504,\"message\":\"Claude API 연결 시간이 초과되었습니다\",\"timestamp\":1710000000000}"))
         )
     })
-    @PostMapping("/{roomId}/regenerate")
+    @PostMapping("/{roomId}/minutes/regenerate")
     public MinutesResponse regenerate(
             @PathVariable Long roomId,
             @RequestBody(required = false) MinutesRegenerateRequest req
@@ -116,7 +122,7 @@ public class MinutesController {
         return minutesService.regenerate(roomId, req);
     }
 
-    @Operation(summary = "회의록 수정", description = "회의록의 제목, 요약 텍스트 등을 부분적으로 수정합니다. 수정한 필드만 반영됩니다.")
+    @Operation(summary = "회의록 수정", description = "회의록의 제목, 요약 텍스트 등을 수정합니다.")
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "수정 성공"),
         @ApiResponse(
@@ -140,7 +146,9 @@ public class MinutesController {
                     value = "{\"code\":\"AI_012\",\"status\":500,\"message\":\"회의록 데이터베이스 저장 중 오류가 발생했습니다\",\"timestamp\":1710000000000}"))
         )
     })
-    @PatchMapping("/{roomId}")
+    // CHECK [ai-담당자]: updateMinutes HTTP 메서드가 PATCH → PUT으로 변경됨.
+    // Frontend PUT /ai/v1/rooms/{roomId}/minutes 호출로 수정 필요.
+    @PutMapping("/{roomId}/minutes")
     public MinutesResponse patch(
             @PathVariable Long roomId,
             @RequestBody MinutesPatchRequest req
@@ -148,7 +156,7 @@ public class MinutesController {
         return minutesService.patch(roomId, req);
     }
 
-    @Operation(summary = "트랜스크립트 원본 조회", description = "회의의 원본 트랜스크립트 JSON 문자열을 반환합니다. STT 결과물 원문을 확인할 수 있습니다.")
+    @Operation(summary = "트랜스크립트 원본 조회", description = "회의의 원본 트랜스크립트를 DTO로 반환합니다.")
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "트랜스크립트 조회 성공"),
         @ApiResponse(
@@ -180,8 +188,8 @@ public class MinutesController {
                 })
         )
     })
-    @GetMapping(value = "/{roomId}/transcript", produces = MediaType.APPLICATION_JSON_VALUE)
-    public String transcript(@PathVariable Long roomId) {
-        return minutesService.getTranscriptRawJson(roomId);
+    @GetMapping("/{roomId}/transcript")
+    public TranscriptResponse transcript(@PathVariable Long roomId) {
+        return minutesService.getTranscript(roomId);
     }
 }

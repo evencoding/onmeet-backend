@@ -70,7 +70,8 @@ public class RoomInvitationService {
             new NotificationRequestDto(
                 inviteeUserId, null, "MEETING_INVITATION", "회의 초대",
                 room.getTitle() + " 회의에 초대되었습니다.",
-                "/meeting/" + roomId, "MEETING", String.valueOf(roomId), inviterUserId
+                "/meeting/" + roomId, "MEETING", String.valueOf(roomId), inviterUserId,
+                null, null
             )
         );
 
@@ -120,7 +121,8 @@ public class RoomInvitationService {
                 new NotificationRequestDto(
                     null, inviteeIds, "MEETING_INVITATION", "회의 초대",
                     room.getTitle() + " 회의에 초대되었습니다.",
-                    "/meeting/" + roomId, "MEETING", String.valueOf(roomId), inviterUserId
+                    "/meeting/" + roomId, "MEETING", String.valueOf(roomId), inviterUserId,
+                    null, null
                 )
             );
         }
@@ -155,7 +157,8 @@ public class RoomInvitationService {
                 "초대 수락",
                 "사용자가 회의 초대를 수락했습니다.",
                 "/meeting/" + invitation.getRoom().getId(),
-                "MEETING", String.valueOf(invitation.getRoom().getId()), userId
+                "MEETING", String.valueOf(invitation.getRoom().getId()), userId,
+                null, null
             )
         );
 
@@ -180,7 +183,8 @@ public class RoomInvitationService {
                 invitation.getInviterUserId(), null, "INVITATION_DECLINED", "초대 거절",
                 "사용자가 회의 초대를 거절했습니다.",
                 "/meeting/" + invitation.getRoom().getId(),
-                "MEETING", String.valueOf(invitation.getRoom().getId()), userId
+                "MEETING", String.valueOf(invitation.getRoom().getId()), userId,
+                null, null
             )
         );
 
@@ -213,7 +217,8 @@ public class RoomInvitationService {
                 "초대 취소",
                 "회의 초대가 취소되었습니다.",
                 "/meeting/" + roomId,
-                "MEETING", String.valueOf(roomId), requesterId
+                "MEETING", String.valueOf(roomId), requesterId,
+                null, null
             )
         );
     }

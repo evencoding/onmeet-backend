@@ -45,7 +45,8 @@ import org.springframework.web.bind.annotation.RestController;
 
 @Tag(name = "Meeting Room", description = "회의방 CRUD 및 운영 API")
 @RestController
-@RequestMapping("/api/rooms")
+// CHECK [video-담당자]: URL 패턴 /api/rooms → /v1/rooms 변경 (gateway /video/v1/** 라우팅 통일)
+@RequestMapping("/v1/rooms")
 public class MeetingRoomController {
 
     private final MeetingRoomService meetingRoomService;
@@ -178,8 +179,9 @@ public class MeetingRoomController {
                 examples = @ExampleObject(value = "{\"code\":\"VIDEO_006\",\"status\":404,\"message\":\"해당 코드의 회의실을 찾을 수 없습니다\",\"timestamp\":1710000000000}"))
         )
     })
+    // CHECK [video-담당자]: findByCode 반환 타입 MeetingRoomResponse -> MeetingRoomDetailResponse
     @GetMapping("/code/{roomCode}")
-    public ApiResponse<MeetingRoomResponse> findByCode(@PathVariable String roomCode) {
+    public ApiResponse<MeetingRoomDetailResponse> findByCode(@PathVariable String roomCode) {
         return ApiResponse.ok(meetingRoomService.findByCode(roomCode));
     }
 
@@ -474,9 +476,11 @@ public class MeetingRoomController {
     @ApiResponses(value = {
         @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "검색 성공")
     })
+    // CHECK [video-담당자]: searchByTag 반환 타입 List -> Page
     @GetMapping("/tags/{tagName}")
-    public ApiResponse<List<MeetingRoomResponse>> searchByTag(@PathVariable String tagName) {
-        return ApiResponse.ok(meetingRoomService.searchByTag(tagName));
+    public ApiResponse<Page<MeetingRoomResponse>> searchByTag(@PathVariable String tagName,
+            @PageableDefault(size = 20) Pageable pageable) {
+        return ApiResponse.ok(meetingRoomService.searchByTag(tagName, pageable));
     }
 
     @Operation(summary = "회의방 즐겨찾기 추가", description = "회의방을 즐겨찾기 목록에 추가합니다.")
@@ -526,9 +530,11 @@ public class MeetingRoomController {
     @ApiResponses(value = {
         @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "즐겨찾기 목록 조회 성공")
     })
+    // CHECK [video-담당자]: listFavorites 반환 타입 List -> Page
     @GetMapping("/favorites")
-    public ApiResponse<List<MeetingRoomResponse>> listFavorites(@RequestHeader("X-User-Id") Long userId) {
-        return ApiResponse.ok(meetingRoomService.listFavorites(userId));
+    public ApiResponse<Page<MeetingRoomResponse>> listFavorites(@RequestHeader("X-User-Id") Long userId,
+            @PageableDefault(size = 20) Pageable pageable) {
+        return ApiResponse.ok(meetingRoomService.listFavorites(userId, pageable));
     }
 
     @Operation(summary = "회의 예약 생성", description = "미래 특정 시간에 회의를 예약합니다. 같은 시간대에 중복 예약은 불가합니다.")
@@ -557,9 +563,11 @@ public class MeetingRoomController {
     @ApiResponses(value = {
         @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "예약 목록 조회 성공")
     })
+    // CHECK [video-담당자]: listScheduled 반환 타입 List -> Page
     @GetMapping("/scheduled")
-    public ApiResponse<List<MeetingRoomResponse>> listScheduled(@RequestHeader("X-User-Id") Long userId) {
-        return ApiResponse.ok(meetingRoomService.listScheduled(userId));
+    public ApiResponse<Page<MeetingRoomResponse>> listScheduled(@RequestHeader("X-User-Id") Long userId,
+            @PageableDefault(size = 20) Pageable pageable) {
+        return ApiResponse.ok(meetingRoomService.listScheduled(userId, pageable));
     }
 
     @Operation(summary = "회의 예약 일정 변경", description = "예약된 회의의 시간을 변경합니다. 예약 상태이며 아직 시작/종료되지 않은 경우만 가능합니다.")
@@ -660,9 +668,11 @@ public class MeetingRoomController {
     @ApiResponses(value = {
         @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "이력 조회 성공")
     })
+    // CHECK [video-담당자]: listHistory 반환 타입 List -> Page
     @GetMapping("/history")
-    public ApiResponse<List<MeetingRoomResponse>> listHistory(@RequestHeader("X-User-Id") Long userId) {
-        return ApiResponse.ok(meetingRoomService.listHistory(userId));
+    public ApiResponse<Page<MeetingRoomResponse>> listHistory(@RequestHeader("X-User-Id") Long userId,
+            @PageableDefault(size = 20) Pageable pageable) {
+        return ApiResponse.ok(meetingRoomService.listHistory(userId, pageable));
     }
 
     @Operation(summary = "월별 회의 통계 조회", description = "사용자의 월별 회의 참가 횟수 및 시간 통계를 조회합니다.")

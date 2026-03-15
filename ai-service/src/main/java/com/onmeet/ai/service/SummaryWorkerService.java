@@ -23,6 +23,10 @@ import java.time.Instant;
 @Service
 public class SummaryWorkerService {
 
+    // CHECK [ai-담당자]: AI 시스템 알림의 actorUserId를 0L(시스템 행위자)로 설정.
+    // notification-service에서 actorUserId=0 이면 시스템 발송으로 처리되는지 확인 필요.
+    private static final Long SYSTEM_ACTOR_ID = 0L;
+
     private final StorageClient storageClient;
     private final ObjectMapper om;
     private final TranscriptRenderer renderer;
@@ -55,7 +59,8 @@ public class SummaryWorkerService {
             new NotificationRequestDto(
                 e.getHostUserId(), null, "AI_SUMMARY_PROGRESS", "AI 요약 시작",
                 "회의록 AI 요약이 시작되었습니다.",
-                "/meeting/" + e.getRoomId() + "?tab=minutes", "MEETING", String.valueOf(e.getRoomId()), null
+                "/meeting/" + e.getRoomId() + "?tab=minutes", "MEETING", String.valueOf(e.getRoomId()), SYSTEM_ACTOR_ID,
+                null, null
             )
         );
 
@@ -104,7 +109,8 @@ public class SummaryWorkerService {
             new NotificationRequestDto(
                 e.getHostUserId(), null, "AI_SUMMARY_COMPLETED", "AI 요약 완료",
                 "회의록 AI 요약이 완료되었습니다.",
-                "/meeting/" + e.getRoomId() + "?tab=minutes", "MEETING", String.valueOf(e.getRoomId()), null
+                "/meeting/" + e.getRoomId() + "?tab=minutes", "MEETING", String.valueOf(e.getRoomId()), SYSTEM_ACTOR_ID,
+                null, null
             )
         );
     }

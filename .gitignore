@@ -61,5 +61,9 @@ out/
 .serena/
 # .gemini included as requested
 
+# Firebase credentials
+**/serviceAccountKey.json
+**/firebase-service-account.json
+
 # OS generated files
 .DS_Store

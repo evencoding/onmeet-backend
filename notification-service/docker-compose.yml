@@ -41,6 +41,7 @@ services:
       - SPRING_KAFKA_BOOTSTRAP_SERVERS=kafka:29092
       - MANAGEMENT_TRACING_ENABLED=false
       - MANAGEMENT_ENDPOINTS_WEB_BASE_PATH=/notification/actuator
+      - FIREBASE_CREDENTIALS_JSON=${FIREBASE_CREDENTIALS_JSON:-}
     depends_on:
       mysql-notification:
         condition: service_healthy

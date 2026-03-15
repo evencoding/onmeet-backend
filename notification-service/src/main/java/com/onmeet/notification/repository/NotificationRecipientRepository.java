@@ -30,6 +30,9 @@ public interface NotificationRecipientRepository extends JpaRepository<Notificat
 
     void deleteAllByUserId(Long userId);
 
+    @Query("SELECT n.type, COUNT(r) FROM NotificationRecipient r JOIN r.notification n WHERE r.userId = :userId AND r.readAt IS NULL GROUP BY n.type")
+    List<Object[]> countUnreadGroupedByType(@Param("userId") Long userId);
+
     @Modifying
     @Query(value = "DELETE FROM notification_recipient WHERE created_at < :cutoffDate LIMIT :batchSize", nativeQuery = true)
     int deleteOlderThan(@Param("cutoffDate") LocalDateTime cutoffDate, @Param("batchSize") int batchSize);

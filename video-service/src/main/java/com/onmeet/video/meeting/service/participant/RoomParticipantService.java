@@ -23,6 +23,8 @@ import com.onmeet.video.meeting.repository.participant.RoomParticipantRepository
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import java.util.stream.Collectors;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -68,12 +70,12 @@ public class RoomParticipantService {
                 .collect(Collectors.toList());
     }
 
+    // CHECK [video-담당자]: listHistory 반환 타입 List -> Page
     @Transactional(readOnly = true)
-    public List<RoomParticipantResponse> listHistory(Long roomId) {
+    public Page<RoomParticipantResponse> listHistory(Long roomId, Pageable pageable) {
         findRoom(roomId);
-        return participantRepository.findByRoomId(roomId).stream()
-                .map(this::toResponse)
-                .collect(Collectors.toList());
+        return participantRepository.findByRoomId(roomId, pageable)
+                .map(this::toResponse);
     }
 
     @Transactional
@@ -245,7 +247,8 @@ public class RoomParticipantService {
             new NotificationRequestDto(
                 targetUserId, null, "WAITING_ROOM_ADMITTED", "회의실 입장 수락",
                 "'" + room.getTitle() + "' 회의실 입장이 수락되었습니다.",
-                "/meeting/" + roomId, "MEETING", String.valueOf(roomId), requesterId
+                "/meeting/" + roomId, "MEETING", String.valueOf(roomId), requesterId,
+                null, null
             )
         );
     }
@@ -269,7 +272,8 @@ public class RoomParticipantService {
             new NotificationRequestDto(
                 targetUserId, null, "WAITING_ROOM_REJECTED", "회의실 입장 거절",
                 "'" + room.getTitle() + "' 회의실 입장이 거절되었습니다.",
-                null, "MEETING", String.valueOf(roomId), requesterId
+                null, "MEETING", String.valueOf(roomId), requesterId,
+                null, null
             )
         );
     }
@@ -335,7 +339,8 @@ public class RoomParticipantService {
                 new NotificationRequestDto(
                     null, userIds, "WAITING_ROOM_ADMITTED", "회의실 입장 수락",
                     "'" + room.getTitle() + "' 회의실 입장이 수락되었습니다.",
-                    "/meeting/" + roomId, "MEETING", String.valueOf(roomId), requesterId
+                    "/meeting/" + roomId, "MEETING", String.valueOf(roomId), requesterId,
+                    null, null
                 )
             );
         }

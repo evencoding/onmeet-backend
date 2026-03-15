@@ -129,11 +129,12 @@ class SttWorkerServiceTest {
         byte[] mockAudioData = new byte[]{1, 2, 3};
         when(storageClient.readBytes(sampleEvent.getS3Path())).thenReturn(mockAudioData);
         when(audioDecoder.decode(mockAudioData)).thenThrow(new IOException("Unsupported format"));
+        when(sttClient.transcribe(any(), any(), any())).thenReturn(null);
 
         sttWorkerService.handleAudioChunk(sampleEvent);
 
         verify(vadClient, never()).detectSpeech(any(), anyInt());
-        verify(sttClient, never()).transcribe(any(), any(), any());
+        // 디코딩 실패 시 fallback으로 transcribe 호출되지만, null 반환 시 이벤트 미발행
         verify(producer, never()).publish(any());
     }
 

@@ -47,5 +47,6 @@ fun User.toUserInfoDto() = UserInfoDto(
     userId = this.requireId(),
     name = this.name,
     email = this.email,
-    profileImageId = this.profileImageId
+    profileImageId = this.profileImageId,
+    fcmDeviceToken = this.fcmDeviceToken
 )

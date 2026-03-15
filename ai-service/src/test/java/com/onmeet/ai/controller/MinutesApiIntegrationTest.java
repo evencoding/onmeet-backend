@@ -27,6 +27,12 @@ import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+// CHECK [ai-담당자]: MinutesController URL 패턴이 /v1/rooms/{roomId}/minutes로 변경됨.
+// Frontend에서 /ai/v1/rooms/{roomId}/minutes로 호출하면 Gateway가 /ai/v1 strip 후
+// /rooms/{roomId}/minutes → 이 컨트롤러로 매핑됨. Gateway strip prefix 동작 확인 필요.
+
+// CHECK [frontend-담당자]: AI API URL 패턴이 Backend에서 Frontend 계약에 맞게 변경됨.
+// Frontend의 /ai/v1/rooms/{roomId}/minutes 호출이 정상 동작하는지 E2E 테스트 필요.
 @ActiveProfiles("test")
 @SpringBootTest
 @AutoConfigureMockMvc(addFilters = false)
@@ -83,10 +89,12 @@ class MinutesApiIntegrationTest {
         minutesRepository.save(existingMinutes);
     }
 
+    // ─── [1][2] URL 패턴 및 HTTP 메서드 변경 ───────────────────────────────
+
     @Test
-    @DisplayName("GET /v1/minutes/{roomId} - 조회 성공")
+    @DisplayName("GET /v1/rooms/{roomId}/minutes - 조회 성공")
     void getMinutes_Success() throws Exception {
-        mockMvc.perform(get("/v1/minutes/1"))
+        mockMvc.perform(get("/v1/rooms/1/minutes"))
                 .andDo(print())
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.roomId").value(1))
@@ -94,10 +102,10 @@ class MinutesApiIntegrationTest {
     }
 
     @Test
-    @DisplayName("GET /v1/minutes/{roomId} - 존재하지 않는 경우 404 또는 Error")
+    @DisplayName("GET /v1/rooms/{roomId}/minutes - 존재하지 않는 경우 404 또는 Error")
     void getMinutes_NotFound() throws Exception {
         try {
-            mockMvc.perform(get("/v1/minutes/9999"))
+            mockMvc.perform(get("/v1/rooms/9999/minutes"))
                     .andDo(print())
                     .andExpect(status().is5xxServerError());
         } catch (Exception e) {
@@ -106,12 +114,12 @@ class MinutesApiIntegrationTest {
     }
 
     @Test
-    @DisplayName("PATCH /v1/minutes/{roomId} - 사용자 편집본 수정")
-    void patchMinutes_Success() throws Exception {
+    @DisplayName("PUT /v1/rooms/{roomId}/minutes - 사용자 편집본 수정 (PATCH→PUT 변경)")
+    void putMinutes_Success() throws Exception {
         MinutesPatchRequest req = new MinutesPatchRequest();
         req.setUserEditedSummaryJson("{\"summary\":\"Edited by User\"}");
 
-        mockMvc.perform(patch("/v1/minutes/1")
+        mockMvc.perform(put("/v1/rooms/1/minutes")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(om.writeValueAsString(req)))
                 .andDo(print())
@@ -121,10 +129,8 @@ class MinutesApiIntegrationTest {
     }
 
     @Test
-    @DisplayName("POST /v1/minutes/{roomId}/regenerate - 요약 재생성")
+    @DisplayName("POST /v1/rooms/{roomId}/minutes/regenerate - 요약 재생성")
     void regenerateMinutes_Success() throws Exception {
-        // Given
-        // TranscriptDocument.Event has timestamp instead of atMs
         String mockTranscriptDoc = "{\"events\":[{\"type\":\"CHAT\",\"text\":\"Hello World\",\"timestamp\":\"2026-03-07T12:00:00Z\",\"actorId\":\"1\"}]}";
         Mockito.when(storageClient.readText(anyString())).thenReturn(mockTranscriptDoc);
 
@@ -136,8 +142,7 @@ class MinutesApiIntegrationTest {
         req.setStyle("bullets");
         req.setModel("claude-pro");
 
-        // When & Then
-        mockMvc.perform(post("/v1/minutes/1/regenerate")
+        mockMvc.perform(post("/v1/rooms/1/minutes/regenerate")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(om.writeValueAsString(req)))
                 .andDo(print())
@@ -145,5 +150,33 @@ class MinutesApiIntegrationTest {
                 .andExpect(jsonPath("$.summaryJson").value(newSummary));
 
         Mockito.verify(storageClient).writeText(anyString(), eq(newSummary), eq("application/json"));
+    }
+
+    // ─── [3] getTranscript 응답 타입 변경 ──────────────────────────────────
+
+    @Test
+    @DisplayName("GET /v1/rooms/{roomId}/transcript - TranscriptResponse DTO 반환")
+    void getTranscript_ReturnsDto() throws Exception {
+        String rawJson = "{\"events\":[]}";
+        Mockito.when(storageClient.readText(anyString())).thenReturn(rawJson);
+
+        mockMvc.perform(get("/v1/rooms/1/transcript"))
+                .andDo(print())
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.roomId").value(1))
+                .andExpect(jsonPath("$.transcript").value(rawJson))
+                .andExpect(jsonPath("$.createdAt").exists());
+    }
+
+    @Test
+    @DisplayName("GET /v1/rooms/{roomId}/transcript - 존재하지 않는 회의록은 에러 반환")
+    void getTranscript_NotFound() throws Exception {
+        try {
+            mockMvc.perform(get("/v1/rooms/9999/transcript"))
+                    .andDo(print())
+                    .andExpect(status().is5xxServerError());
+        } catch (Exception e) {
+            // MVC 테스트에서 Exception이 밖으로 던져질 수 있음
+        }
     }
 }

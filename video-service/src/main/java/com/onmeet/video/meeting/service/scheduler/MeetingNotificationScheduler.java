@@ -73,7 +73,8 @@ public class MeetingNotificationScheduler {
             "/meeting/" + room.getId(),
             "MEETING",
             String.valueOf(room.getId()),
-            null // actorUserId
+            null, // actorUserId
+            null, null // dedupeKey, scheduledAt
         );
         notificationEventPublisher.publishNotification(request);
 

@@ -30,13 +30,11 @@ spring:
 gateway:
   shared-secret: ${GATEWAY_SHARED_SECRET:my-super-secret-gateway-key-1234!}
 
-/**
- * TODO: [VIDEO][FILE_SERVICE] 파일 서버 연동 설정 추가 필요
- * app:
- *   storage:
- *     file-service:
- *       internal-url: ${FILE_SERVICE_URL:http://file-service:8084}
- */
+# TODO: [VIDEO][FILE_SERVICE] 파일 서버 연동 설정 추가 필요
+# app:
+#   storage:
+#     file-service:
+#       internal-url: ${FILE_SERVICE_URL:http://file-service:8084}
 
 app:
   kafka:
@@ -52,9 +50,13 @@ cors:
   allowed-origins: "http://localhost:3000,http://localhost:8080"
 
 livekit:
+  enabled: ${LIVEKIT_ENABLED:false}
   url: ${LIVEKIT_URL:ws://localhost:7880}
   api-key: ${LIVEKIT_API_KEY:devkey}
   api-secret: ${LIVEKIT_API_SECRET:devsecret}
+
+kafka:
+  enabled: ${KAFKA_ENABLED:false}
 
 management:
   endpoints:

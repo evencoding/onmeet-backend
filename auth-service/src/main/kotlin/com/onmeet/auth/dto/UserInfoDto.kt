@@ -2,6 +2,8 @@ package com.onmeet.auth.dto
 
 import io.swagger.v3.oas.annotations.media.Schema
 
+// CHECK [notification-담당자]: UserInfoDto에 fcmDeviceToken 추가됨.
+// notification-service의 AuthServiceClient.UserInfoResponse와 필드명 일치하는지 확인.
 @Schema(description = "내부 서비스용 사용자 정보 (간소화)")
 data class UserInfoDto(
     @Schema(description = "User ID")
@@ -11,7 +13,9 @@ data class UserInfoDto(
     @Schema(description = "이메일")
     val email: String,
     @Schema(description = "프로필 이미지 ID")
-    val profileImageId: Long?
+    val profileImageId: Long?,
+    @Schema(description = "FCM 디바이스 토큰")
+    val fcmDeviceToken: String? = null
 )
 
 @Schema(description = "다중 사용자 정보 조회 요청")

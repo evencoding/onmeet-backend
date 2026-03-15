@@ -4,7 +4,9 @@ import org.springframework.context.annotation.Primary;
 import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
 
-@Profile({ "test", "local", "docker" })
+// CHECK [ai-담당자]: FakeSttClient 프로필에서 "docker"가 제거됨.
+// docker 프로필에서는 OpenAiSttClient(ConditionalOnProperty)가 활성화됨.
+@Profile({ "test", "local" })
 @Component
 public class FakeSttClient implements SttClient {
     @Override
