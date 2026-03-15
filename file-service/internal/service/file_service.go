@@ -352,7 +352,11 @@ func (s *fileService) GenerateDefaultProfileImage(ctx context.Context, name stri
 		initial = string(runes[0])
 	}
 
-	svgContent := fmt.Sprintf(`<svg width="200" height="200" xmlns="http://www.w3.org/2000/svg"><rect width="100%%" height="100%%" fill="%s"/><text x="50%%" y="50%%" font-size="100" text-anchor="middle" dy=".3em" fill="%s" font-family="Arial, sans-serif">%s</text></svg>`, color, textColor, initial)
+	svTemplate := "<svg width=\"200\" height=\"200\" viewBox=\"0 0 200 200\" xmlns=\"http://www.w3.org/2000/svg\">" +
+		"<rect width=\"200\" height=\"200\" fill=\"%s\"/>" +
+		"<text x=\"100\" y=\"100\" font-size=\"80\" font-weight=\"600\" text-anchor=\"middle\" dominant-baseline=\"central\" fill=\"%s\" font-family=\"'Apple SD Gothic Neo', 'Noto Sans KR', Arial, sans-serif\">%s</text>" +
+		"</svg>"
+	svContent := fmt.Sprintf(svgTemplate, color, textColor, initial)
 
 	fileName := uuid.New().String() + ".svg"
 	category := "profile"

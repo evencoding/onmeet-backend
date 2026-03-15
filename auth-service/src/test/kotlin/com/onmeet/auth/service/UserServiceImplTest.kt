@@ -418,9 +418,9 @@ class UserServiceImplTest {
 
         every { mockFile.isEmpty } returns false
         every { userRepository.findById(1L) } returns Optional.of(user)
-        every { userRepository.save(any()) } returns user
         justRun { fileClient.safeDeleteProfileImageIfPresent(any(), any()) }
         every { fileClient.uploadProfileImage(mockFile, "1") } returns uploadedFile
+        every { userRepository.save(match { it.profileImageId == 200L && it.name == "Updated" }) } returns user
 
         // when
         val result = userService.updateUserProfile(1L, user, request, mockFile)
@@ -429,7 +429,7 @@ class UserServiceImplTest {
         assertEquals(200L, user.profileImageId)
         assertEquals("Updated", user.name)
         verify { fileClient.uploadProfileImage(mockFile, "1") }
-        verify(atLeast = 2) { userRepository.save(user) }
+        verify { userRepository.save(user) }
     }
 
     @Test
@@ -444,9 +444,9 @@ class UserServiceImplTest {
 
         every { mockFile.isEmpty } returns false
         every { userRepository.findById(1L) } returns Optional.of(user)
-        every { userRepository.save(any()) } returns user
         justRun { fileClient.safeDeleteProfileImageIfPresent(any(), any()) }
         every { fileClient.uploadProfileImage(mockFile, "1") } returns uploadedFile
+        every { userRepository.save(match { it.profileImageId == 200L }) } returns user
 
         // when
         userService.updateUserProfile(1L, user, request, mockFile)
@@ -455,7 +455,7 @@ class UserServiceImplTest {
         assertEquals(200L, user.profileImageId)
         verify { fileClient.safeDeleteProfileImageIfPresent(100L, any()) }
         verify { fileClient.uploadProfileImage(mockFile, "1") }
-        verify(atLeast = 2) { userRepository.save(user) }
+        verify { userRepository.save(user) }
     }
 
     @Test

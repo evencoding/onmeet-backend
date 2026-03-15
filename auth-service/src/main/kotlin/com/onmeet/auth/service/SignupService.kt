@@ -21,13 +21,13 @@ class SignupService(
     private val passwordEncoder: PasswordEncoder,
     private val fileClient: FileClient
 ) {
+    @Transactional
     fun signupCompany(request: CompanySignupRequest, profileImage: MultipartFile?): Long {
         val savedUser = signupCompanyInternal(request)
         processProfileImage(savedUser, profileImage)
         return savedUser.requireId()
     }
 
-    @Transactional
     fun signupCompanyInternal(request: CompanySignupRequest): User {
         if (userRepository.existsByEmail(request.email)) {
             throw BusinessException(AuthErrorCode.EMAIL_ALREADY_EXISTS)
@@ -49,13 +49,13 @@ class SignupService(
         return userRepository.save(user)
     }
 
+    @Transactional
     fun joinCompany(request: JoinRequest, profileImage: MultipartFile?): Long {
         val savedUser = joinCompanyInternal(request)
         processProfileImage(savedUser, profileImage)
         return savedUser.requireId()
     }
 
-    @Transactional
     fun joinCompanyInternal(request: JoinRequest): User {
         val invitation = invitationService.validateInvitation(request.email, request.code)
 
@@ -87,7 +87,7 @@ class SignupService(
         val fileResp = if (profileImage != null && !profileImage.isEmpty) {
             fileClient.uploadProfileImage(profileImage, user.requireId().toString())
         } else {
-            fileClient.generateDefaultProfileImage(user.name)
+            fileClient.generateDefaultProfileImage(user.name, user.requireId().toString())
         }
 
         fileResp?.let {
