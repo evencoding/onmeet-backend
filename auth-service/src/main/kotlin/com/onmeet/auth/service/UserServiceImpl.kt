@@ -22,39 +22,17 @@ class UserServiceImpl(
     private val notificationEventPublisher: NotificationEventPublisher
 ) : UserService {
 
+    @Transactional
     @CacheEvict(value = ["userInfo"], key = "#requester.id")
     override fun deleteMyProfileImage(requester: User): UserResponseDto {
         fileClient.deleteMyProfileImage()
-        return updateUserProfileImageIdInternal(requester, null)
+        requester.profileImageId = null
+        return userRepository.save(requester).toResponseDto()
     }
 
     @Transactional
-    fun updateUserProfileImageIdInternal(user: User, profileImageId: Long?): UserResponseDto {
-        user.profileImageId = profileImageId
-        return userRepository.save(user).toResponseDto()
-    }
-
     @CacheEvict(value = ["userInfo"], key = "#userId")
     override fun updateUserProfile(userId: Long, requester: User, request: UserProfileUpdateRequest, profileImage: MultipartFile?): UserResponseDto {
-        val user = updateUserProfileInternal(userId, requester, request)
-
-        // Handle profile image upload if provided (outside transaction)
-        if (profileImage != null && !profileImage.isEmpty) {
-            // Delete old profile image if exists
-            fileClient.safeDeleteProfileImageIfPresent(user.profileImageId, "userId=${user.requireId()}")
-
-            // Upload new profile image
-            val uploadResult = fileClient.uploadProfileImage(profileImage, user.requireId().toString())
-            uploadResult?.let {
-                return updateUserProfileImageIdInternal(user, it.id)
-            }
-        }
-
-        return user.toResponseDto()
-    }
-
-    @Transactional
-    fun updateUserProfileInternal(userId: Long, requester: User, request: UserProfileUpdateRequest): User {
         val user = userRepository.findById(userId)
             .orElseThrow { BusinessException(AuthErrorCode.USER_NOT_FOUND) }
 
@@ -79,7 +57,14 @@ class UserServiceImpl(
             user.jobTitle = jobTitle
         }
 
-        return userRepository.save(user)
+        // Handle profile image upload if provided
+        if (profileImage != null && !profileImage.isEmpty) {
+            fileClient.safeDeleteProfileImageIfPresent(user.profileImageId, "userId=${user.requireId()}")
+            val uploadResult = fileClient.uploadProfileImage(profileImage, user.requireId().toString())
+            uploadResult?.let { user.profileImageId = it.id }
+        }
+
+        return userRepository.save(user).toResponseDto()
     }
 
     override fun getUserInfo(userId: Long, requester: User): UserResponseDto {

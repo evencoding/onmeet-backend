@@ -21,13 +21,13 @@ class WithdrawService(
     private val passwordEncoder: PasswordEncoder,
     private val tokenService: TokenService
 ) {
+    @Transactional
     fun withdraw(email: String, request: WithdrawRequest) {
         val profileImageId = withdrawInternal(email, request)
         fileClient.safeDeleteProfileImageIfPresent(profileImageId, "withdraw email=$email")
         tokenService.revokeTokens(null, email)
     }
 
-    @Transactional
     fun withdrawInternal(email: String, request: WithdrawRequest): Long? {
         val user = userRepository.findByEmail(email)
             .orElseThrow { BusinessException(AuthErrorCode.USER_NOT_FOUND) }

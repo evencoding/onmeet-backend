@@ -30,12 +30,12 @@ class GuestService(
         private val ROOM_ID_PATTERN = Regex("^[a-zA-Z0-9_-]+$")
     }
 
+    @Transactional
     fun inviteGuest(request: GuestInviteRequestDto, inviterEmail: String) {
         val user = userRepository.findByEmail(inviterEmail)
             .orElseThrow { BusinessException(AuthErrorCode.GUEST_INVITER_NOT_FOUND) }
 
         // [Security] [IDOR 방어] video-service 연동을 통해 초대자가 해당 roomId의 호스트인지 검증
-        // External HTTP call performed before transaction starts
         val room = internalRoomClient.getRoomByCode(request.roomId, gatewaySecret)
         if (room.hostUserId != (user.id ?: 0L)) {
             throw BusinessException(AuthErrorCode.GUEST_INVITE_FORBIDDEN)
@@ -51,7 +51,6 @@ class GuestService(
         )
     }
 
-    @Transactional
     fun saveGuestInvitation(request: GuestInviteRequestDto, hostName: String): String {
         val uuid = UUID.randomUUID().toString()
         val expiresAt = LocalDateTime.now().plusDays(invitationProperties.guestExpiryDays)
