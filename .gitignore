@@ -58,4 +58,8 @@ out/
 # Agent/AI Tool directories
 .agent/
 .claude/
+.serena/
 # .gemini included as requested
+
+# OS generated files
+.DS_Store
