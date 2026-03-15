@@ -7,11 +7,12 @@ import com.onmeet.video.meeting.event.room.MeetingEvent;
 import com.onmeet.video.meeting.event.screenshare.ScreenShareEvent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.context.annotation.Profile;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 
+// CHECK [video-담당자]: NoOp은 기본 활성화(kafka.enabled 미설정 or false 시 사용)
 @Component
-@Profile("local")
+@ConditionalOnProperty(name = "kafka.enabled", havingValue = "false", matchIfMissing = true)
 public class NoOpMeetingEventPublisher implements MeetingEventPublisher {
 
     /** 

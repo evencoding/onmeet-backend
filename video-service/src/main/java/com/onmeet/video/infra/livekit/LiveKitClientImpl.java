@@ -15,7 +15,7 @@ import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.context.annotation.Profile;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -33,8 +33,9 @@ import org.springframework.web.client.RestTemplate;
 // 환경변수(LIVEKIT_URL, LIVEKIT_API_KEY, LIVEKIT_API_SECRET)로 올바르게 주입되는지 확인 필요.
 // CHECK [video-담당자]: startTrackEgress - S3 경로 형식이 LiveKit Egress 설정과 일치하는지,
 // S3 버킷 권한이 LiveKit 서버에서 쓰기 가능한지 확인 필요.
+// CHECK [video-담당자]: 실제 LiveKit 연동은 livekit.enabled=true 설정 시에만 활성화
 @Component
-@Profile("!local")
+@ConditionalOnProperty(name = "livekit.enabled", havingValue = "true")
 public class LiveKitClientImpl implements LiveKitClient {
 
     private static final Logger log = LoggerFactory.getLogger(LiveKitClientImpl.class);

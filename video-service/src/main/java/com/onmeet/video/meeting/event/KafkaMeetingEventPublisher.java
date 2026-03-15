@@ -9,7 +9,7 @@ import com.onmeet.video.meeting.event.room.MeetingEvent;
 import com.onmeet.video.meeting.event.screenshare.ScreenShareEvent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.context.annotation.Profile;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Component;
 
@@ -26,8 +26,9 @@ import org.springframework.stereotype.Component;
 // ai-service MeetingEndedConsumer와 일치하는지 확인 필요. 특히 roomId, participants 필드.
 // CHECK [video-담당자]: audio-chunk-ready 토픽 스키마가 ai-service AudioChunkConsumer와 일치하는지
 // 확인 필요. AudioSegmentEvent 필드(roomId, s3Path, segmentIndex, participantIdentity)를 검증할 것.
+// CHECK [video-담당자]: 실제 Kafka 발행은 kafka.enabled=true 설정 시에만 활성화
 @Component
-@Profile("!local")
+@ConditionalOnProperty(name = "kafka.enabled", havingValue = "true")
 public class KafkaMeetingEventPublisher implements MeetingEventPublisher {
 
     private static final Logger log = LoggerFactory.getLogger(KafkaMeetingEventPublisher.class);
