@@ -18,7 +18,8 @@ import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 @Tag(name = "Waiting Room SSE", description = "대기실 실시간 알림 SSE API")
 @RestController
-@RequestMapping("/api/rooms/{roomId}/waiting/sse")
+// CHECK [video-담당자]: URL 패턴 /api/rooms → /v1/rooms 변경 (gateway /video/v1/** 라우팅 통일)
+@RequestMapping("/v1/rooms/{roomId}/waiting/sse")
 public class WaitingRoomSseController {
 
     private final WaitingRoomSseService waitingRoomSseService;

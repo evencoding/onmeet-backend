@@ -21,7 +21,8 @@ import org.springframework.web.bind.annotation.RestController;
 
 @Tag(name = "Screen Share", description = "회의방 화면 공유 API")
 @RestController
-@RequestMapping("/api/rooms/{roomId}/screen-share")
+// CHECK [video-담당자]: URL 패턴 /api/rooms → /v1/rooms 변경 (gateway /video/v1/** 라우팅 통일)
+@RequestMapping("/v1/rooms/{roomId}/screen-share")
 public class ScreenShareController {
 
     private final ScreenShareService screenShareService;

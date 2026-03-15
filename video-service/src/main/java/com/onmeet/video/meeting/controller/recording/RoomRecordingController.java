@@ -62,7 +62,8 @@ public class RoomRecordingController {
         )
     })
     // CHECK [recording-담당자]: startRecording 반환 타입 List<RoomRecordingResponse> -> void
-    @PostMapping("/api/rooms/{roomId}/recording/start")
+    // CHECK [video-담당자]: URL 패턴 /api/rooms → /v1/rooms 변경 (gateway /video/v1/** 라우팅 통일)
+    @PostMapping("/v1/rooms/{roomId}/recording/start")
     public ApiResponse<Void> startRecording(@PathVariable Long roomId,
                                             @RequestHeader("X-User-Id") Long userId) {
         recordingService.startRecording(roomId, userId);
@@ -90,7 +91,7 @@ public class RoomRecordingController {
                 })
         )
     })
-    @PostMapping("/api/rooms/{roomId}/recording/stop")
+    @PostMapping("/v1/rooms/{roomId}/recording/stop")
     public ApiResponse<Void> stopRecording(@PathVariable Long roomId,
                                            @RequestHeader("X-User-Id") Long userId) {
         recordingService.stopRecording(roomId, userId);
@@ -108,7 +109,7 @@ public class RoomRecordingController {
         )
     })
     // CHECK [recording-담당자]: getRecordingStatus 반환 타입 List -> 단일 RoomRecordingResponse
-    @GetMapping("/api/rooms/{roomId}/recording/status")
+    @GetMapping("/v1/rooms/{roomId}/recording/status")
     public ApiResponse<RoomRecordingResponse> getRecordingStatus(@PathVariable Long roomId) {
         return ApiResponse.ok(recordingService.getActiveRecording(roomId));
     }
@@ -123,7 +124,7 @@ public class RoomRecordingController {
                     value = "{\"code\": \"VIDEO_004\", \"status\": 404, \"message\": \"존재하지 않는 회의실입니다\", \"timestamp\": 1710000000000}"))
         )
     })
-    @GetMapping("/api/rooms/{roomId}/recordings")
+    @GetMapping("/v1/rooms/{roomId}/recordings")
     public ApiResponse<List<RoomRecordingResponse>> listRecordings(@PathVariable Long roomId) {
         return ApiResponse.ok(recordingService.listRecordings(roomId));
     }
@@ -143,7 +144,8 @@ public class RoomRecordingController {
                 })
         )
     })
-    @GetMapping("/api/recordings/{recordingId}/download")
+    // CHECK [video-담당자]: URL 패턴 /api/recordings → /v1/recordings 변경 (gateway /video/v1/** 라우팅 통일)
+    @GetMapping("/v1/recordings/{recordingId}/download")
     public ApiResponse<String> getDownloadUrl(@PathVariable Long recordingId) {
         return ApiResponse.ok(recordingService.getDownloadUrl(recordingId));
     }
@@ -164,7 +166,7 @@ public class RoomRecordingController {
                     value = "{\"code\": \"VIDEO_045\", \"status\": 404, \"message\": \"녹음 파일을 찾을 수 없습니다\", \"timestamp\": 1710000000000}"))
         )
     })
-    @DeleteMapping("/api/recordings/{recordingId}")
+    @DeleteMapping("/v1/recordings/{recordingId}")
     public ApiResponse<Void> deleteRecording(@PathVariable Long recordingId,
                                              @RequestHeader("X-User-Id") Long userId) {
         recordingService.deleteRecording(recordingId, userId);

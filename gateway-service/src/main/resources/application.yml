@@ -27,14 +27,6 @@ spring:
             - Path=/video/v1/**
           filters:
             - UserHeaderFilter
-        # CHECK [gateway-담당자]: /api/** -> video-service 라우트 추가
-        # video-service context-path(/video) 없이 직접 /api/** 요청을 전달.
-        - id: video-service-api
-          uri: ${VIDEO_SERVICE_URL:http://video-service:8083}
-          predicates:
-            - Path=/api/**
-          filters:
-            - UserHeaderFilter
         - id: video-service-ws-chat
           uri: ${VIDEO_SERVICE_WS_URL:ws://video-service:8083}
           predicates:

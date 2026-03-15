@@ -27,7 +27,8 @@ import org.springframework.web.bind.annotation.RestController;
 
 @Tag(name = "Room Participant", description = "회의방 참가자 관리 API")
 @RestController
-@RequestMapping("/api/rooms/{roomId}")
+// CHECK [video-담당자]: URL 패턴 /api/rooms → /v1/rooms 변경 (gateway /video/v1/** 라우팅 통일)
+@RequestMapping("/v1/rooms/{roomId}")
 public class RoomParticipantController {
 
     private final RoomParticipantService participantService;

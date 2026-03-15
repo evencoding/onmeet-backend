@@ -45,7 +45,7 @@ class RoomParticipantControllerTest {
         );
     }
 
-    // [ITEM-4] GET /api/rooms/{roomId}/participants/history → Page<RoomParticipantResponse>
+    // [ITEM-4] GET /v1/rooms/{roomId}/participants/history → Page<RoomParticipantResponse>
     @Test
     @WithMockUser
     void listHistory_returnsPage() throws Exception {
@@ -53,7 +53,7 @@ class RoomParticipantControllerTest {
                 List.of(sampleParticipant()), PageRequest.of(0, 20), 1);
         when(participantService.listHistory(anyLong(), any(Pageable.class))).thenReturn(page);
 
-        mockMvc.perform(get("/api/rooms/10/participants/history"))
+        mockMvc.perform(get("/v1/rooms/10/participants/history"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.content").isArray())
                 .andExpect(jsonPath("$.data.totalElements").value(1));

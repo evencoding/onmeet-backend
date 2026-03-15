@@ -60,7 +60,7 @@ public class RoomInvitationController {
                 examples = @ExampleObject(value = "{\"code\":\"VIDEO_035\",\"status\":409,\"message\":\"해당 사용자에게 이미 대기 중인 초대장이 있습니다\",\"timestamp\":1710000000000}"))
         )
     })
-    @PostMapping("/api/rooms/{roomId}/invite")
+    @PostMapping("/v1/rooms/{roomId}/invite")
     public ApiResponse<InvitationResponse> invite(@PathVariable Long roomId,
                                                   @Valid @RequestBody InviteRequest request,
                                                   @RequestHeader("X-User-Id") Long userId) {
@@ -95,7 +95,7 @@ public class RoomInvitationController {
                 examples = @ExampleObject(value = "{\"code\":\"VIDEO_035\",\"status\":409,\"message\":\"해당 사용자에게 이미 대기 중인 초대장이 있습니다\",\"timestamp\":1710000000000}"))
         )
     })
-    @PostMapping("/api/rooms/{roomId}/invite/bulk")
+    @PostMapping("/v1/rooms/{roomId}/invite/bulk")
     public ApiResponse<List<InvitationResponse>> inviteBulk(@PathVariable Long roomId,
                                                             @Valid @RequestBody BulkInviteRequest request,
                                                             @RequestHeader("X-User-Id") Long userId) {
@@ -112,7 +112,7 @@ public class RoomInvitationController {
                 examples = @ExampleObject(value = "{\"code\":\"VIDEO_004\",\"status\":404,\"message\":\"존재하지 않는 회의실입니다\",\"timestamp\":1710000000000}"))
         )
     })
-    @GetMapping("/api/rooms/{roomId}/invitations")
+    @GetMapping("/v1/rooms/{roomId}/invitations")
     public ApiResponse<List<InvitationResponse>> listInvitations(@PathVariable Long roomId) {
         return ApiResponse.ok(invitationService.listInvitations(roomId));
     }
@@ -139,7 +139,7 @@ public class RoomInvitationController {
                 examples = @ExampleObject(value = "{\"code\":\"VIDEO_038\",\"status\":404,\"message\":\"초대장을 찾을 수 없습니다\",\"timestamp\":1710000000000}"))
         )
     })
-    @PostMapping("/api/invitations/{invitationId}/accept")
+    @PostMapping("/v1/invitations/{invitationId}/accept")
     public ApiResponse<InvitationResponse> accept(@PathVariable Long invitationId,
                                                   @RequestHeader("X-User-Id") Long userId) {
         return ApiResponse.ok(invitationService.accept(invitationId, userId));
@@ -167,7 +167,7 @@ public class RoomInvitationController {
                 examples = @ExampleObject(value = "{\"code\":\"VIDEO_038\",\"status\":404,\"message\":\"초대장을 찾을 수 없습니다\",\"timestamp\":1710000000000}"))
         )
     })
-    @PostMapping("/api/invitations/{invitationId}/decline")
+    @PostMapping("/v1/invitations/{invitationId}/decline")
     public ApiResponse<InvitationResponse> decline(@PathVariable Long invitationId,
                                                    @RequestHeader("X-User-Id") Long userId) {
         return ApiResponse.ok(invitationService.decline(invitationId, userId));
@@ -186,7 +186,7 @@ public class RoomInvitationController {
                 })
         )
     })
-    @DeleteMapping("/api/rooms/{roomId}/invite/{inviteeUserId}")
+    @DeleteMapping("/v1/rooms/{roomId}/invite/{inviteeUserId}")
     public ApiResponse<Void> cancelInvitation(@PathVariable Long roomId,
                                               @PathVariable Long inviteeUserId,
                                               @RequestHeader("X-User-Id") Long userId) {

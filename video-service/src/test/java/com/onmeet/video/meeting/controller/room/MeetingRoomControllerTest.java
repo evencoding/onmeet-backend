@@ -61,7 +61,7 @@ class MeetingRoomControllerTest {
         );
     }
 
-    // [ITEM-4] GET /api/rooms/scheduled → Page<MeetingRoomResponse>
+    // [ITEM-4] GET /v1/rooms/scheduled → Page<MeetingRoomResponse>
     @Test
     @WithMockUser
     void listScheduled_returnsPage() throws Exception {
@@ -69,14 +69,14 @@ class MeetingRoomControllerTest {
                 List.of(sampleRoomResponse()), PageRequest.of(0, 20), 1);
         when(meetingRoomService.listScheduled(anyLong(), any(Pageable.class))).thenReturn(page);
 
-        mockMvc.perform(get("/api/rooms/scheduled")
+        mockMvc.perform(get("/v1/rooms/scheduled")
                         .header("X-User-Id", "100"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.content").isArray())
                 .andExpect(jsonPath("$.data.totalElements").value(1));
     }
 
-    // [ITEM-4] GET /api/rooms/history → Page<MeetingRoomResponse>
+    // [ITEM-4] GET /v1/rooms/history → Page<MeetingRoomResponse>
     @Test
     @WithMockUser
     void listHistory_returnsPage() throws Exception {
@@ -84,13 +84,13 @@ class MeetingRoomControllerTest {
                 List.of(sampleRoomResponse()), PageRequest.of(0, 20), 1);
         when(meetingRoomService.listHistory(anyLong(), any(Pageable.class))).thenReturn(page);
 
-        mockMvc.perform(get("/api/rooms/history")
+        mockMvc.perform(get("/v1/rooms/history")
                         .header("X-User-Id", "100"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.content").isArray());
     }
 
-    // [ITEM-4] GET /api/rooms/favorites → Page<MeetingRoomResponse>
+    // [ITEM-4] GET /v1/rooms/favorites → Page<MeetingRoomResponse>
     @Test
     @WithMockUser
     void listFavorites_returnsPage() throws Exception {
@@ -98,13 +98,13 @@ class MeetingRoomControllerTest {
                 List.of(sampleRoomResponse()), PageRequest.of(0, 20), 1);
         when(meetingRoomService.listFavorites(anyLong(), any(Pageable.class))).thenReturn(page);
 
-        mockMvc.perform(get("/api/rooms/favorites")
+        mockMvc.perform(get("/v1/rooms/favorites")
                         .header("X-User-Id", "100"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.content").isArray());
     }
 
-    // [ITEM-4] GET /api/rooms/tags/{tagName} → Page<MeetingRoomResponse>
+    // [ITEM-4] GET /v1/rooms/tags/{tagName} → Page<MeetingRoomResponse>
     @Test
     @WithMockUser
     void searchByTag_returnsPage() throws Exception {
@@ -112,18 +112,18 @@ class MeetingRoomControllerTest {
                 List.of(sampleRoomResponse()), PageRequest.of(0, 20), 1);
         when(meetingRoomService.searchByTag(anyString(), any(Pageable.class))).thenReturn(page);
 
-        mockMvc.perform(get("/api/rooms/tags/important"))
+        mockMvc.perform(get("/v1/rooms/tags/important"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.content").isArray());
     }
 
-    // [ITEM-5] GET /api/rooms/code/{roomCode} → MeetingRoomDetailResponse
+    // [ITEM-5] GET /v1/rooms/code/{roomCode} → MeetingRoomDetailResponse
     @Test
     @WithMockUser
     void findByCode_returnsMeetingRoomDetailResponse() throws Exception {
         when(meetingRoomService.findByCode(anyString())).thenReturn(sampleDetailResponse());
 
-        mockMvc.perform(get("/api/rooms/code/ABC123"))
+        mockMvc.perform(get("/v1/rooms/code/ABC123"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.settings").exists())
                 .andExpect(jsonPath("$.data.tags").isArray());

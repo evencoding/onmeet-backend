@@ -41,25 +41,25 @@ class RoomRecordingControllerTest {
         );
     }
 
-    // [ITEM-6] POST /api/rooms/{roomId}/recording/start → void (no body)
+    // [ITEM-6] POST /v1/rooms/{roomId}/recording/start → void (no body)
     @Test
     @WithMockUser
     void startRecording_returnsVoid() throws Exception {
         // recordingService.startRecording() returns void - no body expected in data
-        mockMvc.perform(post("/api/rooms/10/recording/start")
+        mockMvc.perform(post("/v1/rooms/10/recording/start")
                         .header("X-User-Id", "100")
                         .with(SecurityMockMvcRequestPostProcessors.csrf()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data").doesNotExist());
     }
 
-    // [ITEM-6] GET /api/rooms/{roomId}/recording/status → single RoomRecordingResponse
+    // [ITEM-6] GET /v1/rooms/{roomId}/recording/status → single RoomRecordingResponse
     @Test
     @WithMockUser
     void getRecordingStatus_returnsSingleObject() throws Exception {
         when(recordingService.getActiveRecording(anyLong())).thenReturn(sampleRecordingResponse());
 
-        mockMvc.perform(get("/api/rooms/10/recording/status")
+        mockMvc.perform(get("/v1/rooms/10/recording/status")
                         .header("X-User-Id", "100"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.egressId").value("egress_123"))
