@@ -21,9 +21,11 @@ spring:
       ddl-auto: update
     properties:
       hibernate:
-        "[format_sql]": true
-        "[show_sql]": true
+        format_sql: true
+        show_sql: true
         dialect: org.hibernate.dialect.MySQLDialect
+  flyway:
+    enabled: false
 
   kafka:
     bootstrap-servers: ${SPRING_KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
