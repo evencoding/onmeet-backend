@@ -28,11 +28,24 @@ spring:
         dialect: org.hibernate.dialect.MySQLDialect
 
 gateway:
-  shared-secret: ${GATEWAY_SHARED_SECRET}
+  shared-secret: ${GATEWAY_SHARED_SECRET:my-super-secret-gateway-key-1234!}
 
-onmeet:
-  auth:
+/**
+ * TODO: [VIDEO][FILE_SERVICE] 파일 서버 연동 설정 추가 필요
+ * app:
+ *   storage:
+ *     file-service:
+ *       internal-url: ${FILE_SERVICE_URL:http://file-service:8084}
+ */
+
+app:
+  kafka:
     internal-url: ${AUTH_INTERNAL_URL:http://auth-service:8081}
+    # TODO: [VIDEO][KAFKA_EVENT] ai-service와 약속된 토픽 설정 추가 필요
+    # topics:
+    #   audio-chunk-ready: audio-chunk-ready
+    #   meeting-ended: meeting-ended
+    #   chat-events: chat-events
   notification:
     internal-url: ${NOTIFICATION_INTERNAL_URL:http://notification-service:8085}
 cors:

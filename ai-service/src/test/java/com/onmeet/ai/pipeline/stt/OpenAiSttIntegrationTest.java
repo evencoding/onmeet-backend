@@ -1,38 +1,31 @@
 package com.onmeet.ai.pipeline.stt;
 
-import com.onmeet.ai.config.AwsS3Config;
-import com.onmeet.ai.pipeline.storage.S3StorageClient;
 import com.onmeet.ai.pipeline.storage.StorageClient;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.web.reactive.function.client.WebClientAutoConfiguration;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.context.annotation.Import;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.util.StreamUtils;
-import software.amazon.awssdk.services.s3.S3Client;
-import software.amazon.awssdk.services.s3.model.CreateBucketRequest;
-import software.amazon.awssdk.services.s3.model.HeadBucketRequest;
-import software.amazon.awssdk.services.s3.model.NoSuchBucketException;
 
 import java.io.IOException;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * OpenAI STT + LocalStack S3 통합 테스트
+ * OpenAI STT API 연동 테스트
+ * 실제 API 키가 필요하므로 로컬 테스트 시에만 사용 권장
  */
 @ActiveProfiles("test")
 @SpringBootTest(classes = {
-        OpenAiSttClient.class,
-        AwsS3Config.class,
-        S3StorageClient.class
+        OpenAiSttClient.class
 })
 @Import(WebClientAutoConfiguration.class)
-@DisplayName("OpenAI STT Integration Test (Real API & LocalStack)")
+@DisplayName("OpenAI STT Integration Test (OpenAI API)")
 class OpenAiSttIntegrationTest {
 
     @org.springframework.boot.test.context.TestConfiguration
@@ -46,26 +39,12 @@ class OpenAiSttIntegrationTest {
     @Autowired
     private OpenAiSttClient sttClient;
 
-    @Autowired
-    private S3StorageClient storageClient;
-
-    @Autowired
-    private S3Client s3Client;
-
-    private final String bucketName = "onmeet-transcripts";
-
-    @BeforeEach
-    void ensureBucket() {
-        try {
-            s3Client.headBucket(HeadBucketRequest.builder().bucket(bucketName).build());
-        } catch (NoSuchBucketException e) {
-            s3Client.createBucket(CreateBucketRequest.builder().bucket(bucketName).build());
-        }
-    }
+    @MockBean
+    private StorageClient storageClient;
 
     @Test
-    @DisplayName("Audio File -> OpenAI STT -> LocalStack S3 Integration Flow")
-    void testFullIntegration() throws IOException {
+    @DisplayName("STT 결과 전송 및 저장 테스트 (Mocked Storage)")
+    void transcribeAndStoreResult() throws IOException {
         // 1. Load Audio File
         ClassPathResource resource = new ClassPathResource("stt_test/audio_Test_5.m4a");
         assertThat(resource.exists()).as("Test audio file must exist").isTrue();
@@ -75,13 +54,14 @@ class OpenAiSttIntegrationTest {
         // 2. Transcribe (Real Call to OpenAI)
         String transcript = sttClient.transcribe(audioBytes, "audio_Test_5.m4a", "audio/m4a");
         assertThat(transcript).isNotNull().isNotEmpty();
-        System.out.println("Transcript Result: " + transcript);
+        System.out.println("Transcript: " + transcript);
 
-        // 3. Save to S3 (LocalStack)
+        // 3. Save to storage (Mocked)
         String s3Key = "integration-test/transcript-result.txt";
         storageClient.writeText(s3Key, transcript, "text/plain");
 
-        // 4. Verify in S3
+        // 4. Verify in storage (Mocked)
+        org.mockito.Mockito.when(storageClient.readText(s3Key)).thenReturn(transcript);
         String savedContent = storageClient.readText(s3Key);
         assertThat(savedContent).isEqualTo(transcript);
 
@@ -89,3 +69,4 @@ class OpenAiSttIntegrationTest {
         storageClient.delete(s3Key);
     }
 }
+

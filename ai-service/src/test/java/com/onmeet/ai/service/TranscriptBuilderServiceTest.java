@@ -76,7 +76,7 @@ class TranscriptBuilderServiceTest {
         when(om.writeValueAsString(any())).thenReturn("{\"transcript\":\"final\"}");
 
         // When
-        transcriptBuilderService.finalizeMeeting(roomId, endedAt);
+        transcriptBuilderService.finalizeMeeting(roomId, 1L, endedAt);
 
         // Then
         verify(storageClient).writeText(contains(String.valueOf(roomId)), eq("{\"transcript\":\"final\"}"), eq("application/json"));
@@ -100,7 +100,7 @@ class TranscriptBuilderServiceTest {
         when(om.writeValueAsString(any())).thenReturn("{}");
 
         // When
-        transcriptBuilderService.finalizeMeeting(roomId, Instant.now());
+        transcriptBuilderService.finalizeMeeting(roomId, 1L, Instant.now());
 
         // Then
         verify(storageClient).writeText(anyString(), eq("{}"), eq("application/json"));

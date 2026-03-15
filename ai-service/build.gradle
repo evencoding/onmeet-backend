@@ -21,7 +21,6 @@ repositories {
 ext {
     set('springCloudVersion', "2023.0.3")
     set('mapstructVersion', "1.6.2")
-    set('awsSdkVersion', "2.20.26")
 }
 
 dependencies {
@@ -42,10 +41,6 @@ dependencies {
 
     // Kafka
     implementation 'org.springframework.kafka:spring-kafka'
-
-    // AWS SDK for S3
-    implementation platform("software.amazon.awssdk:bom:${awsSdkVersion}")
-    implementation 'software.amazon.awssdk:s3'
 
     // DB & Migration
     runtimeOnly 'com.mysql:mysql-connector-j'
@@ -83,12 +78,11 @@ dependencies {
     testImplementation 'org.springframework.boot:spring-boot-testcontainers'
     testImplementation 'org.testcontainers:junit-jupiter'
     testImplementation 'org.testcontainers:mysql'
-    testImplementation 'org.testcontainers:rabbitmq'
-    testImplementation 'org.testcontainers:localstack'
     testImplementation 'io.rest-assured:rest-assured'
     testImplementation 'org.awaitility:awaitility:4.2.0'
     testImplementation 'org.springframework.kafka:spring-kafka-test'
     implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8"
+    testImplementation 'ws.schild:jave-all-deps:3.3.1'
 }
 
 tasks.named('test') {

@@ -6,39 +6,36 @@ server:
 spring:
   application:
     name: ai-service
-  datasource:
-    url: ${SPRING_DATASOURCE_URL:jdbc:mysql://localhost:3306/ai_db?useSSL=false&allowPublicKeyRetrieval=true&characterEncoding=UTF-8&serverTimezone=UTC}
-    username: ${SPRING_DATASOURCE_USERNAME:root}
-    password: ${SPRING_DATASOURCE_PASSWORD:root}
-    driver-class-name: com.mysql.cj.jdbc.Driver
-    hikari:
-      max-lifetime: 240000
-      keepalive-time: 30000
-      connection-timeout: 30000
-      initialization-fail-timeout: -1
-  jpa:
-    hibernate:
-      ddl-auto: validate
-    properties:
-      hibernate:
-        "[format_sql]": false
-        "[show_sql]": false
-        dialect: org.hibernate.dialect.MySQLDialect
-  flyway:
-    baseline-on-migrate: true
+  kafka:
+    bootstrap-servers: ${SPRING_KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+    consumer:
+      auto-offset-reset: earliest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.ErrorHandlingDeserializer
+      properties:
+        spring.deserializer.value.delegate.class: org.springframework.kafka.support.serializer.JsonDeserializer
+        spring.json.trusted.packages: "com.onmeet.*"
+    listener:
+      missing-topics-fatal: false
 
 gateway:
   shared-secret: ${GATEWAY_SHARED_SECRET:my-super-secret-gateway-key-1234!}
 
 app:
+  storage:
+    file-service:
+      internal-url: ${FILE_SERVICE_URL:http://file-service:8084}
   kafka:
     topics:
-      audio-chunk-ready: ${KAFKA_TOPIC_AUDIO_CHUNK_READY:audio-chunk-ready}
-      voice-segment-created: ${KAFKA_TOPIC_VOICE_SEGMENT_CREATED:voice-segment-created}
-      transcript-finalized: ${KAFKA_TOPIC_TRANSCRIPT_FINALIZED:transcript-finalized}
-      meeting-ended: ${KAFKA_TOPIC_MEETING_ENDED:meeting-ended}
-      chat-events: ${KAFKA_TOPIC_CHAT_EVENTS:chat-events}
-      minutes-generated: ${KAFKA_TOPIC_MINUTES_GENERATED:minutes-generated}
+      audio-chunk-ready: ${KAFKA_TOPIC_AUDIO_CHUNK_READY:audio.chunk.ready}
+      voice-segment-created: ${KAFKA_TOPIC_VOICE_SEGMENT_CREATED:voice.segment.created}
+      transcript-finalized: ${KAFKA_TOPIC_TRANSCRIPT_FINALIZED:transcript.finalized}
+      meeting-ended: ${KAFKA_TOPIC_MEETING_ENDED:meeting.ended}
+      chat-events: ${KAFKA_TOPIC_CHAT_EVENTS:chat.events}
+      minutes-generated: ${KAFKA_TOPIC_MINUTES_GENERATED:minutes.generated}
   vad:
     enabled: ${VAD_ENABLED:true}
     model-path: classpath:models/silero_vad.onnx
@@ -49,9 +46,6 @@ app:
 
 aws:
   region: ${AWS_REGION:ap-northeast-2}
-  s3:
-    endpoint: ${AWS_ENDPOINT:}
-    bucket-name: ${S3_BUCKET_NAME:onmeet-transcripts}
 
 onmeet:
   auth:

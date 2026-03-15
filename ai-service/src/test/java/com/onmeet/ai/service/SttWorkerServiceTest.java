@@ -1,6 +1,6 @@
 package com.onmeet.ai.service;
 
-import com.onmeet.ai.dto.event.AudioChunkReadyEvent;
+import com.onmeet.common.dto.event.AudioChunkReadyEvent;
 import com.onmeet.ai.dto.event.VoiceSegmentCreatedEvent;
 import com.onmeet.ai.messaging.producer.VoiceSegmentProducer;
 import com.onmeet.ai.pipeline.audio.AudioDecoder;

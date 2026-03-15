@@ -12,6 +12,11 @@ import org.springframework.stereotype.Component;
 @Component
 public class NoOpMeetingEventPublisher implements MeetingEventPublisher {
 
+    /** 
+     * TODO: [VIDEO][KAFKA_EVENT] 실제 운영 환경에서는 이 NoOp 구현체 대신 
+     * KafkaTemplate을 사용하는 구현체를 생성하고 @Primary로 등록하여 사용해야 합니다. 
+     */
+
     private static final Logger log = LoggerFactory.getLogger(NoOpMeetingEventPublisher.class);
 
     @Override

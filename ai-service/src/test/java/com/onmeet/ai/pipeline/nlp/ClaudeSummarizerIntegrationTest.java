@@ -1,11 +1,12 @@
 package com.onmeet.ai.pipeline.nlp;
 
-import com.onmeet.ai.config.AwsS3Config;
-import com.onmeet.ai.pipeline.storage.S3StorageClient;
+import com.onmeet.ai.pipeline.nlp.ClaudeSummarizerClient;
+import com.onmeet.ai.pipeline.storage.StorageClient;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.util.StreamUtils;
@@ -26,14 +27,12 @@ import static org.assertj.core.api.Assertions.assertThat;
  * - 병합 텍스트 전체 요약 테스트
  */
 @ActiveProfiles("test")
-@SpringBootTest(classes = {
-        ClaudeSummarizerClient.class,
-        AwsS3Config.class,
-        S3StorageClient.class,
-        ClaudeSummarizerIntegrationTest.Config.class
-})
-@DisplayName("Claude Summarization Integration Test")
+@SpringBootTest(classes = { ClaudeSummarizerClient.class })
+@DisplayName("Claude Summarizer Integration Test (Claude API)")
 class ClaudeSummarizerIntegrationTest {
+
+    @MockBean
+    private StorageClient storageClient;
 
     @org.springframework.boot.test.context.TestConfiguration
     static class Config {

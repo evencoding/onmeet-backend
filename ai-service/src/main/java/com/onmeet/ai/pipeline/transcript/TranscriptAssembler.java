@@ -23,11 +23,17 @@ public class TranscriptAssembler {
     }
 
     public TranscriptDocument load(String transcriptS3Key) {
+        return loadInternal(storageClient.readText(transcriptS3Key));
+    }
+
+    public TranscriptDocument load(Long fileId) {
+        return loadInternal(storageClient.readText(fileId));
+    }
+
+    private TranscriptDocument loadInternal(String json) {
         try {
-            String json = storageClient.readText(transcriptS3Key);
             return om.readValue(json, TranscriptDocument.class);
         } catch (Exception e) {
-            // TODO: [AI][AiErrorCode.TRANSCRIPT_PARSE_FAILED] 에러메시지 검수 요청
             throw new BusinessException(AiErrorCode.TRANSCRIPT_PARSE_FAILED);
         }
     }

@@ -150,6 +150,7 @@ public class RoomRecordingService {
             throw new BusinessException(VideoErrorCode.RECORDING_NOT_COMPLETED);
         }
 
+        /** TODO: [VIDEO][FILE_SERVICE] fileId가 존재할 경우 파일 서버를 통해 다운로드 URL을 생성하도록 로직 전환 필요 */
         if (recording.getS3Path() == null) {
             // TODO: [VIDEO][VideoErrorCode.RECORDING_S3_NOT_READY] 에러메시지 검수 요청
             throw new BusinessException(VideoErrorCode.RECORDING_S3_NOT_READY);
@@ -183,6 +184,7 @@ public class RoomRecordingService {
 
     @Transactional
     public void handleEgressEnded(String egressId, String s3Path, Long fileSizeBytes) {
+        /** TODO: [VIDEO][FILE_SERVICE] S3 업로드 완료 후, 파일 서버(file-service)에 해당 정보를 업로드/등록하고 fileId를 발급받는 로직 추가 필요 */
         recordingRepository.findByEgressId(egressId).ifPresent(recording -> {
             Instant now = clockProvider.now();
             recording.markCompleted(s3Path, fileSizeBytes, now);
