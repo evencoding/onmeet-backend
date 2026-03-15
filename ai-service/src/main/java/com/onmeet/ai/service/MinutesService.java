@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.onmeet.ai.dto.request.MinutesPatchRequest;
 import com.onmeet.ai.dto.request.MinutesRegenerateRequest;
 import com.onmeet.ai.dto.response.MinutesResponse;
+import com.onmeet.ai.dto.response.TranscriptResponse;
 import com.onmeet.ai.entity.Minutes;
 import com.onmeet.ai.pipeline.nlp.SummarizerClient;
 import com.onmeet.ai.pipeline.storage.StorageClient;
@@ -15,6 +16,9 @@ import com.onmeet.common.exception.BusinessException;
 import com.onmeet.common.exception.errorcode.AiErrorCode;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 
 @Service
 public class MinutesService {
@@ -102,9 +106,11 @@ public class MinutesService {
     }
 
     @Transactional(readOnly = true)
-    public String getTranscriptRawJson(Long roomId) {
+    public TranscriptResponse getTranscript(Long roomId) {
         Minutes m = findMinutesOrThrow(roomId);
-        return storageClient.readText(m.getTranscriptS3Key());
+        String transcript = storageClient.readText(m.getTranscriptS3Key());
+        LocalDateTime createdAt = LocalDateTime.ofInstant(m.getCreatedAt(), ZoneOffset.UTC);
+        return new TranscriptResponse(roomId, transcript, createdAt);
     }
 
     private Minutes findMinutesOrThrow(Long roomId) {

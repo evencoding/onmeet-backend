@@ -115,6 +115,22 @@ data class InvitationRequest(
     val emails: List<@jakarta.validation.constraints.Email(message = "Invalid email format") String>
 )
 
+// CHECK [auth-담당자]: SingleInvitationRequest 추가됨. 기존 bulk InvitationRequest와
+// 별도 엔드포인트로 분리. Frontend에서 /auth/v1/manager/invite/single 호출하는지 확인 필요.
+@Schema(description = "단일 멤버 초대 요청 (role 지정 가능)")
+data class SingleInvitationRequest(
+    @field:jakarta.validation.constraints.Email(message = "Invalid email format")
+    @field:jakarta.validation.constraints.NotBlank(message = "Email is required")
+    @Schema(description = "초대할 이메일", example = "user@company.com")
+    val email: String,
+    @field:jakarta.validation.constraints.Pattern(
+        regexp = "USER|ADMIN|MANAGER",
+        message = "Invalid role. Must be USER, ADMIN, or MANAGER"
+    )
+    @Schema(description = "부여할 역할 (USER, ADMIN, MANAGER)", example = "USER")
+    val role: String = "USER"
+)
+
 @Schema(description = "유저 정보 상세 응답")
 data class UserResponseDto(
     @Schema(description = "User ID")

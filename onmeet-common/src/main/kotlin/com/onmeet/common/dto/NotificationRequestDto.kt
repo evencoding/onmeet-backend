@@ -1,5 +1,7 @@
 package com.onmeet.common.dto
 
+import java.time.LocalDateTime
+
 /**
  * 타 서비스(Video, AI, Auth 등)에서 알림 서비스로
  * Kafka 이벤트를 발행할 때 공통으로 사용하는 DTO
@@ -50,5 +52,19 @@ data class NotificationRequestDto(
     /**
      * 알림을 발생시킨 행위자의 사용자 ID (방장 ID 등, 시스템 알림 시 null. 템플릿의 {senderName}으로 사용됨)
      */
-    val actorUserId: Long? = null
+    val actorUserId: Long? = null,
+
+    // CHECK [common-담당자]: dedupeKey, scheduledAt 추가.
+    // nullable + default null이므로 기존 코드 하위 호환. 다만 notification-service에서
+    // 이 필드를 실제 처리하는 로직이 있는지 확인 필요.
+
+    /**
+     * 중복 알림 방지를 위한 고유 키 (동일 키의 알림이 짧은 시간 내 재발행될 경우 무시)
+     */
+    val dedupeKey: String? = null,
+
+    /**
+     * 알림 예약 발송 시각 (null이면 즉시 발송)
+     */
+    val scheduledAt: LocalDateTime? = null
 )

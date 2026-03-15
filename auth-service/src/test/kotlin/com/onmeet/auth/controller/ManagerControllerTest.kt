@@ -2,6 +2,7 @@ package com.onmeet.auth.controller
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.onmeet.auth.dto.InvitationRequest
+import com.onmeet.auth.dto.SingleInvitationRequest
 import com.onmeet.auth.dto.UpdateCompanyRequest
 import com.onmeet.auth.dto.UserResponseDto
 import com.onmeet.auth.entity.Company
@@ -166,6 +167,99 @@ class ManagerControllerTest {
             .andExpect(status().isOk)
             .andExpect(jsonPath("$").isArray)
             .andExpect(jsonPath("$[0]").value(100))
+    }
+
+    @Test
+    fun `inviteSingleMember should return invitation id for single email with role USER`() {
+        // given
+        val testCompany = Company(id = 1L, name = "Test Company")
+        val request = SingleInvitationRequest(email = "user@company.com", role = "USER")
+        val invitation = Invitation(
+            id = 200L,
+            email = request.email,
+            code = "CODE1",
+            role = User.Role.USER,
+            company = testCompany,
+            expiresAt = LocalDateTime.now().plusDays(7)
+        )
+        every { invitationService.createInvitation(eq(1L), eq(request.email), eq(User.Role.USER)) } returns invitation
+
+        // when & then
+        mockMvc.perform(
+            post("/auth/v1/manager/invite/single")
+                .contextPath("/auth")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(request))
+        )
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$").value(200))
+    }
+
+    @Test
+    fun `inviteSingleMember should return invitation id with MANAGER role`() {
+        // given
+        val testCompany = Company(id = 1L, name = "Test Company")
+        val request = SingleInvitationRequest(email = "mgr@company.com", role = "MANAGER")
+        val invitation = Invitation(
+            id = 201L,
+            email = request.email,
+            code = "CODE2",
+            role = User.Role.MANAGER,
+            company = testCompany,
+            expiresAt = LocalDateTime.now().plusDays(7)
+        )
+        every { invitationService.createInvitation(eq(1L), eq(request.email), eq(User.Role.MANAGER)) } returns invitation
+
+        // when & then
+        mockMvc.perform(
+            post("/auth/v1/manager/invite/single")
+                .contextPath("/auth")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(request))
+        )
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$").value(201))
+    }
+
+    @Test
+    fun `inviteSingleMember defaults to USER role when role not specified`() {
+        // given
+        val testCompany = Company(id = 1L, name = "Test Company")
+        val request = SingleInvitationRequest(email = "user@company.com")
+        val invitation = Invitation(
+            id = 202L,
+            email = request.email,
+            code = "CODE3",
+            role = User.Role.USER,
+            company = testCompany,
+            expiresAt = LocalDateTime.now().plusDays(7)
+        )
+        every { invitationService.createInvitation(eq(1L), eq(request.email), eq(User.Role.USER)) } returns invitation
+
+        // when & then
+        mockMvc.perform(
+            post("/auth/v1/manager/invite/single")
+                .contextPath("/auth")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(request))
+        )
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$").value(202))
+    }
+
+    @Test
+    fun `inviteSingleMember should return 400 for invalid role`() {
+        // given
+        val request = SingleInvitationRequest(email = "user@company.com", role = "SUPERADMIN")
+
+        // when & then
+        mockMvc.perform(
+            post("/auth/v1/manager/invite/single")
+                .contextPath("/auth")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(request))
+        )
+            .andExpect(status().isBadRequest)
     }
 
     @Test

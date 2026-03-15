@@ -3,7 +3,9 @@ package com.onmeet.ai.pipeline.nlp;
 import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
 
-@Profile({"local","docker","test"})
+// CHECK [ai-담당자]: DummySummarizerClient 프로필에서 "docker"가 제거됨.
+// docker 프로필에서는 ClaudeSummarizerClient가 활성화되어야 함. 해당 빈 @Profile 설정 확인 필요.
+@Profile({"local","test"})
 @Component
 public class DummySummarizerClient implements SummarizerClient {
 
