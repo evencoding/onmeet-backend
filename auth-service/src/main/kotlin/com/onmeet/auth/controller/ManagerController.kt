@@ -2,6 +2,7 @@ package com.onmeet.auth.controller
 
 import com.onmeet.auth.dto.CompanyResponse
 import com.onmeet.auth.dto.InvitationRequest
+import com.onmeet.auth.dto.SingleInvitationRequest
 import com.onmeet.auth.dto.JobTitleRequest
 import com.onmeet.auth.dto.JobTitleResponse
 import com.onmeet.auth.dto.PageResponse
@@ -648,6 +649,41 @@ class ManagerController(
             invitationService.createInvitation(user.company.requireId(), email, User.Role.USER).requireId()
         }
         return ResponseEntity.ok(invitationIds)
+    }
+
+    @Operation(summary = "단일 멤버 초대 (역할 지정)", description = "이메일과 역할을 지정하여 단일 멤버를 초대합니다 (매니저 권한 필요).")
+    @ApiResponses(value = [
+        ApiResponse(responseCode = "200", description = "초대 발송 성공 - 생성된 초대 ID 반환"),
+        ApiResponse(
+            responseCode = "400",
+            description = "잘못된 요청 - 유효하지 않은 이메일 또는 역할",
+            content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))]
+        ),
+        ApiResponse(
+            responseCode = "401",
+            description = "인증 실패",
+            content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))]
+        ),
+        ApiResponse(
+            responseCode = "403",
+            description = "권한 없음 - MANAGER 권한 필요",
+            content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))]
+        ),
+        ApiResponse(
+            responseCode = "409",
+            description = "충돌 - 이미 활성화된 초대가 존재함",
+            content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))]
+        )
+    ])
+    @PostMapping("/invite/single")
+    @PreAuthorize("hasRole('MANAGER')")
+    fun inviteSingleMember(
+        @AuthenticationPrincipal user: User,
+        @RequestBody @jakarta.validation.Valid request: SingleInvitationRequest
+    ): ResponseEntity<Long> {
+        val role = runCatching { User.Role.valueOf(request.role) }.getOrDefault(User.Role.USER)
+        val invitationId = invitationService.createInvitation(user.company.requireId(), request.email, role).requireId()
+        return ResponseEntity.ok(invitationId)
     }
 
     @Operation(summary = "직급 생성", description = "새로운 직급을 생성합니다 (매니저 전용).")
