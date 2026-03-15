@@ -39,6 +39,7 @@ services:
       - GATEWAY_SHARED_SECRET=${GATEWAY_SHARED_SECRET}
       - SERVER_PORT=${NOTIFICATION_SERVICE_PORT:-8085}
       - MANAGEMENT_ENDPOINTS_WEB_BASE_PATH=/notification/actuator
+      - FIREBASE_CREDENTIALS_JSON=${FIREBASE_CREDENTIALS_JSON:-}
     depends_on:
       mysql-notification:
         condition: service_healthy

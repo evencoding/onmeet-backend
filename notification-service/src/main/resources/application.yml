@@ -39,6 +39,10 @@ spring:
     listener:
       missing-topics-fatal: false
 
+firebase:
+  credentials-json: ${FIREBASE_CREDENTIALS_JSON:}
+  config-path: ${FIREBASE_CONFIG_PATH:firebase/serviceAccountKey.json}
+
 gateway:
   shared-secret: ${GATEWAY_SHARED_SECRET:my-super-secret-gateway-key-1234!}
 
