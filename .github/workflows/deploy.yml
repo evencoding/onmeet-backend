@@ -37,8 +37,9 @@ jobs:
         uses: dorny/paths-filter@v3
         id: changes
         with:
-          # workflow_dispatch 시 HEAD~1 비교 (전체 빌드 트리거용)
-          base: ${{ github.event_name == 'workflow_dispatch' && github.sha || '' }}
+          # push: before..sha 비교, workflow_dispatch: HEAD~1 비교
+          base: ${{ github.event_name == 'push' && github.event.before || '' }}
+          ref: ${{ github.event_name == 'push' && github.sha || '' }}
           filters: |
             common:
               - 'onmeet-common/**'
