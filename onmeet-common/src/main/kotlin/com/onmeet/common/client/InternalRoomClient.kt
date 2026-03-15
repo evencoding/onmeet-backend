@@ -13,8 +13,6 @@ import org.springframework.web.bind.annotation.RequestHeader
 )
 interface InternalRoomClient {
 
-    // CHECK [video-담당자]: InternalRoomClient 헤더가 X-Gateway-Secret으로 변경됨.
-    // video-service GatewayPreAuthFilter에서 이 헤더를 정상 처리하는지 확인.
     @GetMapping("/code/{roomCode}")
     fun getRoomByCode(
         @PathVariable roomCode: String,
