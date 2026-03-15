@@ -16,8 +16,9 @@ import org.springframework.context.annotation.Configuration
         description = "사용자 인증, 인가 및 기업/팀 관리 API"
     ),
     servers = [
-        Server(url = "https://api.onmeet.cloud", description = "Production Server"),
-        Server(url = "http://localhost:8080", description = "Local Development Server")
+        Server(url = "https://api.onmeet.cloud/auth", description = "Production Server"),
+        Server(url = "http://localhost:8080/auth", description = "Local Gateway Server"),
+        Server(url = "http://localhost:8081/auth", description = "Local Direct Server")
     ],
     security = [SecurityRequirement(name = "Bearer Authentication")]
 )

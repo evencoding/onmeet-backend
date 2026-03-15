@@ -16,8 +16,9 @@ import org.springframework.context.annotation.Configuration;
         description = "회의록 생성, STT, 요약 등 AI 관련 API"
     ),
     servers = {
-        @Server(url = "https://api.onmeet.cloud", description = "Production Server"),
-        @Server(url = "http://localhost:8082", description = "Local Development Server")
+        @Server(url = "https://api.onmeet.cloud/ai", description = "Production Server"),
+        @Server(url = "http://localhost:8080/ai", description = "Local Gateway Server"),
+        @Server(url = "http://localhost:8082/ai", description = "Local Direct Server")
     },
     security = @SecurityRequirement(name = "Bearer Authentication")
 )
