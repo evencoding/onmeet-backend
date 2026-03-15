@@ -95,7 +95,7 @@ class FileClient(
     fun safeDeleteProfileImageIfPresent(profileImageId: Long?, logContext: String) {
         if (profileImageId == null) return
         try {
-            deleteMyProfileImage()
+            deleteFile(profileImageId)
         } catch (e: Exception) {
             log.warn("프로필 이미지 삭제 실패 ($logContext): ${e.message}")
         }
