@@ -469,5 +469,5 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh variable set LAST_DEPLOYED_SHA --body "${{ github.sha }}"
+          gh variable set LAST_DEPLOYED_SHA --body "${{ github.sha }}" --repo "${{ github.repository }}"
           echo "Updated LAST_DEPLOYED_SHA to ${{ github.sha }}"
