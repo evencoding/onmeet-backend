@@ -113,34 +113,20 @@ public class LiveKitClientImpl implements LiveKitClient {
         callLiveKit("/twirp/livekit.RoomService/MutePublishedTrack", request);
     }
 
+    // CHECK [video-담당자]: startRoomCompositeEgress 미구현 — S3 자격증명(access_key, secret, bucket) 및
+    // layout 파라미터가 확정되면 실제 구현 필요. 현재 recording 서비스는 startTrackEgress만 사용하므로 즉각 장애 없음.
     @Override
     public String startRoomCompositeEgress(String roomName, String s3Path) {
-        Map<String, Object> s3 = Map.of("access_key", "", "secret", "", "endpoint", "", "bucket", s3Path);
-        Map<String, Object> fileOutput = Map.of("s3", s3);
-        Map<String, Object> request = Map.of(
-                "room_name", roomName,
-                "layout", "speaker-dark",
-                "file", fileOutput
-        );
-        EgressResponse response = callLiveKit("/twirp/livekit.EgressService/StartRoomCompositeEgress",
-                request, EgressResponse.class);
-        String egressId = response != null ? response.egressId : "egress_" + UUID.randomUUID();
-        log.info("LiveKit room composite egress started: room={}, egressId={}", roomName, egressId);
-        return egressId;
+        throw new UnsupportedOperationException(
+                "startRoomCompositeEgress is not yet implemented. S3 credentials and layout config required.");
     }
 
+    // CHECK [video-담당자]: startTrackCompositeEgress 미구현 — audioTrackId/videoTrackId 조회 로직 및
+    // 세그먼트 설정이 확정되면 실제 구현 필요. 현재 recording 서비스는 startTrackEgress만 사용하므로 즉각 장애 없음.
     @Override
     public String startTrackCompositeEgress(String roomName, String s3Path, int segmentDurationSeconds) {
-        Map<String, Object> request = Map.of(
-                "room_name", roomName,
-                "audio_track_id", "",
-                "video_track_id", ""
-        );
-        EgressResponse response = callLiveKit("/twirp/livekit.EgressService/StartTrackCompositeEgress",
-                request, EgressResponse.class);
-        String egressId = response != null ? response.egressId : "egress_" + UUID.randomUUID();
-        log.info("LiveKit track composite egress started: room={}, egressId={}", roomName, egressId);
-        return egressId;
+        throw new UnsupportedOperationException(
+                "startTrackCompositeEgress is not yet implemented. Track ID resolution logic required.");
     }
 
     @Override
