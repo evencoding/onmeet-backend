@@ -46,6 +46,9 @@ services:
       # ✅ Kafka
       - SPRING_KAFKA_BOOTSTRAP_SERVERS=kafka:29092
 
+      # OpenAI (Whisper STT)
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+
       # Anthropic (Claude API)
       - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
 
