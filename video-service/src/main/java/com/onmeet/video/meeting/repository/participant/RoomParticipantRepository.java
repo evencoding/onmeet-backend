@@ -4,6 +4,8 @@ import com.onmeet.video.meeting.entity.participant.ParticipantStatus;
 import com.onmeet.video.meeting.entity.participant.RoomParticipant;
 import java.util.List;
 import java.util.Optional;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -15,6 +17,9 @@ public interface RoomParticipantRepository extends JpaRepository<RoomParticipant
     List<RoomParticipant> findByRoomIdAndStatusIn(Long roomId, List<ParticipantStatus> statuses);
 
     List<RoomParticipant> findByRoomId(Long roomId);
+
+    // CHECK [video-담당자]: Page 반환 메서드 추가
+    Page<RoomParticipant> findByRoomId(Long roomId, Pageable pageable);
 
     Optional<RoomParticipant> findByRoomIdAndUserIdAndStatus(Long roomId, Long userId, ParticipantStatus status);
 

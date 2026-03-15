@@ -13,6 +13,9 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import java.util.List;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -58,9 +61,11 @@ public class RoomParticipantController {
                 examples = @ExampleObject(value = "{\"code\":\"VIDEO_004\",\"status\":404,\"message\":\"존재하지 않는 회의실입니다\",\"timestamp\":1710000000000}"))
         )
     })
+    // CHECK [video-담당자]: listHistory 반환 타입 List -> Page
     @GetMapping("/participants/history")
-    public ApiResponse<List<RoomParticipantResponse>> listHistory(@PathVariable Long roomId) {
-        return ApiResponse.ok(participantService.listHistory(roomId));
+    public ApiResponse<Page<RoomParticipantResponse>> listHistory(@PathVariable Long roomId,
+            @PageableDefault(size = 20) Pageable pageable) {
+        return ApiResponse.ok(participantService.listHistory(roomId, pageable));
     }
 
     @Operation(summary = "참가자 역할 변경", description = "참가자의 역할(공동 호스트 등)을 변경합니다. 호스트의 역할은 변경할 수 없습니다.")

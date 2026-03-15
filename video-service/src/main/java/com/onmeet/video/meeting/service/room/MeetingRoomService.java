@@ -182,11 +182,17 @@ public class MeetingRoomService {
         roomRepository.delete(room);
     }
 
+    // CHECK [video-담당자]: findByCode 반환 타입 MeetingRoomResponse -> MeetingRoomDetailResponse
     @Transactional(readOnly = true)
-    public MeetingRoomResponse findByCode(String roomCode) {
+    public MeetingRoomDetailResponse findByCode(String roomCode) {
         MeetingRoom room = roomRepository.findByRoomCode(roomCode)
                 .orElseThrow(() -> new BusinessException(VideoErrorCode.ROOM_CODE_NOT_FOUND));
-        return toResponse(room);
+        RoomSettings settings = settingsRepository.findByRoomId(room.getId()).orElse(null);
+        int participantCount = participantRepository.countActiveParticipants(room.getId());
+        List<String> tags = tagRepository.findByRoomId(room.getId()).stream()
+                .map(RoomTag::getTagName)
+                .collect(Collectors.toList());
+        return toDetailResponse(room, participantCount, settings, tags);
     }
 
     @Transactional
@@ -415,12 +421,11 @@ public class MeetingRoomService {
         tagRepository.delete(tag);
     }
 
+    // CHECK [video-담당자]: searchByTag 반환 타입 List -> Page
     @Transactional(readOnly = true)
-    public List<MeetingRoomResponse> searchByTag(String tagName) {
-        List<Long> roomIds = tagRepository.findRoomIdsByTagName(tagName);
-        return roomRepository.findAllById(roomIds).stream()
-                .map(this::toResponse)
-                .collect(Collectors.toList());
+    public Page<MeetingRoomResponse> searchByTag(String tagName, Pageable pageable) {
+        return roomRepository.findByTagName(tagName, pageable)
+                .map(this::toResponse);
     }
 
     @Transactional
@@ -440,11 +445,11 @@ public class MeetingRoomService {
         favoriteRepository.delete(favorite);
     }
 
+    // CHECK [video-담당자]: listFavorites 반환 타입 List -> Page
     @Transactional(readOnly = true)
-    public List<MeetingRoomResponse> listFavorites(Long userId) {
-        return favoriteRepository.findByUserId(userId).stream()
-                .map(fav -> toResponse(fav.getRoom()))
-                .collect(Collectors.toList());
+    public Page<MeetingRoomResponse> listFavorites(Long userId, Pageable pageable) {
+        return favoriteRepository.findByUserId(userId, pageable)
+                .map(fav -> toResponse(fav.getRoom()));
     }
 
     @Transactional
@@ -490,12 +495,11 @@ public class MeetingRoomService {
         return toResponse(saved);
     }
 
+    // CHECK [video-담당자]: listScheduled 반환 타입 List -> Page
     @Transactional(readOnly = true)
-    public List<MeetingRoomResponse> listScheduled(Long userId) {
-        return roomRepository.findByHostUserIdAndTypeAndStatusNot(userId, RoomType.SCHEDULED, RoomStatus.CANCELLED)
-                .stream()
-                .map(this::toResponse)
-                .collect(Collectors.toList());
+    public Page<MeetingRoomResponse> listScheduled(Long userId, Pageable pageable) {
+        return roomRepository.findByHostUserIdAndTypeAndStatusNot(userId, RoomType.SCHEDULED, RoomStatus.CANCELLED, pageable)
+                .map(this::toResponse);
     }
 
     @Transactional
@@ -535,11 +539,11 @@ public class MeetingRoomService {
         room.cancel();
     }
 
+    // CHECK [video-담당자]: listHistory 반환 타입 List -> Page
     @Transactional(readOnly = true)
-    public List<MeetingRoomResponse> listHistory(Long userId) {
-        return roomRepository.findByHostUserIdOrderByCreatedAtDesc(userId).stream()
-                .map(this::toResponse)
-                .collect(Collectors.toList());
+    public Page<MeetingRoomResponse> listHistory(Long userId, Pageable pageable) {
+        return roomRepository.findByHostUserIdOrderByCreatedAtDesc(userId, pageable)
+                .map(this::toResponse);
     }
 
     @Transactional(readOnly = true)
