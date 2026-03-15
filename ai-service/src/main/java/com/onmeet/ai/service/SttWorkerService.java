@@ -63,7 +63,12 @@ public class SttWorkerService {
 
         // IF fallback triggered (pcmSamples == null) OR VAD disabled
         if (pcmSamples == null) {
-            String text = sttClient.transcribe(audioBytes, "chunk-" + e.getSegmentIndex() + e.getS3Path().substring(e.getS3Path().lastIndexOf('.')), "audio/mp4").trim();
+            String raw = sttClient.transcribe(audioBytes, "chunk-" + e.getSegmentIndex() + e.getS3Path().substring(e.getS3Path().lastIndexOf('.')), "audio/mp4");
+            if (raw == null || raw.isBlank()) {
+                log.debug("STT returned empty for fallback chunk: roomId={}, segmentIndex={}", e.getRoomId(), e.getSegmentIndex());
+                return;
+            }
+            String text = raw.trim();
             if (!text.isBlank()) {
                 long seq = ((long) e.getSegmentIndex()) * 1_000_000L;
                 publishVoiceSegment(e, chunkStartMs, chunkEndMs, seq, text);
