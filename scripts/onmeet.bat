@@ -169,65 +169,91 @@ set "VERSION=%~2"
 
 REM develop 브랜치로 전환
 for /f "tokens=*" %%b in ('git branch --show-current') do set "CURRENT_BRANCH=%%b"
-if not "%CURRENT_BRANCH%"=="develop" (
-    echo [onmeet] 현재 브랜치: %CURRENT_BRANCH% - develop으로 전환합니다.
+if not "!CURRENT_BRANCH!"=="develop" (
+    echo [onmeet] 현재 브랜치: !CURRENT_BRANCH! - develop으로 전환합니다.
     git checkout develop
 )
 git pull origin develop
 
-if "%VERSION%"=="" (
-    REM 자동 버전 감지
-    set "LATEST=0.0.0"
-    for /f "tokens=*" %%v in ('git branch -r --list "origin/release/v*" 2^>nul ^| sort ^| findstr /r "v[0-9]"') do (
-        for /f "tokens=2 delims=v" %%x in ("%%v") do set "LATEST=%%x"
-    )
+if "%VERSION%"=="" goto :deploy_auto
+goto :deploy_execute
 
-    REM 커밋 분석으로 bump 타입 결정
-    set "BUMP=patch"
-    git log --oneline -20 > "%TEMP%\onmeet_commits.txt" 2>nul
-    findstr /i "feat" "%TEMP%\onmeet_commits.txt" >nul 2>&1 && set "BUMP=minor"
-    del "%TEMP%\onmeet_commits.txt" 2>nul
+:deploy_auto
+REM --- 자동 버전 감지 ---
+git fetch --prune origin >nul 2>&1
 
-    REM 버전 계산
-    for /f "tokens=1,2,3 delims=." %%a in ("!LATEST!") do (
-        set "MAJOR=%%a"
-        set "MINOR=%%b"
-        set "PATCH=%%c"
-    )
-
-    if "!BUMP!"=="minor" (
-        set /a "MINOR=!MINOR!+1"
-        set "PATCH=0"
-        set "NEXT_VER=v!MAJOR!.!MINOR!.!PATCH!"
-    ) else (
-        set /a "PATCH=!PATCH!+1"
-        set "NEXT_VER=v!MAJOR!.!MINOR!.!PATCH!"
-    )
-
-    echo.
-    echo [onmeet] 현재 최신 버전: v!LATEST!
-    echo [onmeet] 커밋 분석 결과: !BUMP! bump 추천
-    echo [onmeet] 다음 버전: !NEXT_VER!
-    echo.
-    set /p "CONFIRM=이 버전으로 배포할까요? (Y/n): "
-    if /i "!CONFIRM!"=="n" (
-        set /p "VERSION=버전을 입력하세요 (예: v0.4.0): "
-    ) else (
-        set "VERSION=!NEXT_VER!"
-    )
+REM 최신 release 브랜치에서 버전 추출 (PowerShell로 정렬)
+set "LATEST=0.0.0"
+for /f "tokens=*" %%v in ('powershell -NoProfile -Command "git branch -r --list 'origin/release/v*' | ForEach-Object { $_.Trim() -replace '.*release/v','' } | Sort-Object { [version]$_ } | Select-Object -Last 1" 2^>nul') do (
+    set "LATEST=%%v"
 )
 
+REM 커밋 분석으로 bump 타입 결정
+set "BUMP=patch"
+git log --oneline -20 > "%TEMP%\onmeet_commits.txt" 2>nul
+findstr /i /r "^[a-f0-9].*feat" "%TEMP%\onmeet_commits.txt" >nul 2>&1 && set "BUMP=minor"
+del "%TEMP%\onmeet_commits.txt" 2>nul
+
+REM 버전 계산
+for /f "tokens=1,2,3 delims=." %%a in ("!LATEST!") do (
+    set "MAJOR=%%a"
+    set "MINOR=%%b"
+    set "PATCH=%%c"
+)
+
+if "!BUMP!"=="minor" (
+    set /a "NEXT_MINOR=!MINOR!+1"
+    set "NEXT_PATCH=v!MAJOR!.!NEXT_MINOR!.0"
+    set "NEXT_PATCH_VER=v!MAJOR!.!MINOR!.!PATCH!"
+    set /a "PATCH_INC=!PATCH!+1"
+    set "NEXT_PATCH_VER=v!MAJOR!.!MINOR!.!PATCH_INC!"
+    set "NEXT_VER=v!MAJOR!.!NEXT_MINOR!.0"
+) else (
+    set /a "PATCH_INC=!PATCH!+1"
+    set "NEXT_PATCH_VER=v!MAJOR!.!MINOR!.!PATCH_INC!"
+    set /a "NEXT_MINOR=!MINOR!+1"
+    set "NEXT_VER=!NEXT_PATCH_VER!"
+)
+
+echo.
+echo [onmeet] 현재 최신 버전: v!LATEST!
+echo [onmeet] 커밋 분석 결과: !BUMP! bump 추천
+echo.
+echo   1^) !NEXT_PATCH_VER!  (patch - 버그 수정, 소규모 변경)
+echo   2^) v!MAJOR!.!NEXT_MINOR!.0  (minor - 기능 추가, 리팩토링)
+echo   3^) 직접 입력
+echo.
+
+if "!BUMP!"=="minor" (
+    set "DEFAULT_CHOICE=2"
+) else (
+    set "DEFAULT_CHOICE=1"
+)
+set /p "CHOICE=선택 [!DEFAULT_CHOICE!]: "
+if "!CHOICE!"=="" set "CHOICE=!DEFAULT_CHOICE!"
+
+if "!CHOICE!"=="1" (
+    set "VERSION=!NEXT_PATCH_VER!"
+) else if "!CHOICE!"=="2" (
+    set "VERSION=v!MAJOR!.!NEXT_MINOR!.0"
+) else if "!CHOICE!"=="3" (
+    set /p "VERSION=버전 입력 (예: v0.4.0): "
+    if "!VERSION!"=="" (
+        echo [onmeet] 버전이 입력되지 않았습니다.
+        goto :end
+    )
+) else (
+    echo [onmeet] 잘못된 선택입니다.
+    goto :end
+)
+
+:deploy_execute
 REM v 접두사 보정
-set "VERSION=!VERSION:~0,1!"
-if not "!VERSION!"=="v" (
-    set "VERSION=v%~2"
-    if "%~2"=="" set "VERSION=!NEXT_VER!"
-)
-set "VERSION=%VERSION%"
+if not "!VERSION:~0,1!"=="v" set "VERSION=v!VERSION!"
 
-echo [onmeet] 배포 시작: %VERSION%
-git checkout -b release/%VERSION% 2>nul || git checkout release/%VERSION%
-git push -u origin release/%VERSION%
+echo [onmeet] 배포 시작: !VERSION!
+git checkout -b release/!VERSION! 2>nul || git checkout release/!VERSION!
+git push -u origin release/!VERSION!
 
 echo [onmeet] release 브랜치 push 완료. CI/CD 파이프라인이 자동 배포를 시작합니다.
 goto :end
