@@ -340,6 +340,19 @@ jobs:
             echo "SPRING_MAIL_USERNAME=evenhancoding@gmail.com" >> .env
             echo "Injected SPRING_MAIL_USERNAME"
 
+            # Gmail OAuth2 (Email Service)
+            sed -i '/^GMAIL_CLIENT_ID=/d' .env 2>/dev/null || true
+            echo "GMAIL_CLIENT_ID=${{ secrets.GMAIL_CLIENT_ID }}" >> .env
+            echo "Injected GMAIL_CLIENT_ID from GitHub Secret"
+
+            sed -i '/^GMAIL_CLIENT_SECRET=/d' .env 2>/dev/null || true
+            echo "GMAIL_CLIENT_SECRET=${{ secrets.GMAIL_CLIENT_SECRET }}" >> .env
+            echo "Injected GMAIL_CLIENT_SECRET from GitHub Secret"
+
+            sed -i '/^GMAIL_REFRESH_TOKEN=/d' .env 2>/dev/null || true
+            echo "GMAIL_REFRESH_TOKEN=${{ secrets.GMAIL_REFRESH_TOKEN }}" >> .env
+            echo "Injected GMAIL_REFRESH_TOKEN from GitHub Secret"
+
             # Docker Hub 로그인
             export DOCKER_API_VERSION=1.41
             export DOCKER_REGISTRY=${{ secrets.DOCKER_USERNAME }}
