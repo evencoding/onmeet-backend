@@ -681,7 +681,13 @@ class ManagerController(
         @AuthenticationPrincipal user: User,
         @RequestBody @jakarta.validation.Valid request: SingleInvitationRequest
     ): ResponseEntity<Long> {
-        val role = runCatching { User.Role.valueOf(request.role) }.getOrDefault(User.Role.USER)
+        val role = try {
+            User.Role.valueOf(request.role)
+        } catch (e: IllegalArgumentException) {
+            throw org.springframework.web.server.ResponseStatusException(
+                org.springframework.http.HttpStatus.BAD_REQUEST, "Invalid role: ${request.role}"
+            )
+        }
         val invitationId = invitationService.createInvitation(user.company.requireId(), request.email, role).requireId()
         return ResponseEntity.ok(invitationId)
     }

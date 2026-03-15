@@ -248,6 +248,21 @@ class ManagerControllerTest {
     }
 
     @Test
+    fun `inviteSingleMember should return 400 for invalid role`() {
+        // given
+        val request = SingleInvitationRequest(email = "user@company.com", role = "SUPERADMIN")
+
+        // when & then
+        mockMvc.perform(
+            post("/auth/v1/manager/invite/single")
+                .contextPath("/auth")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(request))
+        )
+            .andExpect(status().isBadRequest)
+    }
+
+    @Test
     fun `updateCompany should return updated company info`() {
         // given
         val updatedCompany = Company(id = 1L, name = "Updated Company")
