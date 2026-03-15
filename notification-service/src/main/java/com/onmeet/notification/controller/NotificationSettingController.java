@@ -17,7 +17,10 @@ import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequiredArgsConstructor
-@RequestMapping("/notification/v1/settings")
+// CHECK [notification-담당자]: @RequestMapping에서 /notification prefix 제거됨.
+// context-path=/notification이 이미 prefix를 추가하므로 최종 URL은
+// /notification/v1/settings 으로 동일. Swagger/API 문서 업데이트 필요.
+@RequestMapping("/v1/settings")
 @Tag(name = "Notification Settings", description = "알림 설정 API")
 public class NotificationSettingController {
 

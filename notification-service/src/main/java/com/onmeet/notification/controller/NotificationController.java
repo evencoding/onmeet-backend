@@ -23,7 +23,10 @@ import java.util.Map;
 
 @RestController
 @RequiredArgsConstructor
-@RequestMapping("/notification/v1/notifications")
+// CHECK [notification-담당자]: @RequestMapping에서 /notification prefix 제거됨.
+// context-path=/notification이 이미 prefix를 추가하므로 최종 URL은
+// /notification/v1/notifications 으로 동일. Swagger/API 문서 업데이트 필요.
+@RequestMapping("/v1/notifications")
 @Tag(name = "Notification", description = "알림 조회 및 관리 API")
 public class NotificationController {
 
@@ -166,8 +169,9 @@ public class NotificationController {
     @PatchMapping("/read/all")
     public ResponseEntity<Map<String, Integer>> markAllAsRead(
             @Parameter(description = "사용자 ID (Gateway에서 자동 주입)", required = true) @RequestHeader("X-User-Id") Long userId) {
-        int updated = notificationQueryService.markAllAsRead(userId);
-        return ResponseEntity.ok(Map.of("updatedCount", updated));
+        // CHECK [frontend-담당자]: markAllAsRead 응답이 Map<String, Integer>로 변경됨. Frontend UnreadCountResponse 타입과 일치하는지 확인 필요.
+        Map<String, Integer> unreadByType = notificationQueryService.markAllAsRead(userId);
+        return ResponseEntity.ok(unreadByType);
     }
 
     @Operation(

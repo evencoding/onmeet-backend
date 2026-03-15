@@ -390,9 +390,19 @@ public class NotificationService {
         // 발신자 이름 (이미 조회됨)
         params.put("senderName", actorName);
 
-        // 수신자 이름 조회 (N+1 방지를 위해 필요한 템플릿인 경우에만 조회하거나 기본값 사용 권장)
-        // 현재는 receiverName이 필수인 템플릿이 적으므로 기본값 처리 또는 필요시 조회
-        params.put("receiverName", "사용자");
+        // 수신자 이름 조회: auth-service에서 실제 이름을 가져옴. 실패 시 "사용자"로 폴백
+        String receiverName = "사용자";
+        if (dto.getUserId() != null) {
+            try {
+                AuthServiceClient.UserInfoResponse receiverInfo = authServiceClient.getUserInfo(dto.getUserId());
+                if (receiverInfo != null && receiverInfo.name() != null && !receiverInfo.name().isBlank()) {
+                    receiverName = receiverInfo.name();
+                }
+            } catch (Exception e) {
+                log.warn("Failed to fetch receiver name for userId={}, using fallback '사용자'", dto.getUserId());
+            }
+        }
+        params.put("receiverName", receiverName);
 
         // Kafka Producer(예: video-service)에서 이벤트 발행 시 title 값을 DTO에 담아서 보내도록 스펙 정의됨
         // -> 알림 서비스에서 동기적으로 외부 API를 찔러 방 제목을 조회하는 것은 지양(결합도 및 병목 방지)
