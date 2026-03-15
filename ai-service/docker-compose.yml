@@ -31,26 +31,6 @@ services:
     networks:
       - onmeet-network
 
-  # LocalStack for S3 (개발 환경용)
-  localstack:
-    image: localstack/localstack:latest
-    container_name: localstack
-    environment:
-      - SERVICES=s3
-      - DEBUG=1
-      - DATA_DIR=/tmp/localstack/data
-      - AWS_DEFAULT_REGION=ap-northeast-2
-    ports:
-      - "4566:4566"
-
-    networks:
-      - onmeet-network
-    healthcheck:
-      test: [ "CMD", "curl", "-f", "http://localhost:4566/_localstack/health" ]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-
   # AI Service
   ai-service:
     image: ${DOCKER_REGISTRY:-onmeet}/ai-service:latest
@@ -66,13 +46,6 @@ services:
       # ✅ Kafka
       - SPRING_KAFKA_BOOTSTRAP_SERVERS=kafka:29092
 
-      # AWS S3 (LocalStack)
-      - AWS_REGION=ap-northeast-2
-      - AWS_ENDPOINT=http://localstack:4566
-      - AWS_ACCESS_KEY_ID=test
-      - AWS_SECRET_ACCESS_KEY=test
-      - S3_BUCKET_NAME=onmeet-transcripts
-
       # Application
       - SPRING_PROFILES_ACTIVE=docker
       - GATEWAY_SHARED_SECRET=${GATEWAY_SHARED_SECRET:-my-super-secret-gateway-key-1234!}
@@ -81,8 +54,6 @@ services:
         condition: service_started
       kafka:
         condition: service_healthy
-      localstack:
-        condition: service_started
     networks:
       - onmeet-network
     restart: on-failure

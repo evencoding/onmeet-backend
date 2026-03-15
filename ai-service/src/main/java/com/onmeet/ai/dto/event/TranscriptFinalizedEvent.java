@@ -9,6 +9,7 @@ public class TranscriptFinalizedEvent {
     private Long hostUserId;
     private String transcriptId;
     private String transcriptS3Key;
+    private Long transcriptFileId;
     private int version;
     private Instant finalizedAt;
 }

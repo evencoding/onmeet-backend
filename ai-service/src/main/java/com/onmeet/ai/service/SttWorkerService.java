@@ -1,6 +1,6 @@
 package com.onmeet.ai.service;
 
-import com.onmeet.ai.dto.event.AudioChunkReadyEvent;
+import com.onmeet.common.dto.event.AudioChunkReadyEvent;
 import com.onmeet.ai.dto.event.VoiceSegmentCreatedEvent;
 import com.onmeet.ai.messaging.producer.VoiceSegmentProducer;
 import com.onmeet.ai.pipeline.audio.AudioDecoder;
@@ -40,7 +40,14 @@ public class SttWorkerService {
     }
 
     public void handleAudioChunk(AudioChunkReadyEvent e) {
-        byte[] audioBytes = storageClient.readBytes(e.getS3Path());
+        byte[] audioBytes;
+        if (e.getFileId() != null) {
+            log.debug("Found fileId in event, using FileServerStorageClient: roomId={}, fileId={}", e.getRoomId(), e.getFileId());
+            audioBytes = storageClient.readBytes(e.getFileId());
+        } else {
+            log.debug("fileId not found, falling back to S3 path: roomId={}, s3Path={}", e.getRoomId(), e.getS3Path());
+            audioBytes = storageClient.readBytes(e.getS3Path());
+        }
 
         float[] pcmSamples = null;
         try {

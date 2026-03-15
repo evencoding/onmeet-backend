@@ -59,39 +59,43 @@ public class SummaryWorkerService {
             )
         );
 
-        String transcriptJson = storageClient.readText(e.getTranscriptS3Key());
+        String transcriptJson;
+        if (e.getTranscriptFileId() != null) {
+            transcriptJson = storageClient.readText(e.getTranscriptFileId());
+        } else {
+            transcriptJson = storageClient.readText(e.getTranscriptS3Key());
+        }
 
         TranscriptDocument doc;
         try {
             doc = om.readValue(transcriptJson, TranscriptDocument.class);
         } catch (Exception ex) {
-            // TODO: [AI][AiErrorCode.TRANSCRIPT_PARSE_FAILED] 에러메시지 검수 요청
             throw new BusinessException(AiErrorCode.TRANSCRIPT_PARSE_FAILED);
         }
 
         String plain = renderer.toPlainText(doc);
         if (plain == null || plain.isBlank()) {
-            // TODO: [AI][AiErrorCode.TRANSCRIPT_EMPTY] 에러메시지 검수 요청
             throw new BusinessException(AiErrorCode.TRANSCRIPT_EMPTY);
         }
 
         String summaryJson = summarizerClient.summarize(plain, "ko", "default", null);
 
-        String summaryS3Key = StorageKeyFactory.summaryKey(e.getRoomId(), e.getTranscriptId());
-        storageClient.writeText(summaryS3Key, summaryJson, "application/json");
+        // 파일 서버에 요약본 업로드
+        String summaryFilename = e.getTranscriptId() + "_summary.json";
+        String summaryFileId = storageClient.writeText(summaryFilename, summaryJson, "application/json", "summary", "MEETING", String.valueOf(e.getRoomId()));
 
         upsertMinutes(
                 e.getRoomId(),
                 e.getTranscriptId(),
-                e.getTranscriptS3Key(),
-                summaryS3Key,
+                e.getTranscriptFileId() != null ? String.valueOf(e.getTranscriptFileId()) : e.getTranscriptS3Key(),
+                summaryFileId,
                 summaryJson
         );
 
         producer.publish(MinutesGeneratedEvent.builder()
                 .roomId(e.getRoomId())
                 .transcriptId(e.getTranscriptId())
-                .transcriptS3Key(e.getTranscriptS3Key())
+                .transcriptS3Key(e.getTranscriptFileId() != null ? String.valueOf(e.getTranscriptFileId()) : e.getTranscriptS3Key())
                 .generatedAt(Instant.now())
                 .build());
 
