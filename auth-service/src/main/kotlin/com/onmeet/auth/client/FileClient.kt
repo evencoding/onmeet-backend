@@ -87,4 +87,17 @@ class FileClient(
     fun deleteMyProfileImageFallback(t: Throwable) {
         log.error("Failed to delete my profile image. Error: ${t.message}")
     }
+
+    /**
+     * 기존 프로필 이미지가 존재하는 경우 삭제를 시도합니다.
+     * 삭제 실패 시 예외를 던지지 않고 경고 로그만 남깁니다.
+     */
+    fun safeDeleteProfileImageIfPresent(profileImageId: Long?, logContext: String) {
+        if (profileImageId == null) return
+        try {
+            deleteMyProfileImage()
+        } catch (e: Exception) {
+            log.warn("프로필 이미지 삭제 실패 ($logContext): ${e.message}")
+        }
+    }
 }

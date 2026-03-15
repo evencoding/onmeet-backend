@@ -8,7 +8,6 @@ import com.onmeet.auth.repository.jpa.UserRepository
 import com.onmeet.auth.repository.jpa.WithdrawnUserRepository
 import com.onmeet.common.exception.BusinessException
 import com.onmeet.common.exception.errorcode.AuthErrorCode
-import org.slf4j.LoggerFactory
 import org.springframework.security.crypto.password.PasswordEncoder
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
@@ -22,10 +21,14 @@ class WithdrawService(
     private val passwordEncoder: PasswordEncoder,
     private val tokenService: TokenService
 ) {
-    private val log = LoggerFactory.getLogger(WithdrawService::class.java)
+    fun withdraw(email: String, request: WithdrawRequest) {
+        val profileImageId = withdrawInternal(email, request)
+        fileClient.safeDeleteProfileImageIfPresent(profileImageId, "withdraw email=$email")
+        tokenService.revokeTokens(null, email)
+    }
 
     @Transactional
-    fun withdraw(email: String, request: WithdrawRequest) {
+    fun withdrawInternal(email: String, request: WithdrawRequest): Long? {
         val user = userRepository.findByEmail(email)
             .orElseThrow { BusinessException(AuthErrorCode.USER_NOT_FOUND) }
 
@@ -43,14 +46,7 @@ class WithdrawService(
             )
         )
 
-        user.profileImageId?.let {
-            try {
-                fileClient.deleteMyProfileImage()
-            } catch (e: Exception) {
-                log.warn("탈퇴 처리 중 프로필 이미지 삭제 실패 (userId=${user.id}): ${e.message}")
-            }
-        }
-
+        val profileImageId = user.profileImageId
         user.email = "withdrawn_${user.id}@onmeet.deleted"
         user.name = "Withdrawn User"
         user.passwordHash = ""
@@ -58,6 +54,6 @@ class WithdrawService(
         user.profileImageId = null
         userRepository.save(user)
 
-        tokenService.revokeTokens(null, email)
+        return profileImageId
     }
 }
