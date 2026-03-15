@@ -123,6 +123,10 @@ data class SingleInvitationRequest(
     @field:jakarta.validation.constraints.NotBlank(message = "Email is required")
     @Schema(description = "초대할 이메일", example = "user@company.com")
     val email: String,
+    @field:jakarta.validation.constraints.Pattern(
+        regexp = "USER|ADMIN|MANAGER",
+        message = "Invalid role. Must be USER, ADMIN, or MANAGER"
+    )
     @Schema(description = "부여할 역할 (USER, ADMIN, MANAGER)", example = "USER")
     val role: String = "USER"
 )

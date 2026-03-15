@@ -1,5 +1,7 @@
 package com.onmeet.common.dto
 
+import java.time.LocalDateTime
+
 /**
  * 타 서비스(Video, AI, Auth 등)에서 알림 서비스로
  * Kafka 이벤트를 발행할 때 공통으로 사용하는 DTO
@@ -64,5 +66,5 @@ data class NotificationRequestDto(
     /**
      * 알림 예약 발송 시각 (null이면 즉시 발송)
      */
-    val scheduledAt: java.time.LocalDateTime? = null
+    val scheduledAt: LocalDateTime? = null
 )
