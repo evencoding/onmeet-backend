@@ -17,14 +17,14 @@ jobs:
     name: Detect Changed Services & Extract Version
     runs-on: ubuntu-latest
     outputs:
-      auth: ${{ steps.changes.outputs.auth }}
-      gateway: ${{ steps.changes.outputs.gateway }}
-      ai: ${{ steps.changes.outputs.ai }}
-      video: ${{ steps.changes.outputs.video }}
-      notification: ${{ steps.changes.outputs.notification }}
-      email: ${{ steps.changes.outputs.email }}
-      file: ${{ steps.changes.outputs.file }}
-      nginx: ${{ steps.changes.outputs.nginx }}
+      auth: ${{ steps.any-changed.outputs.auth }}
+      gateway: ${{ steps.any-changed.outputs.gateway }}
+      ai: ${{ steps.any-changed.outputs.ai }}
+      video: ${{ steps.any-changed.outputs.video }}
+      notification: ${{ steps.any-changed.outputs.notification }}
+      email: ${{ steps.any-changed.outputs.email }}
+      file: ${{ steps.any-changed.outputs.file }}
+      nginx: ${{ steps.any-changed.outputs.nginx }}
       any-service-changed: ${{ steps.any-changed.outputs.any-service-changed }}
       version: ${{ steps.extract-version.outputs.version }}
     steps:
@@ -33,14 +33,35 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Resolve comparison base SHA
+        id: resolve-base
+        run: |
+          # 1순위: LAST_DEPLOYED_SHA (마지막 배포 성공 커밋)
+          # 2순위: github.event.before (push 이전 커밋)
+          # 3순위: HEAD~1 (fallback)
+          LAST_DEPLOYED="${{ vars.LAST_DEPLOYED_SHA }}"
+
+          if [ -n "$LAST_DEPLOYED" ] && git cat-file -e "$LAST_DEPLOYED" 2>/dev/null; then
+            echo "base=$LAST_DEPLOYED" >> $GITHUB_OUTPUT
+            echo "Using LAST_DEPLOYED_SHA: $LAST_DEPLOYED"
+          elif [ "${{ github.event_name }}" == "push" ] && [ "${{ github.event.before }}" != "0000000000000000000000000000000000000000" ]; then
+            echo "base=${{ github.event.before }}" >> $GITHUB_OUTPUT
+            echo "Using github.event.before: ${{ github.event.before }}"
+          else
+            echo "base=$(git rev-parse HEAD~1)" >> $GITHUB_OUTPUT
+            echo "Fallback to HEAD~1"
+          fi
+
       - name: Detect changes in services
         uses: dorny/paths-filter@v3
         id: changes
         with:
-          # push: before..sha 비교, workflow_dispatch: HEAD~1 비교
-          base: ${{ github.event_name == 'push' && github.event.before || '' }}
-          ref: ${{ github.event_name == 'push' && github.sha || '' }}
+          base: ${{ steps.resolve-base.outputs.base }}
+          ref: ${{ github.sha }}
           filters: |
+            infra:
+              - 'docker-compose.yml'
+              - '.github/workflows/**'
             common:
               - 'onmeet-common/**'
               - 'common-security/**'
@@ -48,40 +69,16 @@ jobs:
               - 'settings.gradle'
             auth:
               - 'auth-service/**'
-              - 'onmeet-common/**'
-              - 'common-security/**'
-              - 'build.gradle'
-              - 'settings.gradle'
             gateway:
               - 'gateway-service/**'
-              - 'onmeet-common/**'
-              - 'common-security/**'
-              - 'build.gradle'
-              - 'settings.gradle'
             ai:
               - 'ai-service/**'
-              - 'onmeet-common/**'
-              - 'common-security/**'
-              - 'build.gradle'
-              - 'settings.gradle'
             video:
               - 'video-service/**'
-              - 'onmeet-common/**'
-              - 'common-security/**'
-              - 'build.gradle'
-              - 'settings.gradle'
             notification:
               - 'notification-service/**'
-              - 'onmeet-common/**'
-              - 'common-security/**'
-              - 'build.gradle'
-              - 'settings.gradle'
             email:
               - 'email-service/**'
-              - 'onmeet-common/**'
-              - 'common-security/**'
-              - 'build.gradle'
-              - 'settings.gradle'
             file:
               - 'file-service/**'
             kafka:
@@ -89,10 +86,46 @@ jobs:
             nginx:
               - 'nginx/**'
 
-      - name: Set any-service-changed flag
+      - name: Determine build targets
         id: any-changed
         run: |
-          if [ "${{ steps.changes.outputs.auth }}" == "true" ] || \
+          COMMON="${{ steps.changes.outputs.common }}"
+          INFRA="${{ steps.changes.outputs.infra }}"
+          MANUAL="${{ github.event_name == 'workflow_dispatch' }}"
+          FULL_BUILD="false"
+
+          # 공통 모듈 또는 인프라 파일 변경 또는 수동 트리거 → 전체 빌드
+          if [ "$COMMON" == "true" ] || [ "$INFRA" == "true" ] || [ "$MANUAL" == "true" ]; then
+            FULL_BUILD="true"
+            echo "Full build triggered (common=$COMMON, infra=$INFRA, manual=$MANUAL)"
+          fi
+
+          echo "full-build=$FULL_BUILD" >> $GITHUB_OUTPUT
+
+          # 개별 서비스 또는 전체 빌드
+          for svc in auth gateway ai video notification email file kafka nginx; do
+            val="${{ steps.changes.outputs.auth }}"
+            case $svc in
+              auth) val="${{ steps.changes.outputs.auth }}" ;;
+              gateway) val="${{ steps.changes.outputs.gateway }}" ;;
+              ai) val="${{ steps.changes.outputs.ai }}" ;;
+              video) val="${{ steps.changes.outputs.video }}" ;;
+              notification) val="${{ steps.changes.outputs.notification }}" ;;
+              email) val="${{ steps.changes.outputs.email }}" ;;
+              file) val="${{ steps.changes.outputs.file }}" ;;
+              kafka) val="${{ steps.changes.outputs.kafka }}" ;;
+              nginx) val="${{ steps.changes.outputs.nginx }}" ;;
+            esac
+            if [ "$val" == "true" ] || [ "$FULL_BUILD" == "true" ]; then
+              echo "$svc=true" >> $GITHUB_OUTPUT
+            else
+              echo "$svc=false" >> $GITHUB_OUTPUT
+            fi
+          done
+
+          # any-service-changed
+          if [ "$FULL_BUILD" == "true" ] || \
+             [ "${{ steps.changes.outputs.auth }}" == "true" ] || \
              [ "${{ steps.changes.outputs.gateway }}" == "true" ] || \
              [ "${{ steps.changes.outputs.ai }}" == "true" ] || \
              [ "${{ steps.changes.outputs.video }}" == "true" ] || \
@@ -100,8 +133,7 @@ jobs:
              [ "${{ steps.changes.outputs.email }}" == "true" ] || \
              [ "${{ steps.changes.outputs.file }}" == "true" ] || \
              [ "${{ steps.changes.outputs.kafka }}" == "true" ] || \
-             [ "${{ steps.changes.outputs.nginx }}" == "true" ] || \
-             [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
+             [ "${{ steps.changes.outputs.nginx }}" == "true" ]; then
             echo "any-service-changed=true" >> $GITHUB_OUTPUT
           else
             echo "any-service-changed=false" >> $GITHUB_OUTPUT
@@ -140,7 +172,6 @@ jobs:
 
       - name: Set up JDK 17
         if: |
-          github.event_name == 'workflow_dispatch' ||
           needs.detect-changes.outputs.auth == 'true' ||
           needs.detect-changes.outputs.gateway == 'true' ||
           needs.detect-changes.outputs.ai == 'true' ||
@@ -154,7 +185,6 @@ jobs:
 
       - name: Setup Gradle
         if: |
-          github.event_name == 'workflow_dispatch' ||
           needs.detect-changes.outputs.auth == 'true' ||
           needs.detect-changes.outputs.gateway == 'true' ||
           needs.detect-changes.outputs.ai == 'true' ||
@@ -169,7 +199,6 @@ jobs:
 
       - name: Login to Docker Hub for Jib
         if: |
-          github.event_name == 'workflow_dispatch' ||
           needs.detect-changes.outputs.auth == 'true' ||
           needs.detect-changes.outputs.gateway == 'true' ||
           needs.detect-changes.outputs.ai == 'true' ||
@@ -182,7 +211,6 @@ jobs:
 
       - name: Build changed Kotlin/Java services with Jib
         if: |
-          github.event_name == 'workflow_dispatch' ||
           needs.detect-changes.outputs.auth == 'true' ||
           needs.detect-changes.outputs.gateway == 'true' ||
           needs.detect-changes.outputs.ai == 'true' ||
@@ -195,24 +223,23 @@ jobs:
         run: |
           # 변경된 서비스만 빌드하도록 동적으로 타겟 생성
           TARGETS=""
-          MANUAL="${{ github.event_name == 'workflow_dispatch' }}"
 
-          if [ "${{ needs.detect-changes.outputs.auth }}" == "true" ] || [ "$MANUAL" == "true" ]; then
+          if [ "${{ needs.detect-changes.outputs.auth }}" == "true" ]; then
             TARGETS="$TARGETS :auth-service:jib"
           fi
-          if [ "${{ needs.detect-changes.outputs.gateway }}" == "true" ] || [ "$MANUAL" == "true" ]; then
+          if [ "${{ needs.detect-changes.outputs.gateway }}" == "true" ]; then
             TARGETS="$TARGETS :gateway-service:jib"
           fi
-          if [ "${{ needs.detect-changes.outputs.ai }}" == "true" ] || [ "$MANUAL" == "true" ]; then
+          if [ "${{ needs.detect-changes.outputs.ai }}" == "true" ]; then
             TARGETS="$TARGETS :ai-service:jib"
           fi
-          if [ "${{ needs.detect-changes.outputs.video }}" == "true" ] || [ "$MANUAL" == "true" ]; then
+          if [ "${{ needs.detect-changes.outputs.video }}" == "true" ]; then
             TARGETS="$TARGETS :video-service:jib"
           fi
-          if [ "${{ needs.detect-changes.outputs.notification }}" == "true" ] || [ "$MANUAL" == "true" ]; then
+          if [ "${{ needs.detect-changes.outputs.notification }}" == "true" ]; then
             TARGETS="$TARGETS :notification-service:jib"
           fi
-          if [ "${{ needs.detect-changes.outputs.email }}" == "true" ] || [ "$MANUAL" == "true" ]; then
+          if [ "${{ needs.detect-changes.outputs.email }}" == "true" ]; then
             TARGETS="$TARGETS :email-service:jib"
           fi
 
@@ -241,18 +268,18 @@ jobs:
           fi
 
       - name: Set up Docker Buildx
-        if: needs.detect-changes.outputs.file == 'true' || github.event_name == 'workflow_dispatch'
+        if: needs.detect-changes.outputs.file == 'true'
         uses: docker/setup-buildx-action@v3
 
       - name: Login to Docker Hub for file-service
-        if: needs.detect-changes.outputs.file == 'true' || github.event_name == 'workflow_dispatch'
+        if: needs.detect-changes.outputs.file == 'true'
         uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
 
       - name: Build and push file-service (Go)
-        if: needs.detect-changes.outputs.file == 'true' || github.event_name == 'workflow_dispatch'
+        if: needs.detect-changes.outputs.file == 'true'
         uses: docker/build-push-action@v5
         with:
           context: ./file-service
@@ -359,18 +386,17 @@ jobs:
             export DOCKER_REGISTRY=${{ secrets.DOCKER_USERNAME }}
             echo "${{ secrets.DOCKER_PASSWORD }}" | docker login -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
 
-            # 변경된 서비스만 추출 (workflow_dispatch 시 전체 배포)
+            # 변경된 서비스만 추출
             TARGETS=""
-            MANUAL="${{ github.event_name == 'workflow_dispatch' }}"
-            if [ "${{ needs.detect-changes.outputs.auth }}" == "true" ] || [ "$MANUAL" == "true" ]; then TARGETS="$TARGETS auth-service mysql-auth redis-auth"; fi
-            if [ "${{ needs.detect-changes.outputs.gateway }}" == "true" ] || [ "$MANUAL" == "true" ]; then TARGETS="$TARGETS gateway-service"; fi
-            if [ "${{ needs.detect-changes.outputs.ai }}" == "true" ] || [ "$MANUAL" == "true" ]; then TARGETS="$TARGETS ai-service mysql-ai redis"; fi
-            if [ "${{ needs.detect-changes.outputs.video }}" == "true" ] || [ "$MANUAL" == "true" ]; then TARGETS="$TARGETS video-service livekit mysql-video"; fi
-            if [ "${{ needs.detect-changes.outputs.notification }}" == "true" ] || [ "$MANUAL" == "true" ]; then TARGETS="$TARGETS notification-service mysql-notification"; fi
-            if [ "${{ needs.detect-changes.outputs.email }}" == "true" ] || [ "$MANUAL" == "true" ]; then TARGETS="$TARGETS email-service"; fi
-            if [ "${{ needs.detect-changes.outputs.file }}" == "true" ] || [ "$MANUAL" == "true" ]; then TARGETS="$TARGETS file-service"; fi
-            if [ "${{ needs.detect-changes.outputs.kafka }}" == "true" ] || [ "$MANUAL" == "true" ]; then TARGETS="$TARGETS kafka zookeeper"; fi
-            if [ "${{ needs.detect-changes.outputs.nginx }}" == "true" ] || [ "$MANUAL" == "true" ]; then TARGETS="$TARGETS nginx certbot"; fi
+            if [ "${{ needs.detect-changes.outputs.auth }}" == "true" ]; then TARGETS="$TARGETS auth-service mysql-auth redis-auth"; fi
+            if [ "${{ needs.detect-changes.outputs.gateway }}" == "true" ]; then TARGETS="$TARGETS gateway-service"; fi
+            if [ "${{ needs.detect-changes.outputs.ai }}" == "true" ]; then TARGETS="$TARGETS ai-service mysql-ai redis"; fi
+            if [ "${{ needs.detect-changes.outputs.video }}" == "true" ]; then TARGETS="$TARGETS video-service livekit mysql-video"; fi
+            if [ "${{ needs.detect-changes.outputs.notification }}" == "true" ]; then TARGETS="$TARGETS notification-service mysql-notification"; fi
+            if [ "${{ needs.detect-changes.outputs.email }}" == "true" ]; then TARGETS="$TARGETS email-service"; fi
+            if [ "${{ needs.detect-changes.outputs.file }}" == "true" ]; then TARGETS="$TARGETS file-service"; fi
+            if [ "${{ needs.detect-changes.outputs.kafka }}" == "true" ]; then TARGETS="$TARGETS kafka zookeeper"; fi
+            if [ "${{ needs.detect-changes.outputs.nginx }}" == "true" ]; then TARGETS="$TARGETS nginx certbot"; fi
 
             echo "Deploying changed services: $TARGETS"
 
@@ -437,3 +463,11 @@ jobs:
             fi
 
             echo "All services are healthy!"
+
+      - name: Update LAST_DEPLOYED_SHA
+        if: success()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh variable set LAST_DEPLOYED_SHA --body "${{ github.sha }}"
+          echo "Updated LAST_DEPLOYED_SHA to ${{ github.sha }}"
