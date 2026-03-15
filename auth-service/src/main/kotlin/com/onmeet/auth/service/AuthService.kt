@@ -100,7 +100,7 @@ class AuthService(
             }
         }
 
-        fileClient.generateDefaultProfileImage(targetUser.name)?.let {
+        fileClient.generateDefaultProfileImage(targetUser.name, targetUser.requireId().toString())?.let {
             targetUser.profileImageId = it.id
             userRepository.save(targetUser)
             notificationEventPublisher.publishNotification(

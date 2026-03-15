@@ -26,16 +26,17 @@ class FileClient(
      * 기본 프로필 이미지를 생성 요청합니다.
      */
     @io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker(name = "fileService", fallbackMethod = "generateDefaultProfileImageFallback")
-    fun generateDefaultProfileImage(name: String): FileMetadataResponse? {
+    fun generateDefaultProfileImage(name: String, ownerId: String): FileMetadataResponse? {
         val url = "$fileServiceUrl/file/profile/default"
         val request = mapOf(
             "name" to name,
-            "ownerType" to "USER"
+            "ownerType" to "USER",
+            "ownerId" to ownerId
         )
         return postWithAuthOrThrow(url, request, FileMetadataResponse::class.java)
     }
 
-    fun generateDefaultProfileImageFallback(name: String, t: Throwable): FileMetadataResponse? {
+    fun generateDefaultProfileImageFallback(name: String, ownerId: String, t: Throwable): FileMetadataResponse? {
         log.error("Failed to generate default profile image for $name. Error: ${t.message}")
         return null
     }

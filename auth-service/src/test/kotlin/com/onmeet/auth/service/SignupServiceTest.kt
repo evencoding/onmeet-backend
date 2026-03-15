@@ -72,7 +72,7 @@ class SignupServiceTest {
         every { jobTitleService.createDefaultInitialTitle(company) } returns jobTitle
         every { passwordEncoder.encode(request.password) } returns "hashed"
         every { userRepository.save(any()) } returns savedUser
-        every { fileClient.generateDefaultProfileImage(request.name) } returns null
+        every { fileClient.generateDefaultProfileImage(request.name, any()) } returns null
         justRun { fileClient.safeDeleteProfileImageIfPresent(any(), any()) }
 
         // when
@@ -136,7 +136,7 @@ class SignupServiceTest {
         every { passwordEncoder.encode(request.password) } returns "hashed"
         every { userRepository.save(any()) } returns savedUser
         every { invitationService.deleteInvitation(1L) } returns Unit
-        every { fileClient.generateDefaultProfileImage(request.name) } returns null
+        every { fileClient.generateDefaultProfileImage(request.name, any()) } returns null
         justRun { fileClient.safeDeleteProfileImageIfPresent(any(), any()) }
 
         // when
@@ -208,7 +208,7 @@ class SignupServiceTest {
         every { passwordEncoder.encode(any()) } returns "hashed"
         every { userRepository.save(any()) } returns savedUser
         every { invitationService.deleteInvitation(1L) } returns Unit
-        every { fileClient.generateDefaultProfileImage(any()) } returns null
+        every { fileClient.generateDefaultProfileImage(any(), any()) } returns null
         justRun { fileClient.safeDeleteProfileImageIfPresent(any(), any()) }
 
         // when

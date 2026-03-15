@@ -39,7 +39,7 @@ class FileClientTest {
             .thenThrow(ResourceAccessException("Service down"))
             
         // When
-        val result = fileClient.generateDefaultProfileImage("test-user")
+        val result = fileClient.generateDefaultProfileImage("test-user", "1")
         
         // Then
         assertNull(result, "Fallback should return null on failure")
