@@ -46,6 +46,9 @@ services:
       # ✅ Kafka
       - SPRING_KAFKA_BOOTSTRAP_SERVERS=kafka:29092
 
+      # Anthropic (Claude API)
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
+
       # Application
       - SPRING_PROFILES_ACTIVE=docker
       - GATEWAY_SHARED_SECRET=${GATEWAY_SHARED_SECRET:-my-super-secret-gateway-key-1234!}
