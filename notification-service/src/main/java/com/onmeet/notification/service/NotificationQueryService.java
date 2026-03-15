@@ -5,12 +5,16 @@ import com.onmeet.common.exception.errorcode.NotificationErrorCode;
 import com.onmeet.notification.dto.NotificationResponseDto;
 import com.onmeet.notification.entity.NotificationRecipient;
 import com.onmeet.notification.repository.NotificationRecipientRepository;
+import com.onmeet.notification.type.NotificationType;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -48,11 +52,22 @@ public class NotificationQueryService {
     }
 
     /**
-     * 내 모든 알림을 읽음 처리합니다.
+     * 내 모든 알림을 읽음 처리하고, 처리 후 타입별 미읽음 수를 반환합니다.
+     *
+     * CHECK [frontend-담당자]: markAllAsRead 응답이 Map<String, Integer>로 변경됨.
+     * Frontend UnreadCountResponse 타입과 일치하는지 확인 필요.
+     *
+     * @return 타입별 남은 미읽음 수 (모두 읽음 처리 후에는 빈 Map)
      */
     @Transactional
-    public int markAllAsRead(Long userId) {
-        return recipientRepository.markAllAsReadByUserId(userId);
+    public Map<String, Integer> markAllAsRead(Long userId) {
+        recipientRepository.markAllAsReadByUserId(userId);
+        return recipientRepository.countUnreadGroupedByType(userId)
+                .stream()
+                .collect(Collectors.toMap(
+                        row -> ((NotificationType) row[0]).name(),
+                        row -> ((Long) row[1]).intValue()
+                ));
     }
 
     /**
