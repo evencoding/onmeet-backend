@@ -39,6 +39,7 @@ services:
       - GATEWAY_SHARED_SECRET=${GATEWAY_SHARED_SECRET}
       - SERVER_PORT=${NOTIFICATION_SERVICE_PORT:-8085}
       - SPRING_KAFKA_BOOTSTRAP_SERVERS=kafka:29092
+      - MANAGEMENT_TRACING_ENABLED=false
       - MANAGEMENT_ENDPOINTS_WEB_BASE_PATH=/notification/actuator
     depends_on:
       mysql-notification:

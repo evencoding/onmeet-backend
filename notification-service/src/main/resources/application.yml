@@ -51,12 +51,10 @@ management:
     web:
       exposure:
         include: health, info, prometheus
-  zipkin:
-    tracing:
-      endpoint: http://zipkin:9411/api/v2/spans
   tracing:
+    enabled: false
     sampling:
-      probability: 0.0 # Zipkin disabled (observability stack not running)
+      probability: 0.0
 
 springdoc:
   api-docs:
