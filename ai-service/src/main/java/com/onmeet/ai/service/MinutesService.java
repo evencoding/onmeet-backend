@@ -106,12 +106,6 @@ public class MinutesService {
     }
 
     @Transactional(readOnly = true)
-    public String getTranscriptRawJson(Long roomId) {
-        Minutes m = findMinutesOrThrow(roomId);
-        return storageClient.readText(m.getTranscriptS3Key());
-    }
-
-    @Transactional(readOnly = true)
     public TranscriptResponse getTranscript(Long roomId) {
         Minutes m = findMinutesOrThrow(roomId);
         String transcript = storageClient.readText(m.getTranscriptS3Key());
