@@ -6,6 +6,9 @@ server:
 spring:
   application:
     name: ai-service
+  jpa:
+    hibernate:
+      ddl-auto: validate
   kafka:
     bootstrap-servers: ${SPRING_KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
     producer:
