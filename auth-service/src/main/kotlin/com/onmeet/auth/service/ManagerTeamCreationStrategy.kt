@@ -42,8 +42,9 @@ class ManagerTeamCreationStrategy(
             }
         }
 
-        val leader = members.find { it.id == request.leaderId }
-            ?: throw BusinessException(AuthErrorCode.TEAM_LEADER_NOT_FOUND)
+        // leader is guaranteed to be in members: leaderId was validated to be in memberIds (line 30)
+        // and all memberIds were confirmed to exist in DB (line 35)
+        val leader = members.first { it.id == request.leaderId }
 
         val team = teamRepository.save(
             Team(
