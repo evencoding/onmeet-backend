@@ -37,7 +37,7 @@ class FileClient(
     }
 
     fun generateDefaultProfileImageFallback(name: String, ownerId: String, t: Throwable): FileMetadataResponse? {
-        log.error("Failed to generate default profile image for $name. Error: ${t.message}")
+        log.error("Failed to generate default profile image for name: $name, ownerId: $ownerId. Error: ${t.message}")
         return null
     }
 
