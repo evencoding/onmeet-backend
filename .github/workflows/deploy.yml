@@ -35,15 +35,32 @@ jobs:
 
       - name: Resolve comparison base SHA
         id: resolve-base
+        env:
+          GCP_HOST: ${{ secrets.GCP_HOST }}
+          GCP_USERNAME: ${{ secrets.GCP_USERNAME }}
+          GCP_SSH_KEY: ${{ secrets.GCP_SSH_KEY }}
+          GCP_SSH_PORT: ${{ secrets.GCP_SSH_PORT }}
+          GCP_PROJECT_PATH: ${{ secrets.GCP_PROJECT_PATH }}
         run: |
-          # 1순위: LAST_DEPLOYED_SHA (마지막 배포 성공 커밋)
+          # 배포 서버의 .last_deployed_sha 파일에서 마지막 배포 SHA를 읽어온다
+          # 1순위: 배포 서버의 .last_deployed_sha 파일
           # 2순위: github.event.before (push 이전 커밋)
           # 3순위: HEAD~1 (fallback)
-          LAST_DEPLOYED="${{ vars.LAST_DEPLOYED_SHA }}"
+
+          LAST_DEPLOYED=""
+          # SSH로 배포 서버에서 SHA 읽기 시도
+          if [ -n "$GCP_HOST" ]; then
+            mkdir -p ~/.ssh
+            echo "$GCP_SSH_KEY" > ~/.ssh/deploy_key
+            chmod 600 ~/.ssh/deploy_key
+            LAST_DEPLOYED=$(ssh -o StrictHostKeyChecking=no -i ~/.ssh/deploy_key -p "$GCP_SSH_PORT" "$GCP_USERNAME@$GCP_HOST" \
+              "cat $GCP_PROJECT_PATH/.last_deployed_sha 2>/dev/null" 2>/dev/null || true)
+            rm -f ~/.ssh/deploy_key
+          fi
 
           if [ -n "$LAST_DEPLOYED" ] && git cat-file -e "$LAST_DEPLOYED" 2>/dev/null; then
             echo "base=$LAST_DEPLOYED" >> $GITHUB_OUTPUT
-            echo "Using LAST_DEPLOYED_SHA: $LAST_DEPLOYED"
+            echo "Using LAST_DEPLOYED_SHA from server: $LAST_DEPLOYED"
           elif [ "${{ github.event_name }}" == "push" ] && [ "${{ github.event.before }}" != "0000000000000000000000000000000000000000" ]; then
             echo "base=${{ github.event.before }}" >> $GITHUB_OUTPUT
             echo "Using github.event.before: ${{ github.event.before }}"
@@ -464,10 +481,14 @@ jobs:
 
             echo "All services are healthy!"
 
-      - name: Update LAST_DEPLOYED_SHA
+      - name: Update LAST_DEPLOYED_SHA on server
         if: success()
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          gh variable set LAST_DEPLOYED_SHA --body "${{ github.sha }}" --repo "${{ github.repository }}"
-          echo "Updated LAST_DEPLOYED_SHA to ${{ github.sha }}"
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.GCP_HOST }}
+          username: ${{ secrets.GCP_USERNAME }}
+          key: ${{ secrets.GCP_SSH_KEY }}
+          port: ${{ secrets.GCP_SSH_PORT }}
+          script: |
+            echo "${{ github.sha }}" > ${{ secrets.GCP_PROJECT_PATH }}/.last_deployed_sha
+            echo "Updated LAST_DEPLOYED_SHA to ${{ github.sha }}"
