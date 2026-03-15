@@ -87,7 +87,7 @@ class SignupService(
         val fileResp = if (profileImage != null && !profileImage.isEmpty) {
             fileClient.uploadProfileImage(profileImage, user.requireId().toString())
         } else {
-            fileClient.generateDefaultProfileImage(user.name)
+            fileClient.generateDefaultProfileImage(user.name, user.requireId().toString())
         }
 
         fileResp?.let {

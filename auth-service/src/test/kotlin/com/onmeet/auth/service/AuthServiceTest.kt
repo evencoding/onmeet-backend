@@ -211,7 +211,7 @@ class AuthServiceTest {
         every { userRepository.findById(2L) } returns Optional.of(employee)
         every { userRepository.findByEmail("manager@example.com") } returns Optional.of(manager)
         every { fileClient.deleteFile(100L) } returns Unit
-        every { fileClient.generateDefaultProfileImage("Employee") } returns FileMetadataResponse(
+        every { fileClient.generateDefaultProfileImage("Employee", any()) } returns FileMetadataResponse(
             id = 200L, fileName = "new.svg", s3Url = "s3://new.svg", contentType = "image/svg+xml"
         )
         every { userRepository.save(any()) } returns employee
@@ -222,7 +222,7 @@ class AuthServiceTest {
 
         // then
         verify { fileClient.deleteFile(100L) }
-        verify { fileClient.generateDefaultProfileImage("Employee") }
+        verify { fileClient.generateDefaultProfileImage("Employee", any()) }
         verify { userRepository.save(match { it.profileImageId == 200L }) }
     }
 
@@ -262,7 +262,7 @@ class AuthServiceTest {
         every { userRepository.findById(2L) } returns Optional.of(employee)
         every { userRepository.findByEmail("manager@example.com") } returns Optional.of(manager)
         every { fileClient.deleteFile(100L) } throws RuntimeException("S3 error")
-        every { fileClient.generateDefaultProfileImage("Employee") } returns FileMetadataResponse(
+        every { fileClient.generateDefaultProfileImage("Employee", any()) } returns FileMetadataResponse(
             id = 200L, fileName = "new.svg", s3Url = "s3://new.svg", contentType = "image/svg+xml"
         )
         every { userRepository.save(any()) } returns employee
@@ -272,7 +272,7 @@ class AuthServiceTest {
         authService.resetUserProfileImage(2L, "manager@example.com")
 
         // then
-        verify { fileClient.generateDefaultProfileImage("Employee") }
+        verify { fileClient.generateDefaultProfileImage("Employee", any()) }
         verify { userRepository.save(match { it.profileImageId == 200L }) }
     }
 }
