@@ -59,7 +59,8 @@ public class SummaryWorkerService {
             new NotificationRequestDto(
                 e.getHostUserId(), null, "AI_SUMMARY_PROGRESS", "AI 요약 시작",
                 "회의록 AI 요약이 시작되었습니다.",
-                "/meeting/" + e.getRoomId() + "?tab=minutes", "MEETING", String.valueOf(e.getRoomId()), SYSTEM_ACTOR_ID
+                "/meeting/" + e.getRoomId() + "?tab=minutes", "MEETING", String.valueOf(e.getRoomId()), SYSTEM_ACTOR_ID,
+                null, null
             )
         );
 
@@ -108,7 +109,8 @@ public class SummaryWorkerService {
             new NotificationRequestDto(
                 e.getHostUserId(), null, "AI_SUMMARY_COMPLETED", "AI 요약 완료",
                 "회의록 AI 요약이 완료되었습니다.",
-                "/meeting/" + e.getRoomId() + "?tab=minutes", "MEETING", String.valueOf(e.getRoomId()), SYSTEM_ACTOR_ID
+                "/meeting/" + e.getRoomId() + "?tab=minutes", "MEETING", String.valueOf(e.getRoomId()), SYSTEM_ACTOR_ID,
+                null, null
             )
         );
     }

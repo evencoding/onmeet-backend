@@ -247,7 +247,8 @@ public class RoomParticipantService {
             new NotificationRequestDto(
                 targetUserId, null, "WAITING_ROOM_ADMITTED", "회의실 입장 수락",
                 "'" + room.getTitle() + "' 회의실 입장이 수락되었습니다.",
-                "/meeting/" + roomId, "MEETING", String.valueOf(roomId), requesterId
+                "/meeting/" + roomId, "MEETING", String.valueOf(roomId), requesterId,
+                null, null
             )
         );
     }
@@ -271,7 +272,8 @@ public class RoomParticipantService {
             new NotificationRequestDto(
                 targetUserId, null, "WAITING_ROOM_REJECTED", "회의실 입장 거절",
                 "'" + room.getTitle() + "' 회의실 입장이 거절되었습니다.",
-                null, "MEETING", String.valueOf(roomId), requesterId
+                null, "MEETING", String.valueOf(roomId), requesterId,
+                null, null
             )
         );
     }
@@ -337,7 +339,8 @@ public class RoomParticipantService {
                 new NotificationRequestDto(
                     null, userIds, "WAITING_ROOM_ADMITTED", "회의실 입장 수락",
                     "'" + room.getTitle() + "' 회의실 입장이 수락되었습니다.",
-                    "/meeting/" + roomId, "MEETING", String.valueOf(roomId), requesterId
+                    "/meeting/" + roomId, "MEETING", String.valueOf(roomId), requesterId,
+                    null, null
                 )
             );
         }
