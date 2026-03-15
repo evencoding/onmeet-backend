@@ -7,7 +7,6 @@ import com.onmeet.auth.entity.User
 import com.onmeet.auth.repository.jpa.UserRepository
 import com.onmeet.common.exception.BusinessException
 import com.onmeet.common.exception.errorcode.AuthErrorCode
-import org.slf4j.LoggerFactory
 import org.springframework.security.crypto.password.PasswordEncoder
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
@@ -22,10 +21,14 @@ class SignupService(
     private val passwordEncoder: PasswordEncoder,
     private val fileClient: FileClient
 ) {
-    private val log = LoggerFactory.getLogger(SignupService::class.java)
+    fun signupCompany(request: CompanySignupRequest, profileImage: MultipartFile?): Long {
+        val savedUser = signupCompanyInternal(request)
+        processProfileImage(savedUser, profileImage)
+        return savedUser.requireId()
+    }
 
     @Transactional
-    fun signupCompany(request: CompanySignupRequest, profileImage: MultipartFile?): Long {
+    fun signupCompanyInternal(request: CompanySignupRequest): User {
         if (userRepository.existsByEmail(request.email)) {
             throw BusinessException(AuthErrorCode.EMAIL_ALREADY_EXISTS)
         }
@@ -43,14 +46,17 @@ class SignupService(
             status = User.UserStatus.ACTIVE
         )
 
-        val savedUser = userRepository.save(user)
-        processProfileImage(savedUser, profileImage)
+        return userRepository.save(user)
+    }
 
+    fun joinCompany(request: JoinRequest, profileImage: MultipartFile?): Long {
+        val savedUser = joinCompanyInternal(request)
+        processProfileImage(savedUser, profileImage)
         return savedUser.requireId()
     }
 
     @Transactional
-    fun joinCompany(request: JoinRequest, profileImage: MultipartFile?): Long {
+    fun joinCompanyInternal(request: JoinRequest): User {
         val invitation = invitationService.validateInvitation(request.email, request.code)
 
         if (userRepository.existsByEmail(request.email)) {
@@ -72,19 +78,11 @@ class SignupService(
 
         val savedUser = userRepository.save(user)
         invitationService.deleteInvitation(invitation.requireId())
-        processProfileImage(savedUser, profileImage)
-
-        return savedUser.requireId()
+        return savedUser
     }
 
     fun processProfileImage(user: User, profileImage: MultipartFile?) {
-        user.profileImageId?.let {
-            try {
-                fileClient.deleteMyProfileImage()
-            } catch (e: Exception) {
-                log.warn("기존 프로필 이미지 삭제 실패 (userId=${user.id}): ${e.message}")
-            }
-        }
+        fileClient.safeDeleteProfileImageIfPresent(user.profileImageId, "userId=${user.id}")
 
         val fileResp = if (profileImage != null && !profileImage.isEmpty) {
             fileClient.uploadProfileImage(profileImage, user.requireId().toString())

@@ -8,8 +8,10 @@ import org.slf4j.LoggerFactory;
 import org.springframework.boot.web.client.RestTemplateBuilder;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.stereotype.Service;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
@@ -51,18 +53,9 @@ public class GmailOAuth2TokenService {
     }
 
     private String refreshAccessToken() {
-        if (config.getClientId() == null || config.getClientId().isBlank()) {
-            log.warn("GMAIL_CLIENT_ID is missing or blank. Token cannot be refreshed.");
-            throw new BusinessException(EmailErrorCode.CREDENTIALS_MISSING);
-        }
-        if (config.getClientSecret() == null || config.getClientSecret().isBlank()) {
-            log.warn("GMAIL_CLIENT_SECRET is missing or blank. Token cannot be refreshed.");
-            throw new BusinessException(EmailErrorCode.CREDENTIALS_MISSING);
-        }
-        if (config.getRefreshToken() == null || config.getRefreshToken().isBlank()) {
-            log.warn("GMAIL_REFRESH_TOKEN is missing or blank. Token cannot be refreshed.");
-            throw new BusinessException(EmailErrorCode.CREDENTIALS_MISSING);
-        }
+        validateCredential(config.getClientId(), "GMAIL_CLIENT_ID");
+        validateCredential(config.getClientSecret(), "GMAIL_CLIENT_SECRET");
+        validateCredential(config.getRefreshToken(), "GMAIL_REFRESH_TOKEN");
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
@@ -76,8 +69,9 @@ public class GmailOAuth2TokenService {
         HttpEntity<MultiValueMap<String, String>> request = new HttpEntity<>(params, headers);
 
         try {
-            @SuppressWarnings("unchecked")
-            ResponseEntity<Map<String, Object>> response = restTemplate.postForEntity(TOKEN_URL, request, (Class<Map<String, Object>>) (Class<?>) Map.class);
+            ResponseEntity<Map<String, Object>> response = restTemplate.exchange(
+                    TOKEN_URL, HttpMethod.POST, request,
+                    new ParameterizedTypeReference<Map<String, Object>>() {});
             if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
                 String accessToken = (String) response.getBody().get("access_token");
                 if (accessToken == null) {
@@ -91,6 +85,13 @@ public class GmailOAuth2TokenService {
             throw e;
         } catch (Exception e) {
             throw new BusinessException(EmailErrorCode.TOKEN_NETWORK_ERROR);
+        }
+    }
+
+    private void validateCredential(String value, String fieldName) {
+        if (value == null || value.isBlank()) {
+            log.warn("{} is missing or blank. Token cannot be refreshed.", fieldName);
+            throw new BusinessException(EmailErrorCode.CREDENTIALS_MISSING);
         }
     }
 }

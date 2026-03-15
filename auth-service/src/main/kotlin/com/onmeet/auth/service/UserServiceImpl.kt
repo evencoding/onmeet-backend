@@ -7,7 +7,6 @@ import com.onmeet.auth.repository.jpa.JobTitleRepository
 import com.onmeet.auth.repository.jpa.UserRepository
 import com.onmeet.common.exception.BusinessException
 import com.onmeet.common.exception.errorcode.AuthErrorCode
-import org.slf4j.LoggerFactory
 import org.springframework.cache.annotation.CacheEvict
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
@@ -23,21 +22,39 @@ class UserServiceImpl(
     private val notificationEventPublisher: NotificationEventPublisher
 ) : UserService {
 
-    companion object {
-        private val log = LoggerFactory.getLogger(UserServiceImpl::class.java)
-    }
-
-    @Transactional
     @CacheEvict(value = ["userInfo"], key = "#requester.id")
     override fun deleteMyProfileImage(requester: User): UserResponseDto {
         fileClient.deleteMyProfileImage()
-        requester.profileImageId = null
-        return userRepository.save(requester).toResponseDto()
+        return updateUserProfileImageIdInternal(requester, null)
     }
 
     @Transactional
+    fun updateUserProfileImageIdInternal(user: User, profileImageId: Long?): UserResponseDto {
+        user.profileImageId = profileImageId
+        return userRepository.save(user).toResponseDto()
+    }
+
     @CacheEvict(value = ["userInfo"], key = "#userId")
     override fun updateUserProfile(userId: Long, requester: User, request: UserProfileUpdateRequest, profileImage: MultipartFile?): UserResponseDto {
+        val user = updateUserProfileInternal(userId, requester, request)
+
+        // Handle profile image upload if provided (outside transaction)
+        if (profileImage != null && !profileImage.isEmpty) {
+            // Delete old profile image if exists
+            fileClient.safeDeleteProfileImageIfPresent(user.profileImageId, "userId=${user.requireId()}")
+
+            // Upload new profile image
+            val uploadResult = fileClient.uploadProfileImage(profileImage, user.requireId().toString())
+            uploadResult?.let {
+                return updateUserProfileImageIdInternal(user, it.id)
+            }
+        }
+
+        return user.toResponseDto()
+    }
+
+    @Transactional
+    fun updateUserProfileInternal(userId: Long, requester: User, request: UserProfileUpdateRequest): User {
         val user = userRepository.findById(userId)
             .orElseThrow { BusinessException(AuthErrorCode.USER_NOT_FOUND) }
 
@@ -62,24 +79,7 @@ class UserServiceImpl(
             user.jobTitle = jobTitle
         }
 
-        // Handle profile image upload if provided
-        if (profileImage != null && !profileImage.isEmpty) {
-            // Delete old profile image if exists
-            user.profileImageId?.let { oldImageId ->
-                try {
-                    fileClient.deleteMyProfileImage()
-                } catch (e: Exception) {
-                    // Log error but continue with upload (old image cleanup failed)
-                    log.error("Failed to delete old profile image for user ${user.requireId()}", e)
-                }
-            }
-
-            // Upload new profile image
-            val uploadResult = fileClient.uploadProfileImage(profileImage, user.requireId().toString())
-            uploadResult?.let { user.profileImageId = it.id }
-        }
-
-        return userRepository.save(user).toResponseDto()
+        return userRepository.save(user)
     }
 
     override fun getUserInfo(userId: Long, requester: User): UserResponseDto {

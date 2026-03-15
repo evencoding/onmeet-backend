@@ -3,6 +3,7 @@ package com.onmeet.ai.pipeline.nlp;
 import com.onmeet.ai.pipeline.nlp.ClaudeSummarizerClient;
 import com.onmeet.ai.pipeline.storage.StorageClient;
 import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -26,6 +27,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  * - 개별 청크 요약 테스트
  * - 병합 텍스트 전체 요약 테스트
  */
+@Tag("integration")
 @ActiveProfiles("test")
 @SpringBootTest(classes = { ClaudeSummarizerClient.class })
 @DisplayName("Claude Summarizer Integration Test (Claude API)")

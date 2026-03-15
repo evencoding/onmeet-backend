@@ -1,6 +1,7 @@
 package com.onmeet.ai.pipeline;
 
 import ai.onnxruntime.*;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 
 import javax.sound.sampled.AudioInputStream;
@@ -14,6 +15,7 @@ import java.nio.file.Files;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
+@Tag("integration")
 public class SileroVadStandaloneTest {
 
     @Test

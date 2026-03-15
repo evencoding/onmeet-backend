@@ -13,6 +13,7 @@ import io.mockk.every
 import io.mockk.impl.annotations.InjectMockKs
 import io.mockk.impl.annotations.MockK
 import io.mockk.junit5.MockKExtension
+import io.mockk.justRun
 import io.mockk.verify
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
@@ -72,6 +73,7 @@ class SignupServiceTest {
         every { passwordEncoder.encode(request.password) } returns "hashed"
         every { userRepository.save(any()) } returns savedUser
         every { fileClient.generateDefaultProfileImage(request.name) } returns null
+        justRun { fileClient.safeDeleteProfileImageIfPresent(any(), any()) }
 
         // when
         val result = signupService.signupCompany(request, null)
@@ -135,6 +137,7 @@ class SignupServiceTest {
         every { userRepository.save(any()) } returns savedUser
         every { invitationService.deleteInvitation(1L) } returns Unit
         every { fileClient.generateDefaultProfileImage(request.name) } returns null
+        justRun { fileClient.safeDeleteProfileImageIfPresent(any(), any()) }
 
         // when
         val result = signupService.joinCompany(request, null)
@@ -206,6 +209,7 @@ class SignupServiceTest {
         every { userRepository.save(any()) } returns savedUser
         every { invitationService.deleteInvitation(1L) } returns Unit
         every { fileClient.generateDefaultProfileImage(any()) } returns null
+        justRun { fileClient.safeDeleteProfileImageIfPresent(any(), any()) }
 
         // when
         signupService.joinCompany(request, null)

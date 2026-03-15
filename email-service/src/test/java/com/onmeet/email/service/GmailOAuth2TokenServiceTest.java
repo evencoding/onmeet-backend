@@ -12,6 +12,8 @@ import org.springframework.boot.web.client.RestTemplateBuilder;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.test.util.ReflectionTestUtils;
+import org.springframework.core.ParameterizedTypeReference;
+import org.springframework.http.HttpMethod;
 import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestTemplate;
 
@@ -64,14 +66,14 @@ class GmailOAuth2TokenServiceTest {
         when(config.getClientSecret()).thenReturn("client-secret");
         when(config.getRefreshToken()).thenReturn("refresh-token");
         doReturn(mockOkResponse("ya29.new-access-token"))
-                .when(restTemplate).postForEntity(anyString(), any(), any());
+                .when(restTemplate).exchange(anyString(), eq(HttpMethod.POST), any(), any(ParameterizedTypeReference.class));
 
         // When
         String token = tokenService.getAccessToken();
 
         // Then
         assertEquals("ya29.new-access-token", token);
-        verify(restTemplate, times(1)).postForEntity(anyString(), any(), any());
+        verify(restTemplate, times(1)).exchange(anyString(), eq(HttpMethod.POST), any(), any(ParameterizedTypeReference.class));
     }
 
     @Test
@@ -82,7 +84,7 @@ class GmailOAuth2TokenServiceTest {
         // When & Then
         BusinessException ex = assertThrows(BusinessException.class, () -> tokenService.getAccessToken());
         assertEquals(EmailErrorCode.CREDENTIALS_MISSING, ex.getErrorCode());
-        verify(restTemplate, never()).postForEntity(anyString(), any(), any());
+        verify(restTemplate, never()).exchange(anyString(), eq(HttpMethod.POST), any(), any(ParameterizedTypeReference.class));
     }
 
     @Test
@@ -126,7 +128,7 @@ class GmailOAuth2TokenServiceTest {
         when(config.getClientSecret()).thenReturn("secret");
         when(config.getRefreshToken()).thenReturn("refresh");
         doReturn(mockErrorResponse(HttpStatus.BAD_REQUEST))
-                .when(restTemplate).postForEntity(anyString(), any(), any());
+                .when(restTemplate).exchange(anyString(), eq(HttpMethod.POST), any(), any(ParameterizedTypeReference.class));
 
         // When & Then
         BusinessException ex = assertThrows(BusinessException.class, () -> tokenService.getAccessToken());
@@ -143,7 +145,7 @@ class GmailOAuth2TokenServiceTest {
 
         Map<String, Object> responseBody = Map.of("token_type", "Bearer"); // no access_token
         doReturn(mockOkResponseWithBody(responseBody))
-                .when(restTemplate).postForEntity(anyString(), any(), any());
+                .when(restTemplate).exchange(anyString(), eq(HttpMethod.POST), any(), any(ParameterizedTypeReference.class));
 
         // When & Then
         BusinessException ex = assertThrows(BusinessException.class, () -> tokenService.getAccessToken());
@@ -157,7 +159,7 @@ class GmailOAuth2TokenServiceTest {
         when(config.getClientSecret()).thenReturn("secret");
         when(config.getRefreshToken()).thenReturn("refresh");
 
-        when(restTemplate.postForEntity(anyString(), any(), any()))
+        when(restTemplate.exchange(anyString(), eq(HttpMethod.POST), any(), any(ParameterizedTypeReference.class)))
                 .thenThrow(new ResourceAccessException("Connection refused"));
 
         // When & Then
@@ -173,7 +175,7 @@ class GmailOAuth2TokenServiceTest {
         when(config.getClientSecret()).thenReturn("secret");
         when(config.getRefreshToken()).thenReturn("refresh");
         doReturn(mockOkResponse("ya29.cached-token"))
-                .when(restTemplate).postForEntity(anyString(), any(), any());
+                .when(restTemplate).exchange(anyString(), eq(HttpMethod.POST), any(), any(ParameterizedTypeReference.class));
 
         // When: call getAccessToken twice
         String firstToken = tokenService.getAccessToken();
@@ -182,7 +184,7 @@ class GmailOAuth2TokenServiceTest {
         // Then: HTTP call made only once; cached token returned on second call
         assertEquals("ya29.cached-token", firstToken);
         assertEquals("ya29.cached-token", secondToken);
-        verify(restTemplate, times(1)).postForEntity(anyString(), any(), any());
+        verify(restTemplate, times(1)).exchange(anyString(), eq(HttpMethod.POST), any(), any(ParameterizedTypeReference.class));
     }
 
     @Test
@@ -195,7 +197,7 @@ class GmailOAuth2TokenServiceTest {
 
         doReturn(mockOkResponse("ya29.first-token"))
                 .doReturn(mockOkResponse("ya29.second-token"))
-                .when(restTemplate).postForEntity(anyString(), any(), any());
+                .when(restTemplate).exchange(anyString(), eq(HttpMethod.POST), any(), any(ParameterizedTypeReference.class));
 
         // First call
         String token1 = tokenService.getAccessToken();
@@ -209,6 +211,6 @@ class GmailOAuth2TokenServiceTest {
         String token2 = tokenService.getAccessToken();
         assertEquals("ya29.second-token", token2);
 
-        verify(restTemplate, times(2)).postForEntity(anyString(), any(), any());
+        verify(restTemplate, times(2)).exchange(anyString(), eq(HttpMethod.POST), any(), any(ParameterizedTypeReference.class));
     }
 }

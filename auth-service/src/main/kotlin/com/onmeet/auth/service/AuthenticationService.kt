@@ -26,9 +26,11 @@ class AuthenticationService(
             UsernamePasswordAuthenticationToken(request.email, request.password)
         )
 
-        request.deviceToken?.let { token ->
-            userRepository.findByEmail(request.email).ifPresent { user ->
-                user.fcmDeviceToken = token
+        val deviceToken = request.deviceToken
+        if (deviceToken != null) {
+            val user = userRepository.findByEmail(request.email).orElse(null)
+            if (user != null) {
+                user.fcmDeviceToken = deviceToken
                 userRepository.save(user)
                 log.info("FCM device token updated for user: ${request.email}")
                 notificationEventPublisher.publishNotification(

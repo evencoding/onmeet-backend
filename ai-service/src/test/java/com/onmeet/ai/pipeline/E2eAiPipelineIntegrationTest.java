@@ -5,6 +5,7 @@ import com.onmeet.ai.pipeline.storage.StorageClient;
 import com.onmeet.ai.pipeline.stt.OpenAiSttClient;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -28,6 +29,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  *
  * 전체 AI 파이프라인을 하나의 플로우로 검증합니다.
  */
+@Tag("integration")
 @ActiveProfiles("test")
 @SpringBootTest(classes = {
         OpenAiSttClient.class,
