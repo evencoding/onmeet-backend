@@ -13,7 +13,7 @@ B2B video conferencing platform with AI summarization, built as microservices ar
 | video-service | 8083 | Java | MySQL | Video conferencing, WebRTC |
 | notification-service | 8085 | Java | MySQL | Notifications (SSE) |
 | file-service | 8086 | Go | PostgreSQL | File upload/download, S3, profile images |
-| email-service | 8087 | Java | - | Email (AWS SES) |
+| email-service | 8087 | Java | - | Email (Gmail SMTP OAuth2) |
 
 Shared libraries: `onmeet-common`, `common-security` (Kotlin)
 

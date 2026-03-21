@@ -55,7 +55,7 @@ B2B 화상 회의 + AI 요약 + 알림 서비스 (MSA w/ Spring Boot 3 & Kotlin)
 | **Video Service** | `8083` | Java | 화상 회의 관리, WebRTC 시그널링 | MySQL |
 | **Notification Service** | `8085` | Java | 실시간 알림 (SSE) | MySQL |
 | **File Service** | `8086` | Go | 파일 업로드/다운로드, S3, 프로필 이미지 | PostgreSQL |
-| **Email Service** | `8087` | Java | 이메일 발송 (AWS SES) | - |
+| **Email Service** | `8087` | Java | 이메일 발송 (Gmail SMTP OAuth2) | - |
 
 > **참고**: File Service는 성능 최적화를 위해 Kotlin에서 Go로 전환되었으며, **약 100배 이상 빠른 API 응답 속도**를 달성했습니다.
 
