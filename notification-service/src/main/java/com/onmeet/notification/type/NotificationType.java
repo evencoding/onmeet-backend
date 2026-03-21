@@ -1,8 +1,12 @@
 package com.onmeet.notification.type;
 
 public enum NotificationType {
+    // 회의 생성/알림
+    MEETING_CREATED,
     MEETING_TODAY,
     MEETING_STARTED,
+
+    // 팀/시스템
     TEAM_MEMBER_ADDED,
     SYSTEM,
     EVENT,
@@ -10,7 +14,18 @@ public enum NotificationType {
     // 회의 초대 관련
     MEETING_INVITATION,
 
-    // 회의 진행 관련
+    // 초대 응답
+    INVITATION_ACCEPTED,
+    INVITATION_DECLINED,
+    INVITATION_CANCELLED,
+
+    // 참가자 관련
+    PARTICIPANT_KICKED,
+    WAITING_ROOM_ADMITTED,
+    WAITING_ROOM_REJECTED,
+    PARTICIPANT_JOINED_NOTIFY,
+
+    // 일정 관련
     SCHEDULE_CREATED,
     SCHEDULE_CHANGED,
     SCHEDULE_CANCELLED,
@@ -19,13 +34,4 @@ public enum NotificationType {
     // AI 요약 관련
     AI_SUMMARY_PROGRESS,
     AI_SUMMARY_COMPLETED,
-
-    // 회의 초대 상세
-    INVITATION_ACCEPTED,
-    INVITATION_DECLINED,
-    INVITATION_CANCELLED,
-
-    // 대기실 관련
-    WAITING_ROOM_ADMITTED,
-    WAITING_ROOM_REJECTED
 }

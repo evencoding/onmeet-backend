@@ -52,8 +52,11 @@ public class NotificationSettingController {
     @Operation(
         summary = "알림 설정 업데이트",
         description = "사용자의 알림 설정을 업데이트합니다. "
-            + "isMeetingNotification: 회의 관련 알림, isMinutesCompletedNotification: 회의록 완성 알림, "
-            + "isTeamNotification: 팀 관련 알림. 설정이 없는 경우 신규 생성합니다."
+            + "pushEnabled: 전체 푸시 ON/OFF, meetingInviteNotification: 회의 초대 알림, "
+            + "meetingStartNotification: 회의 시작 알림, meetingRemindNotification: 회의 리마인더 알림, "
+            + "minutesCompletedNotification: 회의록 완성 알림, systemNoticeNotification: 시스템/공지 알림, "
+            + "doNotDisturbEnabled: 방해금지 모드, doNotDisturbStartTime/EndTime: 방해금지 시간대. "
+            + "설정이 없는 경우 신규 생성합니다."
     )
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "알림 설정 업데이트 성공"),

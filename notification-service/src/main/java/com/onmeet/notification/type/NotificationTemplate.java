@@ -13,6 +13,11 @@ import java.util.Map;
  */
 public enum NotificationTemplate {
 
+    // ── 회의 생성/알림 ──
+    MEETING_CREATED(
+            "새 회의 생성",
+            "{senderName}님이 {title} 회의를 생성했습니다."),
+
     // ── 회의 초대 관련 ──
     MEETING_INVITATION(
             "회의 초대",
@@ -75,7 +80,15 @@ public enum NotificationTemplate {
             "대기실 입장이 승인되었습니다."),
     WAITING_ROOM_REJECTED(
             "대기실 입장 거절",
-            "대기실 입장이 거절되었습니다.");
+            "대기실 입장이 거절되었습니다."),
+
+    // ── 참가자 관련 ──
+    PARTICIPANT_KICKED(
+            "회의 퇴장",
+            "{title} 회의에서 퇴장되었습니다."),
+    PARTICIPANT_JOINED_NOTIFY(
+            "참가자 입장",
+            "{senderName}님이 {title} 회의에 참가했습니다.");
 
     private final String defaultTitle;
     private final String bodyTemplate;
