@@ -22,7 +22,7 @@ class AppConfig {
 
     @Bean
     fun cacheManager(): CacheManager {
-        val manager = CaffeineCacheManager("teamLeadership", "teamMembership", "teamCompany")
+        val manager = CaffeineCacheManager("teamLeadership", "teamMembership", "teamCompany", "userInfo")
         manager.setCaffeine(
             Caffeine.newBuilder()
                 .maximumSize(1000)
