@@ -77,9 +77,9 @@ services:
       - AWS_ACCESS_KEY_ID=${MINIO_ROOT_USER:-minioadmin}
       - AWS_SECRET_ACCESS_KEY=${MINIO_ROOT_PASSWORD:-minioadmin}
       - AWS_REGION=${AWS_REGION:-ap-northeast-2}
-      - S3_BUCKET_NAME=${S3_BUCKET_NAME:-file-bucket}
+      - S3_BUCKET_NAME=${S3_BUCKET_NAME:-onmeet-dev-media-origin}
       - S3_ENDPOINT=http://minio:9000
-      - CLOUDFRONT_DOMAIN=${CLOUDFRONT_DOMAIN}
+      - CLOUDFRONT_DOMAIN=${CLOUDFRONT_DOMAIN:-api.onmeet.cloud/files}
       - KAFKA_BROKERS=${KAFKA_BROKERS:-kafka:29092}
       - AUTH_SERVICE_URL=http://auth-service:8081
     depends_on:
