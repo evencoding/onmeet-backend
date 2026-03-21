@@ -6,6 +6,7 @@ import com.onmeet.notification.entity.Notification;
 import com.onmeet.notification.entity.NotificationRecipient;
 import com.onmeet.notification.entity.NotificationStream;
 import com.onmeet.notification.infra.AuthServiceClient;
+import com.onmeet.notification.repository.NotificationRecipientRepository;
 import com.onmeet.notification.repository.NotificationRepository;
 import com.onmeet.notification.repository.NotificationStreamRepository;
 import com.onmeet.notification.type.NotificationStatus;
@@ -33,6 +34,7 @@ import java.util.stream.Collectors;
 public class NotificationService {
 
     private final NotificationRepository notificationRepository;
+    private final NotificationRecipientRepository recipientRepository;
     private final NotificationStreamRepository streamRepository;
     private final NotificationSettingService settingService;
     private final FcmService fcmService;
@@ -210,6 +212,7 @@ public class NotificationService {
             boolean sseSent = sendToClient(dto.getUserId(), recipient);
             if (sseSent) {
                 recipient.markAsSent();
+                recipientRepository.save(recipient);
             }
 
             try {
