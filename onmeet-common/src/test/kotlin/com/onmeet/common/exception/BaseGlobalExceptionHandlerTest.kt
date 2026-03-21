@@ -9,7 +9,7 @@ import org.springframework.security.access.AccessDeniedException
 
 /**
  * BaseGlobalExceptionHandler 단위 테스트.
- * 핸들러 메서드를 직접 호출하여 ErrorResponse 구조를 검증한다.
+ * 핸들러 메서드를 직접 호출하여 ApiResponse.error 구조를 검증한다.
  */
 class BaseGlobalExceptionHandlerTest {
 
@@ -33,9 +33,10 @@ class BaseGlobalExceptionHandlerTest {
 
         assertEquals(HttpStatus.NOT_FOUND, response.statusCode)
         assertNotNull(response.body)
-        assertEquals("AUTH_006", response.body!!.code)
-        assertEquals(404, response.body!!.status)
-        assertEquals(AuthErrorCode.USER_NOT_FOUND.message, response.body!!.message)
+        assertFalse(response.body!!.success)
+        assertEquals("AUTH_006", response.body!!.error!!.code)
+        assertEquals(404, response.body!!.error!!.status)
+        assertEquals(AuthErrorCode.USER_NOT_FOUND.message, response.body!!.error!!.message)
     }
 
     @Test
@@ -45,8 +46,8 @@ class BaseGlobalExceptionHandlerTest {
         val response = handler.handleBusinessException(ex)
 
         assertEquals(HttpStatus.CONFLICT, response.statusCode)
-        assertEquals("AUTH_001", response.body!!.code)
-        assertEquals(409, response.body!!.status)
+        assertEquals("AUTH_001", response.body!!.error!!.code)
+        assertEquals(409, response.body!!.error!!.status)
     }
 
     @Test
@@ -56,7 +57,7 @@ class BaseGlobalExceptionHandlerTest {
         val response = handler.handleBusinessException(ex)
 
         assertEquals(HttpStatus.UNAUTHORIZED, response.statusCode)
-        assertEquals("AUTH_004", response.body!!.code)
+        assertEquals("AUTH_004", response.body!!.error!!.code)
     }
 
     // ─── IllegalArgumentException ─────────────────────────────────────────
@@ -68,9 +69,9 @@ class BaseGlobalExceptionHandlerTest {
         val response = handler.handleIllegalArgumentException(ex)
 
         assertEquals(HttpStatus.BAD_REQUEST, response.statusCode)
-        assertEquals("COMMON_BAD_REQUEST", response.body!!.code)
-        assertEquals(400, response.body!!.status)
-        assertEquals("invalid input", response.body!!.message)
+        assertEquals("COMMON_BAD_REQUEST", response.body!!.error!!.code)
+        assertEquals(400, response.body!!.error!!.status)
+        assertEquals("invalid input", response.body!!.error!!.message)
     }
 
     @Test
@@ -80,7 +81,7 @@ class BaseGlobalExceptionHandlerTest {
         val response = handler.handleIllegalArgumentException(ex)
 
         assertEquals(HttpStatus.BAD_REQUEST, response.statusCode)
-        assertEquals("잘못된 요청입니다", response.body!!.message)
+        assertEquals("잘못된 요청입니다", response.body!!.error!!.message)
     }
 
     // ─── InsufficientPermissionException ─────────────────────────────────
@@ -93,8 +94,8 @@ class BaseGlobalExceptionHandlerTest {
         val response = handler.handleInsufficientPermissionException(ex)
 
         assertEquals(HttpStatus.FORBIDDEN, response.statusCode)
-        assertEquals("COMMON_FORBIDDEN", response.body!!.code)
-        assertEquals(403, response.body!!.status)
+        assertEquals("COMMON_FORBIDDEN", response.body!!.error!!.code)
+        assertEquals(403, response.body!!.error!!.status)
     }
 
     // ─── CrossCompanyAccessException ──────────────────────────────────────
@@ -107,7 +108,7 @@ class BaseGlobalExceptionHandlerTest {
         val response = handler.handleCrossCompanyAccessException(ex)
 
         assertEquals(HttpStatus.FORBIDDEN, response.statusCode)
-        assertEquals("COMMON_CROSS_COMPANY", response.body!!.code)
+        assertEquals("COMMON_CROSS_COMPANY", response.body!!.error!!.code)
     }
 
     // ─── Spring Security AccessDeniedException ────────────────────────────
@@ -119,8 +120,8 @@ class BaseGlobalExceptionHandlerTest {
         val response = handler.handleAccessDeniedException(ex)
 
         assertEquals(HttpStatus.FORBIDDEN, response.statusCode)
-        assertEquals("COMMON_ACCESS_DENIED", response.body!!.code)
-        assertEquals("접근이 거부되었습니다", response.body!!.message)
+        assertEquals("COMMON_ACCESS_DENIED", response.body!!.error!!.code)
+        assertEquals("접근이 거부되었습니다", response.body!!.error!!.message)
     }
 
     // ─── EntityNotFoundException ──────────────────────────────────────────
@@ -133,8 +134,8 @@ class BaseGlobalExceptionHandlerTest {
         val response = handler.handleEntityNotFoundException(ex)
 
         assertEquals(HttpStatus.NOT_FOUND, response.statusCode)
-        assertEquals("COMMON_NOT_FOUND", response.body!!.code)
-        assertEquals(404, response.body!!.status)
+        assertEquals("COMMON_NOT_FOUND", response.body!!.error!!.code)
+        assertEquals(404, response.body!!.error!!.status)
     }
 
     // ─── IllegalStateException ────────────────────────────────────────────
@@ -146,7 +147,7 @@ class BaseGlobalExceptionHandlerTest {
         val response = handler.handleIllegalStateException(ex)
 
         assertEquals(HttpStatus.CONFLICT, response.statusCode)
-        assertEquals("COMMON_CONFLICT", response.body!!.code)
+        assertEquals("COMMON_CONFLICT", response.body!!.error!!.code)
     }
 
     // ─── Unhandled Exception ──────────────────────────────────────────────
@@ -158,9 +159,9 @@ class BaseGlobalExceptionHandlerTest {
         val response = handler.handleException(ex)
 
         assertEquals(HttpStatus.INTERNAL_SERVER_ERROR, response.statusCode)
-        assertEquals("COMMON_INTERNAL_ERROR", response.body!!.code)
-        assertEquals(500, response.body!!.status)
-        assertEquals("서버 내부 오류가 발생했습니다", response.body!!.message)
+        assertEquals("COMMON_INTERNAL_ERROR", response.body!!.error!!.code)
+        assertEquals(500, response.body!!.error!!.status)
+        assertEquals("서버 내부 오류가 발생했습니다", response.body!!.error!!.message)
     }
 
     @Test
@@ -170,17 +171,19 @@ class BaseGlobalExceptionHandlerTest {
         val response = handler.handleException(ex)
 
         assertEquals(HttpStatus.INTERNAL_SERVER_ERROR, response.statusCode)
-        assertEquals("COMMON_INTERNAL_ERROR", response.body!!.code)
+        assertEquals("COMMON_INTERNAL_ERROR", response.body!!.error!!.code)
     }
 
-    // ─── ErrorResponse structure ──────────────────────────────────────────
+    // ─── ApiResponse structure ────────────────────────────────────────────
 
     @Test
-    fun `ErrorResponse has non-zero timestamp`() {
+    fun `error response has success false and no data`() {
         val ex = BusinessException(AuthErrorCode.TEAM_NOT_FOUND)
 
         val response = handler.handleBusinessException(ex)
 
-        assertTrue(response.body!!.timestamp > 0)
+        assertFalse(response.body!!.success)
+        assertNull(response.body!!.data)
+        assertNotNull(response.body!!.error)
     }
 }

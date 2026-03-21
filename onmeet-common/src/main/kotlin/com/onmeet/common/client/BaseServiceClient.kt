@@ -1,10 +1,14 @@
 package com.onmeet.common.client
 
+import com.onmeet.common.response.ApiResponse
 import com.onmeet.common.security.UserContext
 import org.slf4j.LoggerFactory
+import org.springframework.core.ParameterizedTypeReference
 import org.springframework.http.HttpEntity
 import org.springframework.http.HttpHeaders
 import org.springframework.http.HttpMethod
+import org.springframework.http.MediaType
+import org.springframework.util.MultiValueMap
 import org.springframework.web.client.RestTemplate
 
 /**
@@ -17,7 +21,8 @@ abstract class BaseServiceClient(
 ) {
     protected val log = LoggerFactory.getLogger(this::class.java)
 
-    private fun buildAuthHeaders(): HttpHeaders = HttpHeaders().apply {
+    @PublishedApi
+    internal fun buildAuthHeaders(): HttpHeaders = HttpHeaders().apply {
         set("X-Gateway-Secret", gatewaySecret)
         UserContext.getUserId().ifPresent { set(UserContext.USER_ID_HEADER, it.toString()) }
     }
@@ -64,6 +69,19 @@ abstract class BaseServiceClient(
             contentType = org.springframework.http.MediaType.MULTIPART_FORM_DATA
         }
         return restTemplate.postForObject(url, HttpEntity(body, headers), responseType)
+    }
+
+    protected inline fun <reified T> postWithAuthAndUnwrap(url: String, requestBody: Any?): T? {
+        val responseType = object : ParameterizedTypeReference<ApiResponse<T>>() {}
+        val response = restTemplate.exchange(url, HttpMethod.POST, HttpEntity(requestBody, buildAuthHeaders()), responseType)
+        return response.body?.data
+    }
+
+    protected inline fun <reified T> postMultipartWithAuthAndUnwrap(url: String, body: MultiValueMap<String, Any>): T? {
+        val headers = buildAuthHeaders().apply { contentType = MediaType.MULTIPART_FORM_DATA }
+        val responseType = object : ParameterizedTypeReference<ApiResponse<T>>() {}
+        val response = restTemplate.exchange(url, HttpMethod.POST, HttpEntity(body, headers), responseType)
+        return response.body?.data
     }
 
     protected fun deleteWithAuth(url: String) {
