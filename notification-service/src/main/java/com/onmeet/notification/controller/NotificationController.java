@@ -67,7 +67,7 @@ public class NotificationController {
 
     @Operation(
         summary = "미읽음 알림 수 조회",
-        description = "현재 로그인된 사용자의 읽지 않은 알림 개수를 반환합니다. 응답 형식: {\"unreadCount\": N}"
+        description = "현재 로그인된 사용자의 타입별 읽지 않은 알림 개수를 반환합니다. 응답 형식: {\"MEETING_INVITE\": 3, \"MESSAGE\": 2}"
     )
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "미읽음 알림 수 조회 성공"),
@@ -93,8 +93,7 @@ public class NotificationController {
     @GetMapping("/unread/count")
     public ResponseEntity<Map<String, Long>> getUnreadCount(
             @Parameter(description = "사용자 ID (Gateway에서 자동 주입)", required = true) @RequestHeader("X-User-Id") Long userId) {
-        long count = notificationQueryService.getUnreadCount(userId);
-        return ResponseEntity.ok(Map.of("unreadCount", count));
+        return ResponseEntity.ok(notificationQueryService.getUnreadCount(userId));
     }
 
     @Operation(
