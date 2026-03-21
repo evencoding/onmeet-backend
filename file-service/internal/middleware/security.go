@@ -37,7 +37,7 @@ func SecurityMiddleware(cfg *config.Config) gin.HandlerFunc {
 		// If s.accessControl.ValidateGatewaySecret is intended, the SecurityMiddleware signature needs to change.
 		if subtle.ConstantTimeCompare([]byte(secret), []byte(cfg.GatewaySharedSecret)) != 1 {
 			log.Printf("Security Middleware: Invalid Secret for Path=%s\n", path)
-			c.JSON(http.StatusForbidden, model.ErrorResponseFromAppError(model.ErrInvalidGatewaySecret))
+			c.JSON(http.StatusForbidden, model.ErrorApiResponseFromAppError(model.ErrInvalidGatewaySecret))
 			// Abort()를 호출하면 이후의 핸들러(컨트롤러) 실행이 중단됩니다.
 			c.Abort()
 			return
