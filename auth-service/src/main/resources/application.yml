@@ -78,6 +78,8 @@ logging:
     com.onmeet: INFO
     org.springframework.security: INFO
     org.springframework.web: INFO
+    org.apache.kafka.clients.consumer.ConsumerConfig: WARN
+    org.apache.kafka.clients.producer.ProducerConfig: WARN
 
 onmeet:
   auth:
