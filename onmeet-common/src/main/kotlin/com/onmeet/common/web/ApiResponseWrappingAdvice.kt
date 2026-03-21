@@ -43,6 +43,8 @@ class ApiResponseWrappingAdvice : ResponseBodyAdvice<Any> {
     ): Any? {
         // SSE 스트림은 래핑 제외
         if (MediaType.TEXT_EVENT_STREAM.isCompatibleWith(selectedContentType)) return body
+        // JWKS 엔드포인트는 래핑 제외 (JWT 라이브러리가 {"keys":[...]} 형식을 요구)
+        if (request.uri.path.endsWith("/.well-known/jwks.json")) return body
         // Guard against any ApiResponse class regardless of package (e.g. video-service)
         if (body is ApiResponse<*> || body?.javaClass?.simpleName == "ApiResponse") return body
         return ApiResponse.success(body)
