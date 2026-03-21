@@ -148,6 +148,7 @@ func (s *fileService) processFileUploadFromReader(ctx context.Context, reader io
 	detected := strings.SplitN(http.DetectContentType(sniff), ";", 2)[0]
 	detected = strings.TrimSpace(detected)
 	if !allowedMIMETypes[detected] {
+		log.Printf("MIME type rejected: detected=%s, original=%s, filename=%s", detected, contentType, originalFilename)
 		return nil, model.ErrInvalidMIMEType
 	}
 	// 읽은 바이트를 다시 앞에 붙여 원래 스트림 복원
@@ -160,6 +161,7 @@ func (s *fileService) processFileUploadFromReader(ctx context.Context, reader io
 	// 4. S3 업로드 실행
 	err := s.s3.UploadFile(ctx, savedKey, reader, contentType)
 	if err != nil {
+		log.Printf("S3 upload failed: key=%s, contentType=%s, error=%v", savedKey, contentType, err)
 		return nil, err
 	}
 
