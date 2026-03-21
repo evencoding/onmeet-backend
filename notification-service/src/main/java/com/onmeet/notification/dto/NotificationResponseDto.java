@@ -23,7 +23,7 @@ public class NotificationResponseDto {
     private String dedupeKey;
     private String resourceId;
     private Long actorUserId;
-    private boolean isRead;
+    private boolean read;
 
     public static NotificationResponseDto from(NotificationRecipient recipient) {
         Notification notification = recipient.getNotification();
@@ -39,7 +39,7 @@ public class NotificationResponseDto {
                 .dedupeKey(notification.getDedupeKey())
                 .resourceId(notification.getResourceId())
                 .actorUserId(notification.getActorUserId())
-                .isRead(recipient.getReadAt() != null)
+                .read(recipient.getReadAt() != null)
                 .build();
     }
 }

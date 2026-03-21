@@ -6,6 +6,8 @@ server:
 spring:
   profiles:
     active: ${SPRING_PROFILES_ACTIVE:chat}
+  autoconfigure:
+    exclude: com.onmeet.common.config.CommonWebAutoConfiguration
   application:
     name: video-service
   datasource:

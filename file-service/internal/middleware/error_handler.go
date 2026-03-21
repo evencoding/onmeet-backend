@@ -19,9 +19,9 @@ func ErrorHandlerMiddleware() gin.HandlerFunc {
 
 		err := c.Errors.Last().Err
 		if appErr, ok := err.(*model.AppError); ok {
-			c.JSON(appErr.Status, model.ErrorResponseFromAppError(appErr))
+			c.JSON(appErr.Status, model.ErrorApiResponseFromAppError(appErr))
 		} else {
-			c.JSON(http.StatusInternalServerError, model.NewErrorResponse("INTERNAL_ERROR", http.StatusInternalServerError, err.Error()))
+			c.JSON(http.StatusInternalServerError, model.ErrorApiResponse(http.StatusInternalServerError, err.Error(), "INTERNAL_ERROR"))
 		}
 	}
 }

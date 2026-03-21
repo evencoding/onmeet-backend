@@ -28,7 +28,8 @@ fun Company.toInfoDto() = CompanyInfoDto(
 fun Team.toInfoDto() = TeamInfoDto(
     id = this.requireId(),
     name = this.name,
-    color = this.color
+    color = this.color,
+    status = this.status.name
 )
 
 fun JobTitle.toResponseDto() = JobTitleResponse(

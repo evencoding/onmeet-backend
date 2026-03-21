@@ -1,6 +1,7 @@
 package com.onmeet.gateway.exception
 
 import com.fasterxml.jackson.databind.ObjectMapper
+import com.onmeet.gateway.dto.ErrorDetail
 import com.onmeet.gateway.dto.ErrorResponse
 import org.slf4j.LoggerFactory
 import org.springframework.boot.web.reactive.error.ErrorWebExceptionHandler
@@ -42,9 +43,11 @@ class GlobalErrorWebExceptionHandler(
         response.headers.contentType = MediaType.APPLICATION_JSON
 
         val errorResponse = ErrorResponse(
-            code = errorCode.code,
-            status = errorCode.status,
-            message = errorCode.message
+            error = ErrorDetail(
+                code = errorCode.code,
+                status = errorCode.status,
+                message = errorCode.message
+            )
         )
 
         val bytes = objectMapper.writeValueAsBytes(errorResponse)

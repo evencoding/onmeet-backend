@@ -40,9 +40,9 @@ func getUserIdFromContext(c *gin.Context) *int64 {
 // 아니면 defaultAppErr으로 응답합니다.
 func respondError(c *gin.Context, err error, defaultAppErr *model.AppError) {
 	if appErr, ok := err.(*model.AppError); ok {
-		c.JSON(appErr.Status, model.ErrorResponseFromAppError(appErr))
+		c.JSON(appErr.Status, model.ErrorApiResponseFromAppError(appErr))
 	} else {
-		c.JSON(defaultAppErr.Status, model.ErrorResponseFromAppError(defaultAppErr))
+		c.JSON(defaultAppErr.Status, model.ErrorApiResponseFromAppError(defaultAppErr))
 	}
 }
 
@@ -66,7 +66,7 @@ func respondError(c *gin.Context, err error, defaultAppErr *model.AppError) {
 func (h *FileHandler) Upload(c *gin.Context) {
 	form, err := c.MultipartForm()
 	if err != nil {
-		c.JSON(http.StatusBadRequest, model.ErrorResponseFromAppError(model.ErrMultipartParseFail))
+		c.JSON(http.StatusBadRequest, model.ErrorApiResponseFromAppError(model.ErrMultipartParseFail))
 		return
 	}
 	files := form.File["files"]
@@ -82,7 +82,7 @@ func (h *FileHandler) Upload(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, results)
+	c.JSON(http.StatusOK, model.SuccessResponse(results))
 }
 
 // UploadAsync godoc
@@ -105,7 +105,7 @@ func (h *FileHandler) Upload(c *gin.Context) {
 func (h *FileHandler) UploadAsync(c *gin.Context) {
 	form, err := c.MultipartForm()
 	if err != nil {
-		c.JSON(http.StatusBadRequest, model.ErrorResponseFromAppError(model.ErrAsyncMultipartParseFail))
+		c.JSON(http.StatusBadRequest, model.ErrorApiResponseFromAppError(model.ErrAsyncMultipartParseFail))
 		return
 	}
 	files := form.File["files"]
@@ -121,10 +121,10 @@ func (h *FileHandler) UploadAsync(c *gin.Context) {
 		h.svc.UploadFileAsync(c.Request.Context(), file, category, uploaderId, ownerType, ownerId, callbackTopic, correlationId)
 	}
 
-	c.JSON(http.StatusAccepted, gin.H{
+	c.JSON(http.StatusAccepted, model.SuccessResponse(gin.H{
 		"message":   "Batch file upload started asynchronously",
 		"fileCount": len(files),
-	})
+	}))
 }
 
 // GetFileInfo godoc
@@ -143,7 +143,7 @@ func (h *FileHandler) GetFileInfo(c *gin.Context) {
 	idStr := c.Param("fileId")
 	id, err := strconv.ParseUint(idStr, 10, 64)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, model.ErrorResponseFromAppError(model.ErrInvalidFileID))
+		c.JSON(http.StatusBadRequest, model.ErrorApiResponseFromAppError(model.ErrInvalidFileID))
 		return
 	}
 
@@ -153,7 +153,7 @@ func (h *FileHandler) GetFileInfo(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, metadata)
+	c.JSON(http.StatusOK, model.SuccessResponse(metadata))
 }
 
 // DeleteFile godoc
@@ -171,7 +171,7 @@ func (h *FileHandler) DeleteFile(c *gin.Context) {
 	idStr := c.Param("fileId")
 	id, err := strconv.ParseUint(idStr, 10, 64)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, model.ErrorResponseFromAppError(model.ErrDeleteInvalidFileID))
+		c.JSON(http.StatusBadRequest, model.ErrorApiResponseFromAppError(model.ErrDeleteInvalidFileID))
 		return
 	}
 
@@ -201,7 +201,7 @@ func (h *FileHandler) DeleteFile(c *gin.Context) {
 func (h *FileHandler) DeleteMyProfile(c *gin.Context) {
 	idPtr := getUserIdFromContext(c)
 	if idPtr == nil {
-		c.JSON(http.StatusUnauthorized, model.ErrorResponseFromAppError(model.ErrUnauthorized))
+		c.JSON(http.StatusUnauthorized, model.ErrorApiResponseFromAppError(model.ErrUnauthorized))
 		return
 	}
 
@@ -230,7 +230,7 @@ func (h *FileHandler) GenerateProfileImage(c *gin.Context) {
 	var req GenerateProfileRequest
 
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, model.ErrorResponseFromAppError(model.ErrRequestParseFail))
+		c.JSON(http.StatusBadRequest, model.ErrorApiResponseFromAppError(model.ErrRequestParseFail))
 		return
 	}
 
@@ -242,7 +242,7 @@ func (h *FileHandler) GenerateProfileImage(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, metadata)
+	c.JSON(http.StatusOK, model.SuccessResponse(metadata))
 }
 
 // RenderFile godoc
@@ -263,7 +263,7 @@ func (h *FileHandler) RenderFile(c *gin.Context) {
 	idStr := c.Param("fileId")
 	id, err := strconv.ParseUint(idStr, 10, 64)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, model.ErrorResponseFromAppError(model.ErrRenderInvalidFileID))
+		c.JSON(http.StatusBadRequest, model.ErrorApiResponseFromAppError(model.ErrRenderInvalidFileID))
 		return
 	}
 

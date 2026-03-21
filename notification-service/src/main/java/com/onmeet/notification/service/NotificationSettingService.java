@@ -8,6 +8,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalTime;
+
 
 
 @Service
@@ -29,22 +31,33 @@ public class NotificationSettingService {
         NotificationSetting setting = settingRepository.findByUserId(userId)
                 .orElseGet(() -> NotificationSetting.builder()
                         .userId(userId)
-                        .isMeetingNotification(true)
-                        .isMinutesCompletedNotification(true)
-                        .isTeamNotification(true)
+                        .pushEnabled(true)
+                        .meetingInviteNotification(true)
+                        .meetingStartNotification(true)
+                        .meetingRemindNotification(true)
+                        .minutesCompletedNotification(true)
+                        .systemNoticeNotification(true)
+                        .doNotDisturbEnabled(false)
                         .build());
 
         setting.update(
-                dto.isMeetingNotification(),
+                dto.isPushEnabled(),
+                dto.isMeetingInviteNotification(),
+                dto.isMeetingStartNotification(),
+                dto.isMeetingRemindNotification(),
                 dto.isMinutesCompletedNotification(),
-                dto.isTeamNotification());
+                dto.isSystemNoticeNotification(),
+                dto.isDoNotDisturbEnabled(),
+                dto.getDoNotDisturbStartTime(),
+                dto.getDoNotDisturbEndTime());
 
         settingRepository.save(setting);
     }
 
     /**
      * 알림 전송 가능 여부를 판단합니다.
-     * UI 기획에 맞춰 방해금지 기능을 제거하고 3가지 토글 옵션으로 분기합니다.
+     * pushEnabled가 false이면 모든 알림 차단.
+     * 방해금지 시간대가 설정된 경우 해당 시간대에는 알림 차단.
      */
     @Transactional(readOnly = true)
     public boolean shouldSendNotification(Long userId, NotificationType type) {
@@ -55,36 +68,65 @@ public class NotificationSettingService {
             return true;
         }
 
+        // 전체 푸시 OFF
+        if (!setting.isPushEnabled()) {
+            return false;
+        }
+
+        // 방해금지 시간대 체크
+        if (setting.isDoNotDisturbEnabled() && isInDoNotDisturbPeriod(setting)) {
+            return false;
+        }
+
         return switch (type) {
-            // 회의 알림 토글
-            case MEETING_INVITATION, MEETING_STARTED, 
-                 MEETING_TODAY, MEETING_REMINDER, 
-                 SCHEDULE_CREATED, SCHEDULE_CHANGED, SCHEDULE_CANCELLED ->
-                setting.isMeetingNotification();
-            
-            // 팀 알림 토글
-            case TEAM_MEMBER_ADDED, SYSTEM -> 
-                setting.isTeamNotification();
-            
-            // 회의록 완성 알림 토글
+            // 회의 초대 관련
+            case MEETING_CREATED, MEETING_INVITATION,
+                 INVITATION_ACCEPTED, INVITATION_DECLINED, INVITATION_CANCELLED ->
+                setting.isMeetingInviteNotification();
+
+            // 회의 시작/참가 관련
+            case MEETING_STARTED, MEETING_TODAY,
+                 WAITING_ROOM_ADMITTED, WAITING_ROOM_REJECTED,
+                 PARTICIPANT_KICKED, PARTICIPANT_JOINED_NOTIFY ->
+                setting.isMeetingStartNotification();
+
+            // 일정/리마인더 관련
+            case SCHEDULE_CREATED, SCHEDULE_CHANGED, SCHEDULE_CANCELLED, MEETING_REMINDER ->
+                setting.isMeetingRemindNotification();
+
+            // 회의록/이벤트 알림
             case EVENT, AI_SUMMARY_PROGRESS, AI_SUMMARY_COMPLETED ->
                 setting.isMinutesCompletedNotification();
 
-            // 초대 응답 관련
-            case INVITATION_ACCEPTED, INVITATION_DECLINED, INVITATION_CANCELLED ->
-                setting.isMeetingNotification();
-
-            // 대기실 관련
-            case WAITING_ROOM_ADMITTED, WAITING_ROOM_REJECTED ->
-                setting.isMeetingNotification();
+            // 시스템/공지 알림
+            case TEAM_MEMBER_ADDED, SYSTEM ->
+                setting.isSystemNoticeNotification();
         };
+    }
+
+    private boolean isInDoNotDisturbPeriod(NotificationSetting setting) {
+        LocalTime start = setting.getDoNotDisturbStartTime();
+        LocalTime end = setting.getDoNotDisturbEndTime();
+        if (start == null || end == null) {
+            return false;
+        }
+        LocalTime now = LocalTime.now();
+        // 자정을 넘는 경우 (예: 22:00 ~ 07:00)
+        if (start.isAfter(end)) {
+            return now.isAfter(start) || now.isBefore(end);
+        }
+        return now.isAfter(start) && now.isBefore(end);
     }
 
     private NotificationSettingDto getDefaultSettings() {
         return NotificationSettingDto.builder()
-                .isMeetingNotification(true)
-                .isMinutesCompletedNotification(true)
-                .isTeamNotification(true)
+                .pushEnabled(true)
+                .meetingInviteNotification(true)
+                .meetingStartNotification(true)
+                .meetingRemindNotification(true)
+                .minutesCompletedNotification(true)
+                .systemNoticeNotification(true)
+                .doNotDisturbEnabled(false)
                 .build();
     }
 }

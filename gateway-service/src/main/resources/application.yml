@@ -33,6 +33,14 @@ spring:
             - Path=/ws-chat/**
           filters:
             - PrefixPath=/video
+        - id: notification-sse
+          uri: ${NOTIFICATION_SERVICE_URL:http://notification-service:8085}
+          predicates:
+            - Path=/notification/v1/sse/**
+          filters:
+            - UserHeaderFilter
+          metadata:
+            response-timeout: 3600000
         - id: notification-service
           uri: ${NOTIFICATION_SERVICE_URL:http://notification-service:8085}
           predicates:
