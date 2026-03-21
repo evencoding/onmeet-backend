@@ -49,6 +49,16 @@ public class MinutesService {
         return MinutesResponse.from(m);
     }
 
+    @Transactional(readOnly = true)
+    public java.util.List<MinutesResponse> search(String keyword) {
+        if (keyword == null || keyword.isBlank()) {
+            return java.util.Collections.emptyList();
+        }
+        return minutesRepository.searchByKeyword(keyword).stream()
+                .map(MinutesResponse::from)
+                .toList();
+    }
+
     @Transactional
     public MinutesResponse regenerate(Long roomId, MinutesRegenerateRequest req) {
         Minutes m = findMinutesOrThrow(roomId);
@@ -78,7 +88,23 @@ public class MinutesService {
             String summaryKey = StorageKeyFactory.summaryKey(roomId, m.getTranscriptId());
             storageClient.writeText(summaryKey, summaryJson, "application/json");
 
-            m.applyGenerated(m.getTranscriptId(), m.getTranscriptS3Key(), summaryKey, summaryJson);
+            // 요약 결과 파싱
+            String description = null;
+            String keywords = null;
+            String decisions = null;
+            String actionItems = null;
+
+            try {
+                com.onmeet.common.dto.ai.SummaryResult sr = om.readValue(summaryJson, com.onmeet.common.dto.ai.SummaryResult.class);
+                description = sr.getDescription();
+                if (sr.getKeywords() != null) keywords = om.writeValueAsString(sr.getKeywords());
+                if (sr.getDecisions() != null) decisions = om.writeValueAsString(sr.getDecisions());
+                if (sr.getActionItems() != null) actionItems = om.writeValueAsString(sr.getActionItems());
+            } catch (Exception ignored) {
+                System.err.println("Failed to parse summaryJson in MinutesService: " + ignored.getMessage());
+            }
+
+            m.applyGenerated(m.getTranscriptId(), m.getTranscriptS3Key(), summaryKey, description, keywords, decisions, actionItems, summaryJson);
             minutesRepository.save(m);
 
             return MinutesResponse.from(m);
@@ -98,7 +124,23 @@ public class MinutesService {
         Minutes m = findMinutesOrThrow(roomId);
 
         if (req.getUserEditedSummaryJson() != null) {
-            m.applyUserEdit(req.getUserEditedSummaryJson());
+            String description = null;
+            String keywords = null;
+            String decisions = null;
+            String actionItems = null;
+
+            try {
+                com.onmeet.common.dto.ai.SummaryResult sr = 
+                        om.readValue(req.getUserEditedSummaryJson(), com.onmeet.common.dto.ai.SummaryResult.class);
+                description = sr.getDescription();
+                if (sr.getKeywords() != null) keywords = om.writeValueAsString(sr.getKeywords());
+                if (sr.getDecisions() != null) decisions = om.writeValueAsString(sr.getDecisions());
+                if (sr.getActionItems() != null) actionItems = om.writeValueAsString(sr.getActionItems());
+            } catch (Exception ignored) {
+                System.err.println("Failed to parse userEditedSummaryJson in MinutesService patch: " + ignored.getMessage());
+            }
+
+            m.applyUserEdit(req.getUserEditedSummaryJson(), description, keywords, decisions, actionItems);
         }
 
         minutesRepository.save(m);
@@ -111,6 +153,24 @@ public class MinutesService {
         String transcript = storageClient.readText(m.getTranscriptS3Key());
         LocalDateTime createdAt = LocalDateTime.ofInstant(m.getCreatedAt(), ZoneOffset.UTC);
         return new TranscriptResponse(roomId, transcript, createdAt);
+    }
+
+    @Transactional
+    public void delete(Long roomId) {
+        minutesRepository.findByRoomId(roomId).ifPresent(m -> {
+            try {
+                if (m.getTranscriptS3Key() != null) {
+                    storageClient.delete(m.getTranscriptS3Key());
+                }
+                if (m.getSummaryS3Key() != null) {
+                    storageClient.delete(m.getSummaryS3Key());
+                }
+            } catch (Exception e) {
+                // S3 삭제 실패 시 무시하고 데이터베이스 레코드는 계속 지우도록 처리
+                System.err.println("Failed to delete S3 objects for minutes: " + e.getMessage());
+            }
+            minutesRepository.delete(m);
+        });
     }
 
     private Minutes findMinutesOrThrow(Long roomId) {

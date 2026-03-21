@@ -87,6 +87,10 @@ class MinutesApiIntegrationTest {
                 "transcript-1",
                 "s3/transcripts/1/1.json",
                 "s3/summaries/1/1.json",
+                null,
+                null,
+                null,
+                null,
                 "{\"summary\":\"Original Summary\"}");
         minutesRepository.save(existingMinutes);
     }

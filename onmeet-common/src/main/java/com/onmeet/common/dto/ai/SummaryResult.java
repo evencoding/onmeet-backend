@@ -1,4 +1,4 @@
-package com.onmeet.ai.dto.response;
+package com.onmeet.common.dto.ai;
 
 import lombok.*;
 import java.util.List;
