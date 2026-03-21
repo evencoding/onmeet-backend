@@ -32,7 +32,11 @@ AI 서비스는 OnMeet 플랫폼의 핵심 지능형 모듈로, 실시간 오디
 | `transcriptId` | String | 트랜스크립트 고유 ID (UUID) |
 | `transcriptS3Key` | String | S3에 저장된 전체 트랜스크립트 파일 경로 |
 | `summaryS3Key` | String | S3에 저장된 요약본 파일 경로 |
-| `summaryJson` | LongText | AI가 생성한 구조화된 요약 데이터 (JSON) |
+| `description` | LongText | AI가 요약한 핵심 설명 |
+| `keywords` | LongText | 추출된 주요 키워드 배열 (JSON) |
+| `decisions` | LongText | 회의에서 이루어진 결정 사항 배열 (JSON) |
+| `actionItems` | LongText | 향후 진행할 작업 리스트 배열 (JSON) |
+| `summaryJson` | LongText | Claude가 반환한 로우 데이터(JSON) |
 | `userEditedSummaryJson` | LongText | 사용자가 수정한 요약 데이터 |
 | `status` | Enum | `GENERATED`, `EDITED_BY_USER`, `FAILED`, `REGENERATING` |
 | `lastError` | String | 마지막 발생 오류 메시지 |
@@ -44,19 +48,29 @@ AI 서비스는 OnMeet 플랫폼의 핵심 지능형 모듈로, 실시간 오디
 ### 회의록 관리 (Minutes API)
 
 #### 1) 회의록 상세 조회
-- **Endpoint**: `GET /v1/minutes/{roomId}`
+- **Endpoint**: `GET /v1/rooms/{roomId}/minutes`
 - **Response**: `MinutesResponse` (Status 200)
 
-#### 2) 회의록 부분 수정
-- **Endpoint**: `PATCH /v1/minutes/{roomId}`
-- **Request Body**: `MinutesPatchRequest` (제목, 요약 등 선택적 수정)
+#### 2) 회의록 검색
+- **Endpoint**: `GET /v1/rooms/minutes/search?q={keyword}`
+- **Description**: `description`, `keywords`, `decisions`, `actionItems` 컬럼 대상 키워드 검색 리스트 반환
+- **Response**: `List<MinutesResponse>` (Status 200)
 
-#### 3) 회의록 AI 재생성
-- **Endpoint**: `POST /v1/minutes/{roomId}/regenerate`
+#### 3) 회의록 내용 수정
+- **Endpoint**: `PUT /v1/rooms/{roomId}/minutes`
+- **Description**: 사용자가 수정한 요약 텍스트 반영 (개별 컬럼 동기화 파싱 포함)
+- **Request Body**: `MinutesPatchRequest` (`userEditedSummaryJson` 구조화 데이터 전송)
+
+#### 4) 회의록 AI 재생성
+- **Endpoint**: `POST /v1/rooms/{roomId}/minutes/regenerate`
 - **Description**: 기존 트랜스크립트를 사용하여 AI 요약을 다시 수행합니다.
 
-#### 4) 전체 트랜스크립트 Raw 데이터 조회
-- **Endpoint**: `GET /v1/minutes/{roomId}/transcript`
+#### 5) 회의록 및 S3 원본 완벽 삭제
+- **Endpoint**: `DELETE /v1/rooms/{roomId}/minutes`
+- **Description**: 회의록 메타데이터와 연관 S3 트랜스크립트/요약 데이터 모두 삭제
+
+#### 6) 전체 트랜스크립트 Raw 데이터 조회
+- **Endpoint**: `GET /v1/rooms/{roomId}/transcript`
 - **Output**: Raw JSON String (참가자별 전체 대화 내역)
 
 ### 기타 API

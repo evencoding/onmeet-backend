@@ -85,6 +85,23 @@ public class SummaryWorkerService {
 
         String summaryJson = summarizerClient.summarize(plain, "ko", "default", null);
 
+        // 요약 결과 파싱
+        String description = null;
+        String keywords = null;
+        String decisions = null;
+        String actionItems = null;
+
+        try {
+            com.onmeet.common.dto.ai.SummaryResult sr = om.readValue(summaryJson, com.onmeet.common.dto.ai.SummaryResult.class);
+            description = sr.getDescription();
+            if (sr.getKeywords() != null) keywords = om.writeValueAsString(sr.getKeywords());
+            if (sr.getDecisions() != null) decisions = om.writeValueAsString(sr.getDecisions());
+            if (sr.getActionItems() != null) actionItems = om.writeValueAsString(sr.getActionItems());
+        } catch (Exception ignored) {
+            // 파싱 실패 시 원본만 저장되도록 null 유지
+            System.err.println("Failed to parse summaryJson in SummaryWorkerService: " + ignored.getMessage());
+        }
+
         // 파일 서버에 요약본 업로드
         String summaryFilename = e.getTranscriptId() + "_summary.json";
         String summaryFileId = storageClient.writeText(summaryFilename, summaryJson, "application/json", "summary", "MEETING", String.valueOf(e.getRoomId()));
@@ -94,6 +111,10 @@ public class SummaryWorkerService {
                 e.getTranscriptId(),
                 e.getTranscriptFileId() != null ? String.valueOf(e.getTranscriptFileId()) : e.getTranscriptS3Key(),
                 summaryFileId,
+                description,
+                keywords,
+                decisions,
+                actionItems,
                 summaryJson
         );
 
@@ -121,18 +142,22 @@ public class SummaryWorkerService {
             String transcriptId,
             String transcriptS3Key,
             String summaryS3Key,
+            String description,
+            String keywords,
+            String decisions,
+            String actionItems,
             String summaryJson
     ) {
         Minutes m = minutesRepository.findByRoomId(roomId).orElse(null);
 
         if (m == null) {
             minutesRepository.save(
-                    Minutes.createGenerated(roomId, transcriptId, transcriptS3Key, summaryS3Key, summaryJson)
+                    Minutes.createGenerated(roomId, transcriptId, transcriptS3Key, summaryS3Key, description, keywords, decisions, actionItems, summaryJson)
             );
             return;
         }
 
-        m.applyGenerated(transcriptId, transcriptS3Key, summaryS3Key, summaryJson);
+        m.applyGenerated(transcriptId, transcriptS3Key, summaryS3Key, description, keywords, decisions, actionItems, summaryJson);
         minutesRepository.save(m);
     }
 }

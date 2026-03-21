@@ -117,7 +117,7 @@ public class ClaudeSummarizerClient implements SummarizerClient {
 
                 // Validate that the output matches our SummaryResult schema
                 try {
-                    om.readValue(text, com.onmeet.ai.dto.response.SummaryResult.class);
+                    om.readValue(text, com.onmeet.common.dto.ai.SummaryResult.class);
                     return text;
                 } catch (Exception parseEx) {
                     throw new RuntimeException("Claude returned invalid JSON schema: " + text, parseEx);

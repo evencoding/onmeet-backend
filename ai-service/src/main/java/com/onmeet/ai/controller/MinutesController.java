@@ -65,6 +65,15 @@ public class MinutesController {
         return minutesService.get(roomId);
     }
 
+    @Operation(summary = "회의록 내용 검색", description = "회의 요약의 설명, 키워드, 결정사항, 작업 목록에서 특정 키워드가 포함된 회의록을 검색합니다.")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "검색 성공", content = @Content(mediaType = "application/json"))
+    })
+    @GetMapping("/minutes/search")
+    public java.util.List<MinutesResponse> search(@RequestParam("q") String keyword) {
+        return minutesService.search(keyword);
+    }
+
     @Operation(summary = "회의록 재생성", description = "기존 트랜스크립트를 기반으로 AI가 회의록을 다시 생성합니다. 프롬프트 커스터마이징이 가능합니다.")
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "회의록 재생성 성공"),
@@ -191,5 +200,21 @@ public class MinutesController {
     @GetMapping("/{roomId}/transcript")
     public TranscriptResponse transcript(@PathVariable Long roomId) {
         return minutesService.getTranscript(roomId);
+    }
+
+    @Operation(summary = "회의록 삭제", description = "특정 회의의 회의록 및 관련 S3 데이터(트랜스크립트, 요약본)를 삭제합니다.")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "204", description = "회의록 삭제 성공 (내용 없음)"),
+        @ApiResponse(
+            responseCode = "401",
+            description = "인증 필요",
+            content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class),
+                examples = @ExampleObject(value = "{\"code\":\"GATEWAY_001\",\"status\":401,\"message\":\"인증 토큰이 없습니다.\",\"timestamp\":1710000000000}"))
+        )
+    })
+    @DeleteMapping("/{roomId}/minutes")
+    public org.springframework.http.ResponseEntity<Void> delete(@PathVariable Long roomId) {
+        minutesService.delete(roomId);
+        return org.springframework.http.ResponseEntity.noContent().build();
     }
 }

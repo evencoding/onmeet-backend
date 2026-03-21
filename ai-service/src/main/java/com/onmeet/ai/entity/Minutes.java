@@ -31,6 +31,22 @@ public class Minutes {
     private String summaryS3Key;
 
     @Lob
+    @Column(name = "description", columnDefinition = "LONGTEXT")
+    private String description;
+
+    @Lob
+    @Column(name = "keywords", columnDefinition = "LONGTEXT")
+    private String keywords;
+
+    @Lob
+    @Column(name = "decisions", columnDefinition = "LONGTEXT")
+    private String decisions;
+
+    @Lob
+    @Column(name = "action_items", columnDefinition = "LONGTEXT")
+    private String actionItems;
+
+    @Lob
     @Column(name = "summary_json", columnDefinition = "LONGTEXT", nullable = false)
     private String summaryJson;
 
@@ -57,11 +73,19 @@ public class Minutes {
                     String transcriptId,
                     String transcriptS3Key,
                     String summaryS3Key,
+                    String description,
+                    String keywords,
+                    String decisions,
+                    String actionItems,
                     String summaryJson) {
         this.roomId = roomId;
         this.transcriptId = transcriptId;
         this.transcriptS3Key = transcriptS3Key;
         this.summaryS3Key = summaryS3Key;
+        this.description = description;
+        this.keywords = keywords;
+        this.decisions = decisions;
+        this.actionItems = actionItems;
         this.summaryJson = summaryJson;
         this.userEditedSummaryJson = null;
         this.status = MinutesStatus.GENERATED;
@@ -74,17 +98,29 @@ public class Minutes {
                                           String transcriptId,
                                           String transcriptS3Key,
                                           String summaryS3Key,
+                                          String description,
+                                          String keywords,
+                                          String decisions,
+                                          String actionItems,
                                           String summaryJson) {
-        return new Minutes(roomId, transcriptId, transcriptS3Key, summaryS3Key, summaryJson);
+        return new Minutes(roomId, transcriptId, transcriptS3Key, summaryS3Key, description, keywords, decisions, actionItems, summaryJson);
     }
 
     public void applyGenerated(String transcriptId,
                                String transcriptS3Key,
                                String summaryS3Key,
+                               String description,
+                               String keywords,
+                               String decisions,
+                               String actionItems,
                                String summaryJson) {
         this.transcriptId = transcriptId;
         this.transcriptS3Key = transcriptS3Key;
         this.summaryS3Key = summaryS3Key;
+        this.description = description;
+        this.keywords = keywords;
+        this.decisions = decisions;
+        this.actionItems = actionItems;
         this.summaryJson = summaryJson;
         this.status = MinutesStatus.GENERATED;
         this.lastError = null;
@@ -99,8 +135,12 @@ public class Minutes {
 
 
 
-    public void applyUserEdit(String userEditedSummaryJson) {
+    public void applyUserEdit(String userEditedSummaryJson, String description, String keywords, String decisions, String actionItems) {
         this.userEditedSummaryJson = userEditedSummaryJson;
+        if (description != null) this.description = description;
+        if (keywords != null) this.keywords = keywords;
+        if (decisions != null) this.decisions = decisions;
+        if (actionItems != null) this.actionItems = actionItems;
         this.status = MinutesStatus.EDITED_BY_USER;
         touch();
     }
