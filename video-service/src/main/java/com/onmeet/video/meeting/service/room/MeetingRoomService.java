@@ -125,7 +125,7 @@ public class MeetingRoomService {
                 type,
                 maxParticipants,
                 request.password(),
-                request.scheduledAt(),
+                request.scheduledAtAsInstant(),
                 accessScope,
                 request.teamId());
 
@@ -471,7 +471,8 @@ public class MeetingRoomService {
             }
         }
 
-        validateNoScheduleConflict(userId, request.scheduledAt(), null);
+        Instant scheduledAt = request.scheduledAtAsInstant();
+        validateNoScheduleConflict(userId, scheduledAt, null);
 
         MeetingRoom room = new MeetingRoom(
                 request.title(),
@@ -480,7 +481,7 @@ public class MeetingRoomService {
                 RoomType.SCHEDULED,
                 maxParticipants,
                 request.password(),
-                request.scheduledAt(),
+                scheduledAt,
                 accessScope,
                 request.teamId());
 

@@ -28,6 +28,8 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.List;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -598,9 +600,10 @@ public class MeetingRoomController {
     })
     @PatchMapping("/{roomId}/schedule")
     public ApiResponse<MeetingRoomResponse> updateSchedule(@PathVariable Long roomId,
-                                                           @RequestParam Instant scheduledAt,
+                                                           @RequestParam LocalDateTime scheduledAt,
                                                            @RequestHeader("X-User-Id") Long userId) {
-        return ApiResponse.ok(meetingRoomService.updateSchedule(roomId, scheduledAt, userId));
+        Instant scheduledInstant = scheduledAt.atZone(ZoneId.of("Asia/Seoul")).toInstant();
+        return ApiResponse.ok(meetingRoomService.updateSchedule(roomId, scheduledInstant, userId));
     }
 
     @Operation(summary = "회의 예약 취소", description = "예약된 회의를 취소합니다. 이미 시작/종료된 회의는 취소할 수 없습니다.")
