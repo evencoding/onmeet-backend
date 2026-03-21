@@ -1,5 +1,6 @@
 package com.onmeet.auth.dto
 
+import com.fasterxml.jackson.annotation.JsonProperty
 import io.swagger.v3.oas.annotations.media.Schema
 import org.springframework.data.domain.Page
 
@@ -151,6 +152,7 @@ data class UserResponseDto(
     val teams: List<TeamInfoDto>,
     @Schema(description = "프로필 이미지 ID")
     val profileImageId: Long?,
+    @get:JsonProperty("isPasswordReset")
     @Schema(description = "비밀번호 초기화 여부 (임시 비밀번호 발급 시 true)")
     val isPasswordReset: Boolean = false
 )
@@ -170,7 +172,9 @@ data class TeamInfoDto(
     @Schema(description = "팀 이름")
     val name: String,
     @Schema(description = "팀 색상")
-    val color: String?
+    val color: String?,
+    @Schema(description = "팀 상태")
+    val status: String? = null
 )
 
 @Schema(description = "유저 권한 및 소속 정보 응답")

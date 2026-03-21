@@ -27,13 +27,13 @@ class FileClient(
      */
     @io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker(name = "fileService", fallbackMethod = "generateDefaultProfileImageFallback")
     fun generateDefaultProfileImage(name: String, ownerId: String): FileMetadataResponse? {
-        val url = "$fileServiceUrl/file/profile/default"
+        val url = "$fileServiceUrl/file/v1/profile/default"
         val request = mapOf(
             "name" to name,
             "ownerType" to "USER",
             "ownerId" to ownerId
         )
-        return postWithAuthOrThrow(url, request, FileMetadataResponse::class.java)
+        return postWithAuthAndUnwrap<FileMetadataResponse>(url, request)
     }
 
     fun generateDefaultProfileImageFallback(name: String, ownerId: String, t: Throwable): FileMetadataResponse? {
@@ -46,7 +46,7 @@ class FileClient(
      */
     @io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker(name = "fileService", fallbackMethod = "uploadProfileImageFallback")
     fun uploadProfileImage(file: MultipartFile, ownerId: String): FileMetadataResponse? {
-        val url = "$fileServiceUrl/file/upload"
+        val url = "$fileServiceUrl/file/v1/upload"
         
         val body = LinkedMultiValueMap<String, Any>()
         body.add("files", file.resource)
@@ -54,8 +54,7 @@ class FileClient(
         body.add("ownerType", "USER")
         body.add("ownerId", ownerId)
 
-        val results = postMultipartWithAuthOrThrow(url, body, Array<FileMetadataResponse>::class.java)
-        return results?.firstOrNull()
+        return postMultipartWithAuthAndUnwrap<List<FileMetadataResponse>>(url, body)?.firstOrNull()
     }
 
     fun uploadProfileImageFallback(file: MultipartFile, ownerId: String, t: Throwable): FileMetadataResponse? {
@@ -68,7 +67,7 @@ class FileClient(
      */
     @io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker(name = "fileService", fallbackMethod = "deleteFileFallback")
     fun deleteFile(fileId: Long) {
-        val url = "$fileServiceUrl/file/$fileId"
+        val url = "$fileServiceUrl/file/v1/$fileId"
         deleteWithAuth(url)
     }
 
@@ -81,7 +80,7 @@ class FileClient(
      */
     @io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker(name = "fileService", fallbackMethod = "deleteMyProfileImageFallback")
     fun deleteMyProfileImage() {
-        val url = "$fileServiceUrl/file/me/profile"
+        val url = "$fileServiceUrl/file/v1/me/profile"
         deleteWithAuth(url)
     }
 
