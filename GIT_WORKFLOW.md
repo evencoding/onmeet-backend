@@ -8,8 +8,10 @@ develop (개발)
    ├─► feat/ONMEET-XX (기능 개발)
    │
    └─► release/v0.x.0 (릴리즈 준비) ──► main (프로덕션 안정 버전)
+              │         │
+              │         └─► CI/CD 배포 자동 실행
               │
-              └─► CI/CD 배포 자동 실행
+              └─► hotfix/v0.x.y (긴급 수정) ──► release + develop 병합
 ```
 
 ### 브랜치 설명
@@ -20,6 +22,7 @@ develop (개발)
 | `release/v0.x.0` | 릴리즈 준비 및 QA (배포 트리거) | CI/CD 자동 배포 |
 | `develop` | 개발 통합 브랜치 | Default branch |
 | `feat/ONMEET-XX` | 기능 개발 브랜치 | develop으로 PR |
+| `hotfix/v0.x.y` | 긴급 수정 브랜치 | release에서 분기, release + develop 병합 |
 
 ## 버전 관리 (Semantic Versioning)
 
@@ -116,19 +119,19 @@ git push origin --delete release/v0.2.0
 ## 핫픽스 프로세스 (긴급 수정)
 
 ```bash
-# main 브랜치에서 핫픽스 브랜치 생성
-git checkout main
+# 현재 릴리즈 브랜치에서 핫픽스 브랜치 생성
+git checkout release/v0.2.0
 git checkout -b hotfix/v0.2.1
 
 # 버그 수정
 git add .
 git commit -m "fix(auth): critical security patch"
+git push origin hotfix/v0.2.1
 
-# main에 병합 및 태그
-git checkout main
+# release에 병합 (→ CI/CD 자동 배포)
+git checkout release/v0.2.0
 git merge --no-ff hotfix/v0.2.1
-git tag -a v0.2.1 -m "Hotfix v0.2.1"
-git push origin main --tags
+git push origin release/v0.2.0
 
 # develop에도 반영
 git checkout develop
@@ -137,6 +140,7 @@ git push origin develop
 
 # 핫픽스 브랜치 삭제
 git branch -d hotfix/v0.2.1
+git push origin --delete hotfix/v0.2.1
 ```
 
 ## CI/CD 배포 조건
