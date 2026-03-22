@@ -4,12 +4,7 @@ import com.onmeet.notification.dto.NotificationRequestDto;
 import com.onmeet.notification.dto.NotificationResponseDto;
 import com.onmeet.notification.entity.Notification;
 import com.onmeet.notification.entity.NotificationRecipient;
-import com.onmeet.notification.entity.NotificationStream;
 import com.onmeet.notification.infra.AuthServiceClient;
-import com.onmeet.notification.repository.NotificationRecipientRepository;
-import com.onmeet.notification.repository.NotificationRepository;
-import com.onmeet.notification.repository.NotificationStreamRepository;
-import com.onmeet.notification.type.NotificationStatus;
 import com.onmeet.notification.type.NotificationTemplate;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -18,8 +13,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import java.io.IOException;
-import java.time.LocalDateTime;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -33,9 +26,7 @@ import java.util.stream.Collectors;
 @Slf4j
 public class NotificationService {
 
-    private final NotificationRepository notificationRepository;
-    private final NotificationRecipientRepository recipientRepository;
-    private final NotificationStreamRepository streamRepository;
+    private final NotificationPersistenceService persistenceService;
     private final NotificationSettingService settingService;
     private final FcmService fcmService;
     private final AuthServiceClient authServiceClient;
@@ -57,7 +48,7 @@ public class NotificationService {
         // Unique ID for this connection: userId + UUID (collision-safe)
         String emitterId = userId + "_" + java.util.UUID.randomUUID();
 
-        saveNotificationStream(userId, emitterId);
+        persistenceService.saveNotificationStream(userId, emitterId);
 
         emitter.onCompletion(() -> removeEmitter(userId, emitterId));
         emitter.onTimeout(() -> removeEmitter(userId, emitterId));
@@ -86,7 +77,7 @@ public class NotificationService {
                 emitters.remove(userId);
             }
         }
-        removeNotificationStream(emitterId);
+        persistenceService.removeNotificationStream(emitterId);
         log.debug("SSE connection removed: userId={}, emitterId={}", userId, emitterId);
     }
 
@@ -176,47 +167,25 @@ public class NotificationService {
         String finalTitle = (dto.getTitle() != null && !dto.getTitle().isBlank()) ? dto.getTitle() : renderedTitle;
         String finalBody = (dto.getBody() != null && !dto.getBody().isBlank()) ? dto.getBody() : renderedBody;
 
-        if (dto.getDedupeKey() != null && notificationRepository.existsByDedupeKey(dto.getDedupeKey())) {
-            log.info("Duplicate notification detected via dedupeKey: {}. Skipping.", dto.getDedupeKey());
-            return;
-        }
+        // DB 작업: @Transactional 프록시를 통해 커넥션 즉시 반환
+        NotificationRecipient recipient = persistenceService.saveNotification(dto, type, finalTitle, finalBody, resType, isScheduled);
+        if (recipient == null) return; // dedupeKey 중복
 
-        Notification notification = Notification.builder()
-                .type(type)
-                .title(finalTitle)
-                .body(finalBody)
-                .deeplink(dto.getDeeplink())
-                .scheduledAt(dto.getScheduledAt())
-                .resourceType(resType)
-                .dedupeKey(dto.getDedupeKey())
-                .resourceId(dto.getResourceId())
-                .actorUserId(dto.getActorUserId())
-                .status(isScheduled ? NotificationStatus.PENDING : NotificationStatus.SENT)
-                .build();
-
-        NotificationRecipient recipient = NotificationRecipient.builder()
-                .userId(dto.getUserId())
-                .build();
-
-        notification.addRecipient(recipient);
-        notificationRepository.save(notification);
-
-        // 즉시 발송: DB 저장 후 트랜잭션 밖에서 SSE/FCM 발송
+        // 즉시 발송: DB 트랜잭션 밖에서 SSE/FCM 발송 (커넥션 점유 없음)
         if (!isScheduled) {
-            if (!settingService.shouldSendNotification(dto.getUserId(), notification.getType())) {
+            if (!settingService.shouldSendNotification(dto.getUserId(), recipient.getNotification().getType())) {
                 log.info("Notification blocked by user settings: userId={}, type={}",
-                        dto.getUserId(), notification.getType());
+                        dto.getUserId(), recipient.getNotification().getType());
                 return;
             }
 
             boolean sseSent = sendToClient(dto.getUserId(), recipient);
             if (sseSent) {
-                recipient.markAsSent();
-                recipientRepository.save(recipient);
+                persistenceService.markRecipientAsSent(recipient);
             }
 
             try {
-                sendFcmPushToUniqueTokens(dto.getUserId(), notification, latestToken);
+                sendFcmPushToUniqueTokens(dto.getUserId(), recipient.getNotification(), latestToken);
             } catch (Exception e) {
                 log.warn("FCM push failed but notification was saved: userId={}, error={}",
                         dto.getUserId(), e.getMessage());
@@ -260,34 +229,23 @@ public class NotificationService {
     // FCM Push (스케줄러에서도 호출)
     // ──────────────────────────────────────────────
 
-    /**
-     * 특정 디바이스 토큰으로 푸시를 발송합니다. (인프라 계층 위임)
-     */
     public void sendFcmPushToToken(String token, Notification notification) {
         fcmService.sendPushToToken(token, notification.getTitle(),
                 notification.getBody(), notification.getDeeplink());
     }
 
-    /**
-     * 로컬 DB에 저장된 유저의 모든 토큰으로 푸시를 발송합니다.
-     */
     public void sendFcmPushLocal(Long userId, Notification notification) {
         fcmService.sendPushToLocalTokens(userId, notification.getTitle(),
                 notification.getBody(), notification.getDeeplink());
     }
 
-    /**
-     * Auth 서비스에서 받은 최신 토큰과 로컬 DB의 토큰들을 합쳐서 중복 없이 발송합니다.
-     */
     public void sendFcmPushToUniqueTokens(Long userId, Notification notification, String latestToken) {
         Set<String> uniqueTokens = new HashSet<>();
 
-        // 1. Auth 서비스에서 받은 최신 토큰 추가
         if (latestToken != null && !latestToken.isBlank()) {
             uniqueTokens.add(latestToken);
         }
 
-        // 2. 로컬 DB에 저장된 토큰들 추가 (중복은 Set에 의해 자동 제거됨)
         uniqueTokens.addAll(fcmService.getTokensByUserId(userId));
 
         if (uniqueTokens.isEmpty()) {
@@ -295,16 +253,12 @@ public class NotificationService {
             return;
         }
 
-        // 3. 유니크한 토큰들에 대해서만 발송
         for (String token : uniqueTokens) {
             fcmService.sendPushToToken(token, notification.getTitle(),
                     notification.getBody(), notification.getDeeplink());
         }
     }
 
-    /**
-     * 유저의 정보를 조회하여 최신 토큰(Auth)과 로컬 토큰으로 중복 없이 발송합니다.
-     */
     public void sendFcmPush(Long userId, Notification notification) {
         String latestToken = null;
         try {
@@ -334,7 +288,6 @@ public class NotificationService {
                             .name("heartbeat")
                             .data(""));
                 } catch (IOException e) {
-                    // Heartbeat 실패 시 연결 끊김으로 간주하고 제거
                     log.debug("Heartbeat failed for user={}, emitterId={}", userId, emitterId);
                     removeEmitter(userId, emitterId);
                 }
@@ -343,44 +296,14 @@ public class NotificationService {
     }
 
     // ──────────────────────────────────────────────
-    // NotificationStream 관리
+    // Template Params
     // ──────────────────────────────────────────────
 
-    private void saveNotificationStream(Long userId, String streamId) {
-        try {
-            NotificationStream stream = NotificationStream.builder()
-                    .id(streamId)
-                    .userId(userId)
-                    .clientId("web-client")
-                    .connectedAt(LocalDateTime.now())
-                    .lastSeenAt(LocalDateTime.now())
-                    .lastEventId(null)
-                    .build();
-            streamRepository.save(stream);
-        } catch (Exception e) {
-            log.error("Failed to save notification stream for user: {}", userId, e);
-        }
-    }
-
-    private void removeNotificationStream(String streamId) {
-        try {
-            streamRepository.deleteById(streamId);
-        } catch (Exception e) {
-            log.error("Failed to remove notification stream: {}", streamId, e);
-        }
-    }
-
-    /**
-     * 템플릿 렌더링에 필요한 파라미터를 구성합니다.
-     * actorUserId → senderName, userId → receiverName, title → title
-     */
     private Map<String, String> buildTemplateParams(NotificationRequestDto dto, String actorName) {
         Map<String, String> params = new HashMap<>();
 
-        // 발신자 이름 (이미 조회됨)
         params.put("senderName", actorName);
 
-        // 수신자 이름 조회: auth-service에서 실제 이름을 가져옴. 실패 시 "사용자"로 폴백
         String receiverName = "사용자";
         if (dto.getUserId() != null) {
             try {
@@ -394,11 +317,7 @@ public class NotificationService {
         }
         params.put("receiverName", receiverName);
 
-        // Kafka Producer(예: video-service)에서 이벤트 발행 시 title 값을 DTO에 담아서 보내도록 스펙 정의됨
-        // -> 알림 서비스에서 동기적으로 외부 API를 찔러 방 제목을 조회하는 것은 지양(결합도 및 병목 방지)
         params.put("title", dto.getTitle() != null ? dto.getTitle() : "");
-
-        // 원본 body (SYSTEM, EVENT 템플릿에서 사용)
         params.put("body", dto.getBody() != null ? dto.getBody() : "");
 
         return params;
