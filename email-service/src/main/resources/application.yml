@@ -7,6 +7,18 @@ server:
 spring:
   application:
     name: email-service
+  mail:
+    host: ${SPRING_MAIL_HOST:smtp.gmail.com}
+    port: ${SPRING_MAIL_PORT:587}
+    username: ${SPRING_MAIL_USERNAME}
+    properties:
+      mail:
+        smtp:
+          auth: true
+          auth.mechanisms: XOAUTH2
+          starttls:
+            enable: true
+            required: true
 
 onmeet:
   auth:
@@ -18,21 +30,6 @@ onmeet:
       auto-offset-reset: earliest
       key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
       value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
-    # AWS Config removed for Gmail migration
-  mail:
-    host: ${SPRING_MAIL_HOST:smtp.gmail.com}
-    port: ${SPRING_MAIL_PORT:587}
-    username: ${SPRING_MAIL_USERNAME}
-    # password는 Access Token으로 동적 주입될 예정이므로 properties에 빈 값 추가 혹은 생략 처리
-    properties:
-      mail:
-        smtp:
-          auth:
-            enable: true
-            mechanisms: XOAUTH2
-          starttls:
-            enable: true
-            required: true
 
 gmail:
   oauth2:
