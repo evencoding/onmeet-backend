@@ -16,7 +16,7 @@ import com.onmeet.video.meeting.dto.chat.DataChannelMessage;
 import com.onmeet.video.meeting.dto.chat.SendChatRequest;
 import com.onmeet.video.meeting.entity.room.MeetingRoom;
 import com.onmeet.video.meeting.entity.participant.ParticipantStatus;
-import com.onmeet.video.meeting.event.chat.ChatMessageEvent;
+import com.onmeet.common.dto.event.ChatMessageEvent;
 import com.onmeet.video.meeting.event.MeetingEventPublisher;
 import com.onmeet.video.meeting.repository.room.MeetingRoomRepository;
 import com.onmeet.video.meeting.repository.participant.RoomParticipantRepository;
@@ -134,17 +134,17 @@ public class ChatIntegrationService {
             );
         }
 
-        eventPublisher.publishChatMessage(new ChatMessageEvent(
-            messageId,
-            roomId,
-            room.getLivekitRoomName(),
-            senderId,
-            String.valueOf(senderId),
-            messageType,
-            request.content(),
-            request.replyToMessageId(),
-            message.timestamp()
-        ));
+        eventPublisher.publishChatMessage(ChatMessageEvent.builder()
+            .messageId(messageId)
+            .roomId(roomId)
+            .roomName(room.getLivekitRoomName())
+            .senderId(senderId)
+            .senderName(senderName)
+            .messageType(messageType)
+            .content(request.content())
+            .replyToMessageId(request.replyToMessageId())
+            .timestamp(message.timestamp())
+            .build());
     }
 
     @Transactional(readOnly = true)
@@ -161,17 +161,17 @@ public class ChatIntegrationService {
 
         Long senderId = parseSenderId(senderIdentity);
 
-        eventPublisher.publishChatMessage(new ChatMessageEvent(
-            message.messageId() != null ? message.messageId() : UUID.randomUUID().toString(),
-            room.getId(),
-            roomName,
-            senderId,
-            senderIdentity,
-            message.type() != null ? message.type() : DataChannelMessage.TYPE_CHAT,
-            message.content(),
-            message.replyToMessageId(),
-            message.timestamp() != null ? message.timestamp() : clockProvider.now()
-        ));
+        eventPublisher.publishChatMessage(ChatMessageEvent.builder()
+            .messageId(message.messageId() != null ? message.messageId() : UUID.randomUUID().toString())
+            .roomId(room.getId())
+            .roomName(roomName)
+            .senderId(senderId)
+            .senderName(senderIdentity)
+            .messageType(message.type() != null ? message.type() : DataChannelMessage.TYPE_CHAT)
+            .content(message.content())
+            .replyToMessageId(message.replyToMessageId())
+            .timestamp(message.timestamp() != null ? message.timestamp() : clockProvider.now())
+            .build());
     }
 
     private MeetingRoom resolveRoom(ChatTokenRequest request) {

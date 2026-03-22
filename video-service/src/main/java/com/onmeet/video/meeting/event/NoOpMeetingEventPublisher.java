@@ -1,8 +1,8 @@
 package com.onmeet.video.meeting.event;
 
-import com.onmeet.video.meeting.event.chat.ChatMessageEvent;
+import com.onmeet.common.dto.event.ChatMessageEvent;
 import com.onmeet.video.meeting.event.participant.ParticipantEvent;
-import com.onmeet.video.meeting.event.recording.AudioSegmentEvent;
+import com.onmeet.common.dto.event.AudioChunkReadyEvent;
 import com.onmeet.video.meeting.event.room.MeetingEvent;
 import com.onmeet.video.meeting.event.screenshare.ScreenShareEvent;
 import org.slf4j.Logger;
@@ -43,13 +43,13 @@ public class NoOpMeetingEventPublisher implements MeetingEventPublisher {
     }
 
     @Override
-    public void publishAudioSegmentReady(AudioSegmentEvent event) {
-        log.debug("Audio segment ready event: roomId={}, segmentIndex={}", event.roomId(), event.segmentIndex());
+    public void publishAudioSegmentReady(AudioChunkReadyEvent event) {
+        log.debug("Audio segment ready event: roomId={}, segmentIndex={}", event.getRoomId(), event.getSegmentIndex());
     }
 
     @Override
     public void publishChatMessage(ChatMessageEvent event) {
-        log.debug("Chat message event: roomId={}, senderId={}, type={}", event.roomId(), event.senderId(), event.messageType());
+        log.debug("Chat message event: roomId={}, senderId={}, type={}", event.getRoomId(), event.getSenderId(), event.getMessageType());
     }
 
     @Override

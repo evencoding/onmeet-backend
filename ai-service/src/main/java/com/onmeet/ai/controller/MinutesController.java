@@ -50,11 +50,11 @@ public class MinutesController {
         ),
         @ApiResponse(
             responseCode = "500",
-            description = "서버 내부 오류 - S3 읽기 실패 또는 트랜스크립트 파싱 실패",
+            description = "서버 내부 오류 - 데이터 읽기 실패 또는 파싱 실패",
             content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class),
                 examples = {
-                    @ExampleObject(name = "AI_002 - S3 읽기 실패",
-                        value = "{\"code\":\"AI_002\",\"status\":500,\"message\":\"S3에서 파일을 읽는 중 오류가 발생했습니다\",\"timestamp\":1710000000000}"),
+                    @ExampleObject(name = "AI_002 - 데이터 읽기 실패",
+                        value = "{\"code\":\"AI_002\",\"status\":500,\"message\":\"데이터를 읽는 중 오류가 발생했습니다\",\"timestamp\":1710000000000}"),
                     @ExampleObject(name = "AI_003 - 파싱 실패",
                         value = "{\"code\":\"AI_003\",\"status\":500,\"message\":\"트랜스크립트 JSON 파싱 중 오류가 발생했습니다\",\"timestamp\":1710000000000}")
                 })
@@ -99,13 +99,13 @@ public class MinutesController {
         ),
         @ApiResponse(
             responseCode = "500",
-            description = "서버 내부 오류 - AI 요약 처리 실패 또는 S3 저장 실패",
+            description = "서버 내부 오류 - AI 요약 처리 실패 또는 파일 서버 저장 실패",
             content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class),
                 examples = {
                     @ExampleObject(name = "AI_005 - AI 요약 실패",
                         value = "{\"code\":\"AI_005\",\"status\":500,\"message\":\"AI 요약 처리 중 오류가 발생했습니다\",\"timestamp\":1710000000000}"),
-                    @ExampleObject(name = "AI_006 - S3 저장 실패",
-                        value = "{\"code\":\"AI_006\",\"status\":500,\"message\":\"S3에 파일을 저장하는 중 오류가 발생했습니다\",\"timestamp\":1710000000000}")
+                    @ExampleObject(name = "AI_006 - 파일 저장 실패",
+                        value = "{\"code\":\"AI_006\",\"status\":500,\"message\":\"파일 서버에 저장하는 중 오류가 발생했습니다\",\"timestamp\":1710000000000}")
                 })
         ),
         @ApiResponse(
@@ -176,22 +176,22 @@ public class MinutesController {
         ),
         @ApiResponse(
             responseCode = "404",
-            description = "회의록 또는 S3 파일이 없는 경우",
+            description = "회의록 데이터 또는 파일이 없는 경우",
             content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class),
                 examples = {
                     @ExampleObject(name = "AI_001 - 회의록 없음",
                         value = "{\"code\":\"AI_001\",\"status\":404,\"message\":\"해당 회의실의 회의록을 찾을 수 없습니다\",\"timestamp\":1710000000000}"),
-                    @ExampleObject(name = "AI_027 - S3 파일 없음",
-                        value = "{\"code\":\"AI_027\",\"status\":404,\"message\":\"S3에서 해당 파일을 찾을 수 없습니다\",\"timestamp\":1710000000000}")
+                    @ExampleObject(name = "AI_027 - 파일 없음",
+                        value = "{\"code\":\"AI_027\",\"status\":404,\"message\":\"원문 파일을 찾을 수 없습니다\",\"timestamp\":1710000000000}")
                 })
         ),
         @ApiResponse(
             responseCode = "500",
-            description = "S3 읽기 오류 또는 트랜스크립트 직렬화 실패",
+            description = "데이터 읽기 오류 또는 파싱 실패",
             content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class),
                 examples = {
-                    @ExampleObject(name = "AI_002 - S3 읽기 실패",
-                        value = "{\"code\":\"AI_002\",\"status\":500,\"message\":\"S3에서 파일을 읽는 중 오류가 발생했습니다\",\"timestamp\":1710000000000}"),
+                    @ExampleObject(name = "AI_002 - 데이터 읽기 실패",
+                        value = "{\"code\":\"AI_002\",\"status\":500,\"message\":\"데이터 읽기 중 오류가 발생했습니다\",\"timestamp\":1710000000000}"),
                     @ExampleObject(name = "AI_016 - 직렬화 실패",
                         value = "{\"code\":\"AI_016\",\"status\":500,\"message\":\"트랜스크립트 JSON 직렬화 중 오류가 발생했습니다\",\"timestamp\":1710000000000}")
                 })
@@ -202,7 +202,7 @@ public class MinutesController {
         return minutesService.getTranscript(roomId);
     }
 
-    @Operation(summary = "회의록 삭제", description = "특정 회의의 회의록 및 관련 S3 데이터(트랜스크립트, 요약본)를 삭제합니다.")
+    @Operation(summary = "회의록 삭제", description = "특정 회의의 회의록 및 관련 데이터(트랜스크립트, 요약본)를 삭제합니다.")
     @ApiResponses(value = {
         @ApiResponse(responseCode = "204", description = "회의록 삭제 성공 (내용 없음)"),
         @ApiResponse(

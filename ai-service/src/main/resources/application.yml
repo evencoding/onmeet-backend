@@ -53,7 +53,7 @@ app:
 openai:
   api-key: ${OPENAI_API_KEY:}
   api-url: https://api.openai.com/v1/audio/transcriptions
-  model: whisper-1
+  model: gpt-4o-mini-transcribe
 
 anthropic:
   api-key: ${ANTHROPIC_API_KEY:}

@@ -125,7 +125,8 @@ public class SttWorkerService {
         producer.publish(VoiceSegmentCreatedEvent.builder()
                 .roomId(e.getRoomId())
                 .segmentId(UUID.randomUUID().toString())
-                .participantIdentity(e.getParticipantIdentity())
+                .participantId(e.getParticipantId())
+                .participantName(e.getParticipantName())
                 .segmentStartMs(startMs)
                 .segmentEndMs(endMs)
                 .seq(seq)
@@ -134,6 +135,6 @@ public class SttWorkerService {
                 .build());
 
         log.debug("Published voice segment: roomId={}, participant={}, startMs={}, endMs={}",
-                e.getRoomId(), e.getParticipantIdentity(), startMs, endMs);
+                e.getRoomId(), e.getParticipantName(), startMs, endMs);
     }
 }

@@ -1,7 +1,7 @@
 package com.onmeet.ai.pipeline;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.onmeet.ai.dto.event.ChatMessageEvent;
+import com.onmeet.common.dto.event.ChatMessageEvent;
 import com.onmeet.ai.dto.event.VoiceSegmentCreatedEvent;
 import com.onmeet.ai.pipeline.storage.StorageClient;
 import com.onmeet.ai.service.TranscriptBuilderService;
@@ -71,15 +71,16 @@ class PipelineE2ETest {
                                 .roomId(roomId)
                                 .messageId("msg-1")
                                 .senderId(1L)
+                                .senderName("테스트유저")
                                 .content("Hello E2E")
                                 .timestamp(Instant.now())
-                                .seq(1)
+                                .seq(1L)
                                 .build());
 
                 transcriptBuilderService.ingestVoice(VoiceSegmentCreatedEvent.builder()
                                 .roomId(roomId)
                                 .segmentId("seg-1")
-                                .participantIdentity("참가자2")
+                                .participantName("참가자2")
                                 .text("This is voice")
                                 .segmentStartMs(200L)
                                 .segmentEndMs(500L)

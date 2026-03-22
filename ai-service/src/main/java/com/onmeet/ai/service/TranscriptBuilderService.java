@@ -1,17 +1,20 @@
 package com.onmeet.ai.service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.onmeet.ai.dto.event.ChatMessageEvent;
+import com.onmeet.common.dto.event.ChatMessageEvent;
 import com.onmeet.ai.dto.event.TranscriptFinalizedEvent;
 import com.onmeet.ai.dto.event.VoiceSegmentCreatedEvent;
+import com.onmeet.ai.entity.Transcript;
+import com.onmeet.ai.entity.TranscriptEvent;
 import com.onmeet.ai.messaging.producer.TranscriptEventsProducer;
-import com.onmeet.ai.pipeline.storage.StorageClient;
-import com.onmeet.ai.pipeline.storage.StorageKeyFactory;
 import com.onmeet.ai.pipeline.transcript.RedisMeetingEventStore;
 import com.onmeet.ai.pipeline.transcript.TranscriptDocument;
+import com.onmeet.ai.repository.TranscriptEventRepository;
+import com.onmeet.ai.repository.TranscriptRepository;
 import com.onmeet.common.exception.BusinessException;
 import com.onmeet.common.exception.errorcode.AiErrorCode;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
 import java.util.*;
@@ -21,18 +24,21 @@ import java.util.stream.Collectors;
 public class TranscriptBuilderService {
 
     private final RedisMeetingEventStore store;
-    private final StorageClient storageClient;
+    private final TranscriptRepository transcriptRepository;
+    private final TranscriptEventRepository transcriptEventRepository;
     private final TranscriptEventsProducer producer;
     private final ObjectMapper om;
 
     public TranscriptBuilderService(
             RedisMeetingEventStore store,
-            StorageClient storageClient,
+            TranscriptRepository transcriptRepository,
+            TranscriptEventRepository transcriptEventRepository,
             TranscriptEventsProducer producer,
             ObjectMapper om
     ) {
         this.store = store;
-        this.storageClient = storageClient;
+        this.transcriptRepository = transcriptRepository;
+        this.transcriptEventRepository = transcriptEventRepository;
         this.producer = producer;
         this.om = om;
     }
@@ -45,31 +51,36 @@ public class TranscriptBuilderService {
         store.appendVoice(event);
     }
 
+    @Transactional
     public void finalizeMeeting(Long roomId, Long hostUserId, Instant endedAt) {
         List<RedisMeetingEventStore.StoredEvent> items = store.readAll(roomId);
 
         String transcriptId = UUID.randomUUID().toString();
         int version = 1;
 
-        List<TranscriptDocument.Event> events = new ArrayList<>(items.size());
+        // Redis 이벤트 → TranscriptEvent 엔티티 목록으로 변환
+        List<TranscriptEvent> eventEntities = new ArrayList<>(items.size());
         for (RedisMeetingEventStore.StoredEvent it : items) {
             if ("CHAT".equals(it.getType())) {
                 ChatMessageEvent e = read(it.getJson(), ChatMessageEvent.class);
-                events.add(TranscriptDocument.Event.builder()
-                        .id(e.getMessageId())
+                eventEntities.add(TranscriptEvent.builder()
+                        .transcriptId(transcriptId)
+                        .eventId(e.getMessageId())
                         .type("CHAT")
-                        .actorId(String.valueOf(e.getSenderId()))
+                        .participantId(e.getSenderId() != null ? String.valueOf(e.getSenderId()) : null)
+                        .participantName(e.getSenderName())
                         .timestamp(e.getTimestamp())
-                        .seq(e.getSeq())
+                        .seq(e.getSeq() != null ? e.getSeq() : 0L)
                         .text(e.getContent())
                         .build());
             } else if ("VOICE".equals(it.getType())) {
                 VoiceSegmentCreatedEvent e = read(it.getJson(), VoiceSegmentCreatedEvent.class);
-                events.add(TranscriptDocument.Event.builder()
-                        .id(e.getSegmentId())
+                eventEntities.add(TranscriptEvent.builder()
+                        .transcriptId(transcriptId)
+                        .eventId(e.getSegmentId())
                         .type("VOICE")
-                        .actorId(e.getParticipantIdentity())
-                        // voice event does not have absolute audio timestamp yet, using occurred timestamp or startMs mapping
+                        .participantId(e.getParticipantId() != null ? String.valueOf(e.getParticipantId()) : null)
+                        .participantName(e.getParticipantName())
                         .timestamp(e.getTimestamp() != null ? e.getTimestamp() : Instant.ofEpochMilli(e.getSegmentStartMs()))
                         .seq(e.getSeq())
                         .text(e.getText())
@@ -79,26 +90,20 @@ public class TranscriptBuilderService {
             }
         }
 
-        events = events.stream()
-                .sorted(Comparator.comparing((TranscriptDocument.Event e) -> e.getTimestamp() != null ? e.getTimestamp().toEpochMilli() : 0L)
-                        .thenComparingLong(TranscriptDocument.Event::getSeq))
-                .collect(Collectors.toList());
+        // 시간순 정렬
+        eventEntities.sort(Comparator.comparing((TranscriptEvent ev) ->
+                ev.getTimestamp() != null ? ev.getTimestamp().toEpochMilli() : 0L)
+                .thenComparingLong(ev -> ev.getSeq() != null ? ev.getSeq() : 0L));
 
-        TranscriptDocument doc = TranscriptDocument.builder()
-                .roomId(roomId)
-                .transcriptId(transcriptId)
-                .version(version)
-                .events(events)
-                .build();
-
-        String s3Key = StorageKeyFactory.transcriptKey(roomId, transcriptId);
-        storageClient.writeText(s3Key, write(doc), "application/json");
+        // DB 저장: transcript 헤더 + transcript_event 배치 Insert
+        transcriptRepository.save(Transcript.create(roomId, transcriptId, version));
+        transcriptEventRepository.saveAll(eventEntities);
 
         producer.publish(TranscriptFinalizedEvent.builder()
                 .roomId(roomId)
                 .hostUserId(hostUserId)
                 .transcriptId(transcriptId)
-                .transcriptS3Key(s3Key)
+                .transcriptS3Key(null)  // DB 전환 후 불필요, null 처리
                 .version(version)
                 .finalizedAt(Instant.now())
                 .build());
