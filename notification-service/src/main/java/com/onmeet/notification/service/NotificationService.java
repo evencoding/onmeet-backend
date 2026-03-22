@@ -6,6 +6,7 @@ import com.onmeet.notification.entity.Notification;
 import com.onmeet.notification.entity.NotificationRecipient;
 import com.onmeet.notification.entity.NotificationStream;
 import com.onmeet.notification.infra.AuthServiceClient;
+import com.onmeet.notification.repository.NotificationRecipientRepository;
 import com.onmeet.notification.repository.NotificationRepository;
 import com.onmeet.notification.repository.NotificationStreamRepository;
 import com.onmeet.notification.type.NotificationStatus;
@@ -14,7 +15,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import java.io.IOException;
@@ -34,6 +34,7 @@ import java.util.stream.Collectors;
 public class NotificationService {
 
     private final NotificationRepository notificationRepository;
+    private final NotificationRecipientRepository recipientRepository;
     private final NotificationStreamRepository streamRepository;
     private final NotificationSettingService settingService;
     private final FcmService fcmService;
@@ -93,16 +94,14 @@ public class NotificationService {
     // 알림 전송 (즉시 / 예약)
     // ──────────────────────────────────────────────
 
-    @Transactional
     public void send(NotificationRequestDto dto) {
-        // 공통 파라미터 미리 조회 (N+1 방지)
+        // HTTP 호출은 트랜잭션 밖에서 수행 (DB 커넥션 점유 방지)
         String actorName = "알 수 없는 사용자";
         if (dto.getActorUserId() != null) {
             actorName = authServiceClient.getUserName(dto.getActorUserId());
         }
 
         if (dto.getUserIds() != null && !dto.getUserIds().isEmpty()) {
-            // 다수 수신자 처리 (N+1 방지: 배치 조회)
             List<Long> targetUserIds = dto.getUserIds();
             List<AuthServiceClient.UserInfoResponse> userInfos = authServiceClient.getBatchUserInfo(targetUserIds);
             Map<Long, String> userTokenMap = userInfos.stream()
@@ -115,7 +114,6 @@ public class NotificationService {
                 sendSingle(singleDto, actorName, latestToken);
             }
         } else if (dto.getUserId() != null) {
-            // 단일 수신자 처리
             String latestToken = null;
             try {
                 AuthServiceClient.UserInfoResponse userInfo = authServiceClient.getUserInfo(dto.getUserId());
@@ -147,7 +145,6 @@ public class NotificationService {
     private void sendSingle(NotificationRequestDto dto, String actorName, String latestToken) {
         boolean isScheduled = dto.getScheduledAt() != null;
 
-        // 타입 파싱 (DoS 방지)
         if (dto.getType() == null) {
             log.warn("Notification type is null. Skipping.");
             return;
@@ -170,18 +167,15 @@ public class NotificationService {
             }
         }
 
-        // 템플릿 기반 메시지 렌더링
         NotificationTemplate template = NotificationTemplate.fromType(type);
         Map<String, String> params = buildTemplateParams(dto, actorName);
 
         String renderedTitle = template.getDefaultTitle();
         String renderedBody = template.renderBody(params);
 
-        // 외부에서 직접 지정한 title/body가 있으면 우선 사용 (하위 호환)
         String finalTitle = (dto.getTitle() != null && !dto.getTitle().isBlank()) ? dto.getTitle() : renderedTitle;
         String finalBody = (dto.getBody() != null && !dto.getBody().isBlank()) ? dto.getBody() : renderedBody;
 
-        // dedupeKey 중복 체크
         if (dto.getDedupeKey() != null && notificationRepository.existsByDedupeKey(dto.getDedupeKey())) {
             log.info("Duplicate notification detected via dedupeKey: {}. Skipping.", dto.getDedupeKey());
             return;
@@ -207,9 +201,8 @@ public class NotificationService {
         notification.addRecipient(recipient);
         notificationRepository.save(notification);
 
-        // 즉시 발송: scheduledAt이 없으면 바로 보냄
+        // 즉시 발송: DB 저장 후 트랜잭션 밖에서 SSE/FCM 발송
         if (!isScheduled) {
-            // 알림 설정 검증
             if (!settingService.shouldSendNotification(dto.getUserId(), notification.getType())) {
                 log.info("Notification blocked by user settings: userId={}, type={}",
                         dto.getUserId(), notification.getType());
@@ -219,9 +212,9 @@ public class NotificationService {
             boolean sseSent = sendToClient(dto.getUserId(), recipient);
             if (sseSent) {
                 recipient.markAsSent();
+                recipientRepository.save(recipient);
             }
 
-            // FCM 푸시 발송 (Auth 최신 토큰 + 로컬 DB 토큰의 합집합으로 중복 방지)
             try {
                 sendFcmPushToUniqueTokens(dto.getUserId(), notification, latestToken);
             } catch (Exception e) {

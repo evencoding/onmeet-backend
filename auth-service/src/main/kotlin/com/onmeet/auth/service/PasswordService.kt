@@ -29,7 +29,7 @@ class PasswordService(
         val user = userRepository.findByEmail(email)
             .orElseThrow { BusinessException(AuthErrorCode.USER_NOT_FOUND) }
 
-        if (!passwordEncoder.matches(request.oldPassword, user.passwordHash)) {
+        if (!passwordEncoder.matches(request.currentPassword, user.passwordHash)) {
             throw BusinessException(AuthErrorCode.CURRENT_PASSWORD_MISMATCH)
         }
 

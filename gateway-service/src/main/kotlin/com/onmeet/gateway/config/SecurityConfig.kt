@@ -39,6 +39,7 @@ class SecurityConfig(
                     "/auth/v1/check",
                     "/auth/v1/refresh",
                     "/auth/v1/logout",
+                    "/auth/v1/password/find",
                     "/.well-known/**",
                     "/auth/v1/.well-known/**",
                     "/ws-chat",

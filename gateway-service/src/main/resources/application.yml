@@ -4,6 +4,8 @@ server:
 spring:
   application:
     name: gateway-service
+  codec:
+    max-in-memory-size: 100MB
   cloud:
     gateway:
       routes:
@@ -33,6 +35,10 @@ spring:
             - Path=/ws-chat/**
           filters:
             - PrefixPath=/video
+        - id: notification-actuator
+          uri: ${NOTIFICATION_SERVICE_URL:http://notification-service:8085}
+          predicates:
+            - Path=/notification/actuator/**
         - id: notification-sse
           uri: ${NOTIFICATION_SERVICE_URL:http://notification-service:8085}
           predicates:

@@ -142,24 +142,26 @@ func (s *fileService) processFileUploadFromReader(ctx context.Context, reader io
 	}
 
 	// 3. MIME 스푸핑 방지: 실제 파일 내용 기반 MIME 타입 검사
-	sniff := make([]byte, 512)
-	n, _ := io.ReadFull(reader, sniff)
-	sniff = sniff[:n]
-	detected := strings.SplitN(http.DetectContentType(sniff), ";", 2)[0]
+	// 전체 파일을 버퍼에 읽어 seekable하게 만듦 (S3 SDK payload hash 계산에 필요)
+	allBytes, readErr := io.ReadAll(reader)
+	if readErr != nil {
+		return nil, readErr
+	}
+	detected := strings.SplitN(http.DetectContentType(allBytes), ";", 2)[0]
 	detected = strings.TrimSpace(detected)
 	if !allowedMIMETypes[detected] {
+		log.Printf("MIME type rejected: detected=%s, original=%s, filename=%s", detected, contentType, originalFilename)
 		return nil, model.ErrInvalidMIMEType
 	}
-	// 읽은 바이트를 다시 앞에 붙여 원래 스트림 복원
-	reader = io.MultiReader(bytes.NewReader(sniff), reader)
 
 	ext := filepath.Ext(originalFilename)
 	fileName := uuid.New().String() + ext
 	savedKey := fmt.Sprintf("%s/%s/%s/%s", ownerType, ownerId, category, fileName)
 
-	// 4. S3 업로드 실행
-	err := s.s3.UploadFile(ctx, savedKey, reader, contentType)
+	// 4. S3 업로드 실행 (bytes.Reader는 seekable)
+	err := s.s3.UploadFile(ctx, savedKey, bytes.NewReader(allBytes), contentType)
 	if err != nil {
+		log.Printf("S3 upload failed: key=%s, contentType=%s, error=%v", savedKey, contentType, err)
 		return nil, err
 	}
 

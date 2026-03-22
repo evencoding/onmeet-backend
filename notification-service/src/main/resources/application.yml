@@ -12,6 +12,7 @@ spring:
     password: ${SPRING_DATASOURCE_PASSWORD:root}
     driver-class-name: com.mysql.cj.jdbc.Driver
     hikari:
+      maximum-pool-size: 20
       max-lifetime: 240000
       keepalive-time: 30000
       connection-timeout: 30000
@@ -61,6 +62,11 @@ management:
     enabled: false
     sampling:
       probability: 0.0
+
+logging:
+  level:
+    org.apache.kafka.clients.consumer.ConsumerConfig: WARN
+    org.apache.kafka.clients.producer.ProducerConfig: WARN
 
 springdoc:
   api-docs:

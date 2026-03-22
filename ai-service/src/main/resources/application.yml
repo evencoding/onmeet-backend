@@ -80,6 +80,11 @@ management:
     sampling:
       probability: 0.0 # Zipkin disabled (observability stack not running)
 
+logging:
+  level:
+    org.apache.kafka.clients.consumer.ConsumerConfig: WARN
+    org.apache.kafka.clients.producer.ProducerConfig: WARN
+
 springdoc:
   api-docs:
     path: /v1/v3/api-docs

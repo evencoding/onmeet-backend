@@ -33,10 +33,15 @@ public class NotificationQueryService {
     }
 
     /**
-     * 미읽음 알림 수를 반환합니다.
+     * 타입별 미읽음 알림 수를 반환합니다.
      */
-    public long getUnreadCount(Long userId) {
-        return recipientRepository.countByUserIdAndReadAtIsNull(userId);
+    public Map<String, Long> getUnreadCount(Long userId) {
+        return recipientRepository.countUnreadGroupedByType(userId)
+                .stream()
+                .collect(Collectors.toMap(
+                        row -> ((NotificationType) row[0]).name(),
+                        row -> (Long) row[1]
+                ));
     }
 
     /**

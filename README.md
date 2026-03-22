@@ -2,6 +2,8 @@
 
 B2B 화상 회의 + AI 요약 + 알림 서비스 (MSA w/ Spring Boot 3 & Kotlin)
 
+> **Current Version**: v0.4.9 | **Deployed**: [api.onmeet.cloud](https://api.onmeet.cloud)
+
 ## 🏗 기술 스택 (Tech Stack)
 
 ### Core
@@ -15,6 +17,9 @@ B2B 화상 회의 + AI 요약 + 알림 서비스 (MSA w/ Spring Boot 3 & Kotlin)
 - **Gateway**: Spring Cloud Gateway (WebFlux)
 - **Communication**: REST API, Kafka (이벤트 기반)
 - **Database**: MySQL 9.0 (대부분), PostgreSQL 16 (File Service), Redis (인증/캐싱)
+- **File Storage**: MinIO (S3 호환) + Nginx 프록시 서빙
+- **Deployment**: GCP VM (e2-standard-4) + Docker Compose + GitHub Actions CI/CD
+- **DNS/CDN**: Cloudflare (DNS 프록시, Pages)
 
 ## ⚡ 성능 최적화 (Performance Optimization)
 
@@ -180,3 +185,29 @@ SPRING_MAIL_USERNAME=your-gmail-address@gmail.com
 
 ### 상태 확인 (Health Check)
 - `GET /actuator/health` (모든 서비스 공통)
+
+---
+
+## 📋 릴리즈 노트 (Release Notes)
+
+### v0.4.9 (2026-03-22)
+- **fix(auth)**: 비밀번호 변경 500 에러 수정 (DTO 필드명 불일치)
+- **fix(gateway)**: 비밀번호 찾기 API 화이트리스트 추가
+- **fix(video)**: 회의 생성/예약 500 에러 수정 (`@EnableJpaAuditing` 누락, auth URL config 키 수정)
+- **fix(notification)**: actuator 경로 이중화 해소, Gateway 라우트 추가
+- **fix(notification)**: 미읽음 알림 수 응답을 타입별 분류 Map으로 변경
+
+### v0.4.0 (2026-03-15)
+- 전 서비스 응답 포맷 통일 (`{ success: true, data: T }`)
+- GCP VM 업그레이드 (e2-standard-4)
+
+### v0.3.0
+- AI 회의록 요약 기능
+- STT 연동
+
+### v0.2.0
+- 화상 회의 기능 (LiveKit WebRTC)
+- 실시간 채팅
+
+### v0.1.0
+- 초기 MVP (인증, 기업/팀 관리)
