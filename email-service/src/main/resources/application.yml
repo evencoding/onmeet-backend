@@ -19,17 +19,15 @@ spring:
           starttls:
             enable: true
             required: true
-
-onmeet:
-  auth:
-    internal-url: ${AUTH_INTERNAL_URL:http://auth-service:8081}
   kafka:
     bootstrap-servers: ${SPRING_KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
     consumer:
       group-id: email-service-group
       auto-offset-reset: earliest
-      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
-      value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+
+onmeet:
+  auth:
+    internal-url: ${AUTH_INTERNAL_URL:http://auth-service:8081}
 
 gmail:
   oauth2:

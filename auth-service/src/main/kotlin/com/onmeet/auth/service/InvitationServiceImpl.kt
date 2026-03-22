@@ -46,9 +46,10 @@ class InvitationServiceImpl(
             expiresAt = LocalDateTime.now().plusDays(invitationProperties.expiryDays)
         )
         
+        val saved = invitationRepository.save(invitation)
         emailService.sendInvitationEmail(email, code, company.name)
-        
-        return invitationRepository.save(invitation)
+
+        return saved
     }
 
     override fun validateInvitation(email: String, code: String): Invitation {
