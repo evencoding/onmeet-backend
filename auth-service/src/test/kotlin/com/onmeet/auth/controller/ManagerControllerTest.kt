@@ -1,0 +1,302 @@
+package com.onmeet.auth.controller
+
+import com.fasterxml.jackson.databind.ObjectMapper
+import com.onmeet.auth.dto.InvitationRequest
+import com.onmeet.auth.dto.SingleInvitationRequest
+import com.onmeet.auth.dto.UpdateCompanyRequest
+import com.onmeet.auth.dto.UserResponseDto
+import com.onmeet.auth.entity.Company
+import com.onmeet.auth.entity.Invitation
+import com.onmeet.auth.service.AuthService
+import com.onmeet.auth.service.CompanyService
+import com.onmeet.auth.service.UserService
+import io.mockk.every
+import io.mockk.just
+import io.mockk.runs
+import org.junit.jupiter.api.Test
+import org.springframework.http.MediaType
+import org.springframework.test.web.servlet.MockMvc
+import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete
+import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch
+import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post
+import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put
+import org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath
+import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
+import com.onmeet.auth.entity.User
+import org.springframework.web.method.support.HandlerMethodArgumentResolver
+import org.springframework.core.MethodParameter
+import org.springframework.web.context.request.NativeWebRequest
+import org.springframework.web.method.support.ModelAndViewContainer
+import org.springframework.web.bind.support.WebDataBinderFactory
+import org.junit.jupiter.api.BeforeEach
+import org.springframework.test.web.servlet.setup.MockMvcBuilders
+import java.time.LocalDateTime
+
+class ManagerControllerTest {
+    private lateinit var mockMvc: MockMvc
+    private lateinit var userService: UserService
+    private lateinit var authService: AuthService
+    private lateinit var teamService: com.onmeet.auth.service.TeamService
+    private lateinit var invitationService: com.onmeet.auth.service.InvitationService
+    private lateinit var jobTitleService: com.onmeet.auth.service.JobTitleService
+    private lateinit var companyService: CompanyService
+    private val objectMapper = ObjectMapper().apply {
+        registerModule(com.fasterxml.jackson.module.kotlin.KotlinModule.Builder().build())
+    }
+
+    @BeforeEach
+    fun setup() {
+        userService = io.mockk.mockk()
+        authService = io.mockk.mockk()
+        teamService = io.mockk.mockk()
+        invitationService = io.mockk.mockk()
+        jobTitleService = io.mockk.mockk()
+        companyService = io.mockk.mockk()
+
+        mockMvc = MockMvcBuilders
+            .standaloneSetup(ManagerController(userService, authService, teamService, invitationService, jobTitleService, companyService))
+            .setCustomArgumentResolvers(object : HandlerMethodArgumentResolver {
+                override fun supportsParameter(parameter: MethodParameter): Boolean {
+                    return parameter.parameterType == User::class.java
+                }
+
+                override fun resolveArgument(
+                    parameter: MethodParameter,
+                    mavContainer: ModelAndViewContainer?,
+                    webRequest: NativeWebRequest,
+                    binderFactory: WebDataBinderFactory?
+                ): Any? {
+                    return User(
+                        id = 2L, email = "manager@test.com", passwordHash = "hash", name = "Manager",
+                        company = Company(id = 1L, name = "Test Company"),
+                        roles = mutableSetOf(User.Role.USER, User.Role.MANAGER)
+                    )
+                }
+            })
+            .setMessageConverters(org.springframework.http.converter.json.MappingJackson2HttpMessageConverter(objectMapper))
+            .build()
+    }
+    @Test
+    fun `deactivateUser should return success`() {
+        // given
+        val userId = 1L
+        val userResponse = UserResponseDto(
+            id = userId, email = "test@example.com", name = "Test User",
+            employeeId = null, roles = setOf("ROLE_USER"), status = "ACTIVE",
+            company = null, jobTitle = null, teams = emptyList(), profileImageId = null
+        )
+        every { userService.deactivateUser(eq(userId), any()) } returns userResponse
+
+        // when & then
+        mockMvc.perform(
+            put("/auth/v1/manager/employees/$userId/deactivate")
+                .contextPath("/auth")
+        )
+            .andExpect(status().isOk)    }
+
+    @Test
+    fun `resetProfileImage should return no content`() {
+        // given
+        val userId = 1L
+        every { authService.resetUserProfileImage(eq(userId), any()) } just runs
+
+        // when & then
+        mockMvc.perform(
+            delete("/auth/v1/manager/employees/$userId/profile-image")
+                .contextPath("/auth")
+                .principal(org.springframework.security.authentication.UsernamePasswordAuthenticationToken("manager@test.com", null))
+        )
+            .andExpect(status().isNoContent)    }
+
+    @Test
+    fun `inviteMember should return invitation ids for multiple emails`() {
+        // given
+        val testCompany = Company(id = 1L, name = "Test Company")
+        val emails = listOf("user1@company.com", "user2@company.com", "user3@company.com")
+        val request = InvitationRequest(emails = emails)
+
+        emails.forEachIndexed { index, email ->
+            val invitation = Invitation(
+                id = 101L + index,
+                email = email,
+                code = "CODE${index + 1}",
+                role = User.Role.USER,
+                company = testCompany,
+                expiresAt = LocalDateTime.now().plusDays(7)
+            )
+            every { invitationService.createInvitation(eq(1L), eq(email), eq(User.Role.USER)) } returns invitation
+        }
+
+        // when & then
+        mockMvc.perform(
+            post("/auth/v1/manager/invite")
+                .contextPath("/auth")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(request))
+        )
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$").isArray)
+            .andExpect(jsonPath("$", org.hamcrest.Matchers.contains(101, 102, 103)))
+    }
+
+    @Test
+    fun `inviteMember should return single invitation id for single email`() {
+        // given
+        val testCompany = Company(id = 1L, name = "Test Company")
+        val email = "user@company.com"
+        val request = InvitationRequest(emails = listOf(email))
+
+        val invitation = Invitation(
+            id = 100L,
+            email = email,
+            code = "CODE",
+            role = User.Role.USER,
+            company = testCompany,
+            expiresAt = LocalDateTime.now().plusDays(7)
+        )
+
+        every { invitationService.createInvitation(eq(1L), eq(email), eq(User.Role.USER)) } returns invitation
+
+        // when & then
+        mockMvc.perform(
+            post("/auth/v1/manager/invite")
+                .contextPath("/auth")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(request))
+        )
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$").isArray)
+            .andExpect(jsonPath("$[0]").value(100))
+    }
+
+    @Test
+    fun `inviteSingleMember should return invitation id for single email with role USER`() {
+        // given
+        val testCompany = Company(id = 1L, name = "Test Company")
+        val request = SingleInvitationRequest(email = "user@company.com", role = "USER")
+        val invitation = Invitation(
+            id = 200L,
+            email = request.email,
+            code = "CODE1",
+            role = User.Role.USER,
+            company = testCompany,
+            expiresAt = LocalDateTime.now().plusDays(7)
+        )
+        every { invitationService.createInvitation(eq(1L), eq(request.email), eq(User.Role.USER)) } returns invitation
+
+        // when & then
+        mockMvc.perform(
+            post("/auth/v1/manager/invite/single")
+                .contextPath("/auth")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(request))
+        )
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$").value(200))
+    }
+
+    @Test
+    fun `inviteSingleMember should return invitation id with MANAGER role`() {
+        // given
+        val testCompany = Company(id = 1L, name = "Test Company")
+        val request = SingleInvitationRequest(email = "mgr@company.com", role = "MANAGER")
+        val invitation = Invitation(
+            id = 201L,
+            email = request.email,
+            code = "CODE2",
+            role = User.Role.MANAGER,
+            company = testCompany,
+            expiresAt = LocalDateTime.now().plusDays(7)
+        )
+        every { invitationService.createInvitation(eq(1L), eq(request.email), eq(User.Role.MANAGER)) } returns invitation
+
+        // when & then
+        mockMvc.perform(
+            post("/auth/v1/manager/invite/single")
+                .contextPath("/auth")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(request))
+        )
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$").value(201))
+    }
+
+    @Test
+    fun `inviteSingleMember defaults to USER role when role not specified`() {
+        // given
+        val testCompany = Company(id = 1L, name = "Test Company")
+        val request = SingleInvitationRequest(email = "user@company.com")
+        val invitation = Invitation(
+            id = 202L,
+            email = request.email,
+            code = "CODE3",
+            role = User.Role.USER,
+            company = testCompany,
+            expiresAt = LocalDateTime.now().plusDays(7)
+        )
+        every { invitationService.createInvitation(eq(1L), eq(request.email), eq(User.Role.USER)) } returns invitation
+
+        // when & then
+        mockMvc.perform(
+            post("/auth/v1/manager/invite/single")
+                .contextPath("/auth")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(request))
+        )
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$").value(202))
+    }
+
+    @Test
+    fun `inviteSingleMember should return 400 for invalid role`() {
+        // given
+        val request = SingleInvitationRequest(email = "user@company.com", role = "SUPERADMIN")
+
+        // when & then
+        mockMvc.perform(
+            post("/auth/v1/manager/invite/single")
+                .contextPath("/auth")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(request))
+        )
+            .andExpect(status().isBadRequest)
+    }
+
+    @Test
+    fun `updateCompany should return updated company info`() {
+        // given
+        val updatedCompany = Company(id = 1L, name = "Updated Company")
+        val request = UpdateCompanyRequest(name = "Updated Company")
+        every { companyService.updateCompany(eq(1L), eq(request)) } returns updatedCompany
+
+        // when & then
+        mockMvc.perform(
+            patch("/auth/v1/manager/company")
+                .contextPath("/auth")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(request))
+        )
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.id").value(1))
+            .andExpect(jsonPath("$.name").value("Updated Company"))
+            .andExpect(jsonPath("$.status").value("ACTIVE"))
+    }
+
+    @Test
+    fun `updateCompany should succeed with null name in request`() {
+        // given
+        val existingCompany = Company(id = 1L, name = "Existing Company")
+        val request = UpdateCompanyRequest(name = null)
+        every { companyService.updateCompany(eq(1L), eq(request)) } returns existingCompany
+
+        // when & then
+        mockMvc.perform(
+            patch("/auth/v1/manager/company")
+                .contextPath("/auth")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(request))
+        )
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.name").value("Existing Company"))
+    }
+}

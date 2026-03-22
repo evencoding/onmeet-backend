@@ -3,6 +3,8 @@ package com.onmeet.auth.service
 import com.onmeet.auth.entity.*
 import com.onmeet.auth.exception.*
 import com.onmeet.auth.repository.jpa.InvitationRepository
+import com.onmeet.common.exception.BusinessException
+import com.onmeet.common.exception.errorcode.AuthErrorCode
 import com.onmeet.auth.repository.jpa.CompanyRepository
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
@@ -21,7 +23,7 @@ class InvitationServiceImpl(
 
     override fun createInvitation(companyId: Long, email: String, role: User.Role): Invitation {
         val company = companyRepository.findById(companyId)
-            .orElseThrow { CompanyNotFoundException("Company not found: $companyId") }
+            .orElseThrow { BusinessException(AuthErrorCode.COMPANY_NOT_FOUND) }
         return createInvitation(company, email, role)
     }
 
@@ -29,7 +31,7 @@ class InvitationServiceImpl(
         // Check for existing pending invitation
         invitationRepository.findByEmail(email).ifPresent {
              if (it.expiresAt.isAfter(LocalDateTime.now())) {
-                 throw ActiveInvitationExistsException("Active invitation already exists for $email")
+                 throw BusinessException(AuthErrorCode.ACTIVE_INVITATION_EXISTS)
              } else {
                  invitationRepository.delete(it)
              }
@@ -44,17 +46,17 @@ class InvitationServiceImpl(
             expiresAt = LocalDateTime.now().plusDays(invitationProperties.expiryDays)
         )
         
-        emailService.sendInvitationEmail(email, code)
+        emailService.sendInvitationEmail(email, code, company.name)
         
         return invitationRepository.save(invitation)
     }
 
     override fun validateInvitation(email: String, code: String): Invitation {
         val invitation = invitationRepository.findByCode(code)
-            .orElseThrow { InvitationNotFoundException("Invitation not found for code: $code") }
+            .orElseThrow { BusinessException(AuthErrorCode.INVITATION_NOT_FOUND) }
 
         if (invitation.email != email || invitation.expiresAt.isBefore(LocalDateTime.now())) {
-            throw InvalidInvitationException("Invalid invitation code or email mismatch/expired")
+            throw BusinessException(AuthErrorCode.INVALID_INVITATION)
         }
 
         return invitation
@@ -62,7 +64,7 @@ class InvitationServiceImpl(
     
     override fun deleteInvitation(id: Long) {
         if (!invitationRepository.existsById(id)) {
-            throw InvitationNotFoundException("Invitation not found for ID: $id")
+            throw BusinessException(AuthErrorCode.INVITATION_NOT_FOUND)
         }
         invitationRepository.deleteById(id)
     }

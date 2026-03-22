@@ -1,25 +1,35 @@
 services:
   gateway-service:
-    build:
-      context: ../
-      dockerfile: gateway-service/Dockerfile
+    image: ${DOCKER_REGISTRY:-onmeet}/gateway-service:latest
     container_name: gateway-service
     ports:
       - "${GATEWAY_SERVICE_PORT:-8080}:${GATEWAY_SERVICE_PORT:-8080}"
     environment:
+      - JAVA_OPTS=-Xms256m -Xmx512m -XX:+UseG1GC -XX:MaxGCPauseMillis=200
       # No DB Config needed
       - SERVER_PORT=${GATEWAY_SERVICE_PORT:-8080}
       - GATEWAY_SHARED_SECRET=${GATEWAY_SHARED_SECRET}
       - AUTH_SERVICE_URL=${AUTH_SERVICE_URL:-http://auth-service:8081}
       - AI_SERVICE_URL=${AI_SERVICE_URL:-http://ai-service:8082}
       - VIDEO_SERVICE_URL=${VIDEO_SERVICE_URL:-http://video-service:8083}
-      - CHAT_SERVICE_URL=${CHAT_SERVICE_URL:-http://chat-service:8084}
       - NOTIFICATION_SERVICE_URL=${NOTIFICATION_SERVICE_URL:-http://notification-service:8085}
-      - IMAGE_SERVICE_URL=${IMAGE_SERVICE_URL:-http://image-service:8086}
+      - FILE_SERVICE_URL=${FILE_SERVICE_URL:-http://file-service:8086}
+      - SPRING_DATA_REDIS_HOST=${AUTH_REDIS_HOST:-redis-auth}
+      - SPRING_DATA_REDIS_PORT=6379
+    depends_on:
+      - redis-auth
     networks:
-      - msa-network
+      - onmeet-network
+    deploy:
+      resources:
+        limits:
+          cpus: '0.50'
+          memory: 768M
+        reservations:
+          cpus: '0.10'
+          memory: 256M
 
 networks:
-  msa-network:
-    name: onmeet-network
+  onmeet-network:
     external: true
+    name: onmeet-network

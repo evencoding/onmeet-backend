@@ -6,6 +6,7 @@ import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.stereotype.Service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.onmeet.common.exception.BusinessException;
 import com.onmeet.email.dto.EmailRequestDto;
 
 @Service
@@ -38,7 +39,9 @@ public class EmailKafkaConsumer {
         log.info("Received Kafka message: {}", message);
         try {
             EmailRequestDto emailRequest = objectMapper.readValue(message, EmailRequestDto.class);
-            emailService.sendEmail(emailRequest.getTo(), emailRequest.getSubject(), emailRequest.getBody());
+            emailService.sendEmail(emailRequest.getTo(), emailRequest.getSubject(), emailRequest.getTemplateName(), emailRequest.getVariables());
+        } catch (BusinessException e) {
+            log.error("Business rule violation processing Kafka email message: code={}, message={}", e.getErrorCode().getCode(), e.getMessage());
         } catch (com.fasterxml.jackson.core.JsonProcessingException e) {
             log.error("Error processing Kafka message: {}", message, e);
         }

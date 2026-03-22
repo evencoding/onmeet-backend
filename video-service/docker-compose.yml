@@ -6,36 +6,94 @@ services:
       MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD}
       MYSQL_DATABASE: video_db
     ports:
-      - "3309:3306"
+      - "127.0.0.1:3309:3306"
+    volumes:
+      - mysql-video-data:/var/lib/mysql
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${DB_ROOT_PASSWORD}"]
+      test: [ "CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${DB_ROOT_PASSWORD}" ]
       interval: 10s
       timeout: 5s
       retries: 5
     networks:
-      - msa-network
+      - onmeet-network
+    deploy:
+      resources:
+        limits:
+          cpus: '0.25'
+          memory: 512M
+        reservations:
+          cpus: '0.05'
+          memory: 128M
+
+  livekit:
+    image: livekit/livekit-server:latest
+    container_name: livekit
+    ports:
+      - "127.0.0.1:7880:7880"
+      - "127.0.0.1:7881:7881"
+      - "50000-50100:50000-50100/udp"
+    environment:
+      LIVEKIT_KEYS: "${LIVEKIT_API_KEY:-devkey}: ${LIVEKIT_API_SECRET:-devsecret}"
+      LIVEKIT_EXTERNAL_IP: ${LIVEKIT_EXTERNAL_IP}
+    volumes:
+      - ./livekit.yaml:/etc/livekit.yaml
+    command: --config /etc/livekit.yaml --node-ip ${LIVEKIT_EXTERNAL_IP}
+    healthcheck:
+      test: [ "CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:7880" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - onmeet-network
+    deploy:
+      resources:
+        limits:
+          cpus: '0.50'
+          memory: 512M
+        reservations:
+          cpus: '0.10'
+          memory: 256M
 
   video-service:
-    build:
-      context: ../
-      dockerfile: video-service/Dockerfile
+    image: ${DOCKER_REGISTRY:-onmeet}/video-service:latest
     container_name: video-service
     ports:
-      - "${VIDEO_SERVICE_PORT:-8083}:${VIDEO_SERVICE_PORT:-8083}"
+      - "127.0.0.1:8083:8083"
     environment:
+      - SPRING_PROFILES_ACTIVE=default
+      - JAVA_OPTS=-Xms256m -Xmx512m -XX:+UseG1GC -XX:MaxGCPauseMillis=200
       - SPRING_DATASOURCE_URL=${VIDEO_DB_URL:-jdbc:mysql://mysql-video:3306/video_db?useSSL=false&allowPublicKeyRetrieval=true&characterEncoding=UTF-8&serverTimezone=UTC}
       - SPRING_DATASOURCE_USERNAME=${DB_USERNAME}
       - SPRING_DATASOURCE_PASSWORD=${DB_ROOT_PASSWORD}
       - GATEWAY_SHARED_SECRET=${GATEWAY_SHARED_SECRET}
       - SERVER_PORT=${VIDEO_SERVICE_PORT:-8083}
-      - MANAGEMENT_ENDPOINTS_WEB_BASE_PATH=/video/actuator
+      - LIVEKIT_ENABLED=${LIVEKIT_ENABLED:-false}
+      - LIVEKIT_URL=${LIVEKIT_URL:-ws://livekit:7880}
+      - LIVEKIT_API_KEY=${LIVEKIT_API_KEY:-devkey}
+      - LIVEKIT_API_SECRET=${LIVEKIT_API_SECRET:-devsecret}
+      - KAFKA_ENABLED=${KAFKA_ENABLED:-false}
+      - SPRING_KAFKA_BOOTSTRAP_SERVERS=${KAFKA_BOOTSTRAP_SERVERS:-kafka:29092}
+      - MANAGEMENT_ENDPOINT_HEALTH_PROBES_ENABLED=true
     depends_on:
       mysql-video:
         condition: service_healthy
+      livekit:
+        condition: service_healthy
     networks:
-      - msa-network
+      - onmeet-network
+    deploy:
+      resources:
+        limits:
+          cpus: '0.50'
+          memory: 768M
+        reservations:
+          cpus: '0.10'
+          memory: 256M
 
 networks:
-  msa-network:
-    name: onmeet-network
+  onmeet-network:
     external: true
+    name: onmeet-network
+
+volumes:
+  mysql-video-data:

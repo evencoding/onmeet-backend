@@ -1,18 +1,90 @@
 server:
   port: ${SERVER_PORT:8082}
+  servlet:
+    context-path: /ai
+  forward-headers-strategy: framework
 spring:
   application:
     name: ai-service
-  datasource:
-    url: ${SPRING_DATASOURCE_URL:jdbc:mysql://localhost:3306/ai_db?useSSL=false&allowPublicKeyRetrieval=true&characterEncoding=UTF-8&serverTimezone=UTC}
-    username: ${SPRING_DATASOURCE_USERNAME:root}
-    password: ${SPRING_DATASOURCE_PASSWORD:root}
-    driver-class-name: com.mysql.cj.jdbc.Driver
+  jackson:
+    serialization:
+      write-dates-as-timestamps: false
   jpa:
     hibernate:
       ddl-auto: validate
-    properties:
-      hibernate:
-        "[format_sql]": true
-        "[show_sql]": true
-        dialect: org.hibernate.dialect.MySQLDialect
+  kafka:
+    bootstrap-servers: ${SPRING_KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+    consumer:
+      auto-offset-reset: earliest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.ErrorHandlingDeserializer
+      properties:
+        spring.deserializer.value.delegate.class: org.springframework.kafka.support.serializer.JsonDeserializer
+        spring.json.trusted.packages: "com.onmeet.*"
+    listener:
+      missing-topics-fatal: false
+
+gateway:
+  shared-secret: ${GATEWAY_SHARED_SECRET:my-super-secret-gateway-key-1234!}
+
+app:
+  storage:
+    file-service:
+      internal-url: ${FILE_SERVICE_URL:http://file-service:8084}
+  kafka:
+    topics:
+      audio-chunk-ready: ${KAFKA_TOPIC_AUDIO_CHUNK_READY:audio.chunk.ready}
+      voice-segment-created: ${KAFKA_TOPIC_VOICE_SEGMENT_CREATED:voice.segment.created}
+      transcript-finalized: ${KAFKA_TOPIC_TRANSCRIPT_FINALIZED:transcript.finalized}
+      meeting-ended: ${KAFKA_TOPIC_MEETING_ENDED:meeting.ended}
+      chat-events: ${KAFKA_TOPIC_CHAT_EVENTS:chat.events}
+      minutes-generated: ${KAFKA_TOPIC_MINUTES_GENERATED:minutes.generated}
+  vad:
+    enabled: ${VAD_ENABLED:true}
+    model-path: classpath:models/silero_vad.onnx
+    threshold: 0.5
+    min-speech-duration-ms: 250
+    min-silence-duration-ms: 300
+    speech-pad-ms: 30
+
+openai:
+  api-key: ${OPENAI_API_KEY:}
+  api-url: https://api.openai.com/v1/audio/transcriptions
+  model: gpt-4o-mini-transcribe
+
+anthropic:
+  api-key: ${ANTHROPIC_API_KEY:}
+  api-url: https://api.anthropic.com/v1/messages
+  version: 2023-06-01
+  model: claude-sonnet-4-20250514
+
+aws:
+  region: ${AWS_REGION:ap-northeast-2}
+
+onmeet:
+  auth:
+    internal-url: ${AUTH_INTERNAL_URL:http://auth-service:8081}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health, info, prometheus
+  zipkin:
+    tracing:
+      endpoint: http://zipkin:9411/api/v2/spans
+  tracing:
+    sampling:
+      probability: 0.0 # Zipkin disabled (observability stack not running)
+
+logging:
+  level:
+    org.apache.kafka.clients.consumer.ConsumerConfig: WARN
+    org.apache.kafka.clients.producer.ProducerConfig: WARN
+
+springdoc:
+  api-docs:
+    path: /v1/v3/api-docs

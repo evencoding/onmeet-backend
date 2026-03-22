@@ -37,13 +37,8 @@ class User(
     @JoinColumn(name = "job_title_id")
     var jobTitle: JobTitle? = null,
 
-    @ManyToMany(fetch = FetchType.LAZY)
-    @JoinTable(
-        name = "user_teams",
-        joinColumns = [JoinColumn(name = "user_id")],
-        inverseJoinColumns = [JoinColumn(name = "team_id")]
-    )
-    var teams: MutableSet<Team> = mutableSetOf(),
+    @OneToMany(mappedBy = "user", fetch = FetchType.LAZY, cascade = [CascadeType.ALL], orphanRemoval = true)
+    var teamMemberships: MutableSet<TeamMember> = mutableSetOf(),
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
@@ -54,6 +49,15 @@ class User(
     @CollectionTable(name = "user_roles", joinColumns = [JoinColumn(name = "user_id")])
     @Column(name = "role")
     var roles: MutableSet<Role> = mutableSetOf(Role.USER),
+
+    @Column
+    var profileImageId: Long? = null,
+
+    @Column(nullable = false)
+    var isPasswordReset: Boolean = false,
+
+    @Column
+    var fcmDeviceToken: String? = null,
 
     @CreatedDate
     @Column(nullable = false, updatable = false)
@@ -69,16 +73,21 @@ class User(
     }
 
     enum class Role {
-        USER, ADMIN, MANAGER, TEAM_LEADER
+        USER, ADMIN, MANAGER
     }
 
     fun hasRole(role: Role): Boolean = roles.contains(role)
 
     fun isManager(): Boolean = hasRole(Role.MANAGER)
-    
-    fun isTeamLeader(): Boolean = hasRole(Role.TEAM_LEADER)
 
     fun isSelf(user: User): Boolean = this.id == user.id
+
+    // 특정 팀에서의 리더 여부 확인
+    fun isLeaderOfTeam(teamId: Long): Boolean =
+        teamMemberships.any { it.team.id == teamId && it.role == TeamMember.TeamRole.LEADER }
+
+    // 소속된 팀 목록 조회
+    fun getTeams(): List<Team> = teamMemberships.map { it.team }
 
     fun belongsToCompany(companyId: Long): Boolean = company.id == companyId
 

@@ -33,7 +33,8 @@ data class JwtProperties(
 ) {
     data class CookieProperties(
         val secure: Boolean = true,
-        val maxAge: Long = 3600
+        val maxAge: Long = 3600,
+        val sameSite: String = "Lax"
     )
 
     data class RefreshCookieProperties(
@@ -43,7 +44,8 @@ data class JwtProperties(
 
 @ConfigurationProperties(prefix = "invitation")
 data class InvitationProperties(
-    val expiryDays: Long = 7
+    val expiryDays: Long = 7,
+    val guestExpiryDays: Long = 1
 )
 
 @ConfigurationProperties(prefix = "app.team")

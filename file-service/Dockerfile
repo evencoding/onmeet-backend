@@ -1,25 +1,39 @@
-# Stage 1: Build
-FROM eclipse-temurin:17-jdk-jammy AS build
+# syntax=docker/dockerfile:1
+
+# Build Stage
+FROM golang:1.24-alpine AS build
+
+# 빌드에 필요한 도구 설치
+RUN apk add --no-cache git
+
 WORKDIR /app
 
-# Gradle Wrapper 및 설정 파일 복사
-COPY --chmod=0755 gradlew .
-COPY gradle gradle
-COPY build.gradle .
-COPY settings.gradle .
+# 의존성 다운로드 (캐시 마운트로 재사용)
+COPY go.mod go.sum ./
+RUN --mount=type=cache,target=/go/pkg/mod \
+    go mod download
 
-# 의존성 먼저 다운로드하여 캐싱 최적화
-RUN ./gradlew dependencies --no-daemon
+# 소스 복사 및 빌드 (캐시 마운트로 재빌드 속도 향상)
+COPY . .
+RUN --mount=type=cache,target=/go/pkg/mod \
+    --mount=type=cache,target=/root/.cache/go-build \
+    CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build \
+    -ldflags="-s -w" \
+    -trimpath \
+    -o file-service main.go
 
-# 공통 모듈 및 Image 서비스 소스 복사
-COPY common-security common-security
-COPY file-service file-service
+# Run Stage
+FROM alpine:latest
 
-# 빌드 수행
-RUN ./gradlew :file-service:build -x test --no-daemon
+# 보안 및 TLS 인증서
+RUN apk --no-cache add ca-certificates tzdata
 
-# Stage 2: Run
-FROM eclipse-temurin:17-jre-jammy
 WORKDIR /app
-COPY --from=build /app/file-service/build/libs/*.jar app.jar
-ENTRYPOINT ["java", "-jar", "app.jar"]
+
+# 빌드된 바이너리와 문서 복사
+COPY --from=build /app/file-service .
+COPY --from=build /app/docs ./docs
+
+EXPOSE 8086
+
+ENTRYPOINT ["./file-service"]

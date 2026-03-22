@@ -1,6 +1,13 @@
 server:
   port: ${SERVER_PORT:8083}
+  servlet:
+    context-path: /video
+  forward-headers-strategy: framework
 spring:
+  profiles:
+    active: ${SPRING_PROFILES_ACTIVE:chat}
+  autoconfigure:
+    exclude: com.onmeet.common.config.CommonWebAutoConfiguration
   application:
     name: video-service
   datasource:
@@ -8,13 +15,56 @@ spring:
     username: ${SPRING_DATASOURCE_USERNAME:root}
     password: ${SPRING_DATASOURCE_PASSWORD:root}
     driver-class-name: com.mysql.cj.jdbc.Driver
+    hikari:
+      max-lifetime: 240000
+      keepalive-time: 30000
+      connection-timeout: 30000
+      initialization-fail-timeout: -1
   jpa:
     hibernate:
       ddl-auto: validate
     properties:
       hibernate:
-        "[format_sql]": true
-        "[show_sql]": true
+        format_sql: false
+        show_sql: false
         dialect: org.hibernate.dialect.MySQLDialect
+
+gateway:
+  shared-secret: ${GATEWAY_SHARED_SECRET:my-super-secret-gateway-key-1234!}
+
+# TODO: [VIDEO][FILE_SERVICE] 파일 서버 연동 설정 추가 필요
+# app:
+#   storage:
+#     file-service:
+#       internal-url: ${FILE_SERVICE_URL:http://file-service:8084}
+
+onmeet:
+  auth:
+    internal-url: ${AUTH_INTERNAL_URL:http://auth-service:8081}
 cors:
   allowed-origins: "http://localhost:3000,http://localhost:8080"
+
+livekit:
+  enabled: ${LIVEKIT_ENABLED:false}
+  url: ${LIVEKIT_URL:ws://localhost:7880}
+  api-key: ${LIVEKIT_API_KEY:devkey}
+  api-secret: ${LIVEKIT_API_SECRET:devsecret}
+
+kafka:
+  enabled: ${KAFKA_ENABLED:false}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health, info, prometheus
+  zipkin:
+    tracing:
+      endpoint: http://zipkin:9411/api/v2/spans
+  tracing:
+    sampling:
+      probability: 0.0 # Zipkin disabled (observability stack not running)
+
+springdoc:
+  api-docs:
+    path: /v1/v3/api-docs

@@ -1,116 +1,117 @@
 package com.onmeet.auth.service
 
+import com.onmeet.auth.client.FileClient
 import com.onmeet.auth.dto.*
 import com.onmeet.auth.dto.toResponseDto
 import com.onmeet.auth.entity.User
-import com.onmeet.auth.exception.*
 import com.onmeet.auth.repository.jpa.UserRepository
-import org.springframework.security.authentication.AuthenticationManager
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken
-import org.springframework.security.crypto.password.PasswordEncoder
+import com.onmeet.common.dto.NotificationRequestDto
+import com.onmeet.common.exception.BusinessException
+import com.onmeet.common.exception.errorcode.AuthErrorCode
+import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 
+/**
+ * Facade for auth-related operations. Delegates to specialized services.
+ * Controllers can depend on AuthService for backward compatibility, or
+ * directly on the specific service (SignupService, AuthenticationService, etc.).
+ */
 @Service
 class AuthService(
-    private val userRepository: UserRepository,
-    private val passwordEncoder: PasswordEncoder,
-    private val authenticationManager: AuthenticationManager,
-    private val companyService: CompanyService,
-    private val teamService: TeamService,
+    private val signupService: SignupService,
+    private val authenticationService: AuthenticationService,
+    private val withdrawService: WithdrawService,
+    private val passwordService: PasswordService,
     private val invitationService: InvitationService,
-    private val jobTitleService: JobTitleService,
-    private val tokenService: TokenService
+    private val fileClient: FileClient,
+    private val userRepository: UserRepository,
+    private val notificationEventPublisher: NotificationEventPublisher
 ) {
+    private val log = LoggerFactory.getLogger(AuthService::class.java)
 
     @Transactional
-    fun signupCompany(request: CompanySignupRequest): Long {
-        if (userRepository.existsByEmail(request.email)) {
-            throw EmailAlreadyExistsException("Email already in use: ${request.email}")
-        }
-
-        // 1. Create Company
-        val company = companyService.createCompany(request.companyName)
-
-        // 2. Create Initial Team (from request)
-        val defaultTeam = teamService.createTeam(
-            company.requireId(),
-            request.teamName
-        )
-
-        // 3. Create Default Job Title
-        val defaultJobTitle = jobTitleService.createDefaultInitialTitle(company)
-
-        // 4. Create User (Manager)
-        val user = User(
-            email = request.email,
-            passwordHash = passwordEncoder.encode(request.password),
-            name = request.name,
-            roles = mutableSetOf(User.Role.MANAGER),
-            company = company,
-            teams = mutableSetOf(defaultTeam),
-            jobTitle = defaultJobTitle,
-            status = User.UserStatus.ACTIVE
-        )
-
-        return userRepository.save(user).requireId()
-    }
+    fun signupCompany(request: CompanySignupRequest, profileImage: org.springframework.web.multipart.MultipartFile?): Long =
+        signupService.signupCompany(request, profileImage)
 
     @Transactional
-    fun joinCompany(request: JoinRequest): Long {
-        // 1. Validate Invitation
-        val invitation = invitationService.validateInvitation(request.email, request.code)
-
-        if (userRepository.existsByEmail(request.email)) {
-            throw EmailAlreadyExistsException("Email already in use: ${request.email}")
-        }
-
-        // 2. Assign Default Job Title
-        val defaultJobTitle = jobTitleService.getDefaultJobTitle(invitation.company)
-
-        // 3. Create User
-        val user = User(
-            email = request.email,
-            passwordHash = passwordEncoder.encode(request.password),
-            name = request.name,
-            employeeId = request.employeeId,
-            roles = mutableSetOf(invitation.role),
-            company = invitation.company,
-            jobTitle = defaultJobTitle,
-            status = User.UserStatus.ACTIVE
-        )
-
-        val savedUser = userRepository.save(user)
-
-        // 4. Mark Invitation as used
-        invitationService.deleteInvitation(invitation.requireId())
-
-        return savedUser.requireId()
-    }
+    fun signupCompany(request: CompanySignupRequest): Long =
+        signupService.signupCompany(request, null)
 
     @Transactional
-    fun login(request: LoginRequest): TokenResponse {
-        val authentication = authenticationManager.authenticate(
-            UsernamePasswordAuthenticationToken(request.email, request.password)
-        )
-        return tokenService.issueTokens(authentication, request.email)
-    }
+    fun joinCompany(request: JoinRequest, profileImage: org.springframework.web.multipart.MultipartFile?): Long =
+        signupService.joinCompany(request, profileImage)
 
     @Transactional
-    fun guestLogin(request: GuestLoginRequest): TokenResponse {
-        return tokenService.issueGuestTokens(request.name, request.meetingId)
-    }
+    fun joinCompany(request: JoinRequest): Long =
+        signupService.joinCompany(request, null)
 
     @Transactional
-    fun refresh(token: String): TokenResponse {
-        return tokenService.refreshTokens(token)
-    }
+    fun login(request: LoginRequest): TokenResponse =
+        authenticationService.login(request)
+
+    @Transactional
+    fun guestLogin(request: GuestLoginRequest): TokenResponse =
+        authenticationService.guestLogin(request)
+
+    @Transactional
+    fun refresh(token: String): TokenResponse =
+        authenticationService.refresh(token)
+
+    fun logout(accessToken: String?, email: String?) =
+        authenticationService.logout(accessToken, email)
 
     @Transactional(readOnly = true)
     fun validateInvitation(email: String, code: String): InvitationResponse =
         invitationService.validateInvitation(email, code).toResponseDto()
 
-    fun logout(accessToken: String?, email: String?) {
-        tokenService.revokeTokens(accessToken, email)
+    @Transactional
+    fun withdraw(email: String, request: WithdrawRequest) =
+        withdrawService.withdraw(email, request)
+
+    @Transactional
+    fun changePassword(email: String, request: ChangePasswordRequest) =
+        passwordService.changePassword(email, request)
+
+    @Transactional
+    fun findPassword(email: String) =
+        passwordService.findPassword(email)
+
+    @Transactional
+    fun resetUserProfileImage(targetUserId: Long, requesterEmail: String) {
+        val targetUser = userRepository.findById(targetUserId)
+            .orElseThrow { BusinessException(AuthErrorCode.USER_NOT_FOUND) }
+
+        val requester = userRepository.findByEmail(requesterEmail)
+            .orElseThrow { BusinessException(AuthErrorCode.REQUESTER_NOT_FOUND) }
+
+        val isManager = requester.roles.contains(User.Role.MANAGER) &&
+                requester.company.id == targetUser.company.id
+
+        if (!isManager) {
+            throw BusinessException(AuthErrorCode.PROFILE_RESET_FORBIDDEN)
+        }
+
+        targetUser.profileImageId?.let { oldImageId ->
+            try {
+                fileClient.deleteFile(oldImageId)
+            } catch (e: Exception) {
+                log.warn("Failed to delete old profile image: $oldImageId", e)
+            }
+        }
+
+        fileClient.generateDefaultProfileImage(targetUser.name, targetUser.requireId().toString())?.let {
+            targetUser.profileImageId = it.id
+            userRepository.save(targetUser)
+            notificationEventPublisher.publishNotification(
+                NotificationRequestDto(
+                    userId = targetUser.id,
+                    type = "SYSTEM",
+                    title = "프로필 초기화",
+                    body = "관리자에 의해 프로필 이미지가 초기화되었습니다.",
+                    actorUserId = requester.id
+                )
+            )
+        }
     }
 }

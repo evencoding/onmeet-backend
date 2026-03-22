@@ -1,0 +1,8 @@
+**/build/
+.gradle/
+.idea/
+*.log
+.DS_Store
+out/
+.env
+nginx/

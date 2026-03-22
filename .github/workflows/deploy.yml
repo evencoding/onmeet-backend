@@ -1,0 +1,501 @@
+name: CI/CD Pipeline for Onmeet Backend
+
+on:
+  push:
+    branches:
+      - "release/**" # release/v0.1.0, release/v0.2.0 등 버전별 릴리즈 브랜치
+  workflow_dispatch: # 수동 트리거 가능
+
+env:
+  DOCKER_REGISTRY: docker.io
+  DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
+  DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
+
+jobs:
+  # Job 1: 변경된 서비스 감지 및 버전 추출
+  detect-changes:
+    name: Detect Changed Services & Extract Version
+    runs-on: ubuntu-latest
+    outputs:
+      auth: ${{ steps.any-changed.outputs.auth }}
+      gateway: ${{ steps.any-changed.outputs.gateway }}
+      ai: ${{ steps.any-changed.outputs.ai }}
+      video: ${{ steps.any-changed.outputs.video }}
+      notification: ${{ steps.any-changed.outputs.notification }}
+      email: ${{ steps.any-changed.outputs.email }}
+      file: ${{ steps.any-changed.outputs.file }}
+      nginx: ${{ steps.any-changed.outputs.nginx }}
+      any-service-changed: ${{ steps.any-changed.outputs.any-service-changed }}
+      version: ${{ steps.extract-version.outputs.version }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Resolve comparison base SHA
+        id: resolve-base
+        env:
+          GCP_HOST: ${{ secrets.GCP_HOST }}
+          GCP_USERNAME: ${{ secrets.GCP_USERNAME }}
+          GCP_SSH_KEY: ${{ secrets.GCP_SSH_KEY }}
+          GCP_SSH_PORT: ${{ secrets.GCP_SSH_PORT }}
+          GCP_PROJECT_PATH: ${{ secrets.GCP_PROJECT_PATH }}
+        run: |
+          # 배포 서버의 .last_deployed_sha 파일에서 마지막 배포 SHA를 읽어온다
+          # 1순위: 배포 서버의 .last_deployed_sha 파일
+          # 2순위: github.event.before (push 이전 커밋)
+          # 3순위: HEAD~1 (fallback)
+
+          LAST_DEPLOYED=""
+          # SSH로 배포 서버에서 SHA 읽기 시도
+          if [ -n "$GCP_HOST" ]; then
+            mkdir -p ~/.ssh
+            echo "$GCP_SSH_KEY" > ~/.ssh/deploy_key
+            chmod 600 ~/.ssh/deploy_key
+            LAST_DEPLOYED=$(ssh -o StrictHostKeyChecking=no -i ~/.ssh/deploy_key -p "$GCP_SSH_PORT" "$GCP_USERNAME@$GCP_HOST" \
+              "cat $GCP_PROJECT_PATH/.last_deployed_sha 2>/dev/null" 2>/dev/null || true)
+            rm -f ~/.ssh/deploy_key
+          fi
+
+          if [ -n "$LAST_DEPLOYED" ] && git cat-file -e "$LAST_DEPLOYED" 2>/dev/null; then
+            echo "base=$LAST_DEPLOYED" >> $GITHUB_OUTPUT
+            echo "Using LAST_DEPLOYED_SHA from server: $LAST_DEPLOYED"
+          elif [ "${{ github.event_name }}" == "push" ] && [ "${{ github.event.before }}" != "0000000000000000000000000000000000000000" ]; then
+            echo "base=${{ github.event.before }}" >> $GITHUB_OUTPUT
+            echo "Using github.event.before: ${{ github.event.before }}"
+          else
+            echo "base=$(git rev-parse HEAD~1)" >> $GITHUB_OUTPUT
+            echo "Fallback to HEAD~1"
+          fi
+
+      - name: Detect changes in services
+        uses: dorny/paths-filter@v3
+        id: changes
+        with:
+          base: ${{ steps.resolve-base.outputs.base }}
+          ref: ${{ github.sha }}
+          filters: |
+            infra:
+              - 'docker-compose.yml'
+              - '.github/workflows/**'
+            common:
+              - 'onmeet-common/**'
+              - 'common-security/**'
+              - 'build.gradle'
+              - 'settings.gradle'
+            auth:
+              - 'auth-service/**'
+            gateway:
+              - 'gateway-service/**'
+            ai:
+              - 'ai-service/**'
+            video:
+              - 'video-service/**'
+            notification:
+              - 'notification-service/**'
+            email:
+              - 'email-service/**'
+            file:
+              - 'file-service/**'
+            kafka:
+              - 'kafka/**'
+            nginx:
+              - 'nginx/**'
+
+      - name: Determine build targets
+        id: any-changed
+        run: |
+          COMMON="${{ steps.changes.outputs.common }}"
+          INFRA="${{ steps.changes.outputs.infra }}"
+          MANUAL="${{ github.event_name == 'workflow_dispatch' }}"
+          FULL_BUILD="false"
+
+          # 공통 모듈 또는 인프라 파일 변경 또는 수동 트리거 → 전체 빌드
+          if [ "$COMMON" == "true" ] || [ "$INFRA" == "true" ] || [ "$MANUAL" == "true" ]; then
+            FULL_BUILD="true"
+            echo "Full build triggered (common=$COMMON, infra=$INFRA, manual=$MANUAL)"
+          fi
+
+          echo "full-build=$FULL_BUILD" >> $GITHUB_OUTPUT
+
+          # 개별 서비스 또는 전체 빌드
+          for svc in auth gateway ai video notification email file kafka nginx; do
+            val="${{ steps.changes.outputs.auth }}"
+            case $svc in
+              auth) val="${{ steps.changes.outputs.auth }}" ;;
+              gateway) val="${{ steps.changes.outputs.gateway }}" ;;
+              ai) val="${{ steps.changes.outputs.ai }}" ;;
+              video) val="${{ steps.changes.outputs.video }}" ;;
+              notification) val="${{ steps.changes.outputs.notification }}" ;;
+              email) val="${{ steps.changes.outputs.email }}" ;;
+              file) val="${{ steps.changes.outputs.file }}" ;;
+              kafka) val="${{ steps.changes.outputs.kafka }}" ;;
+              nginx) val="${{ steps.changes.outputs.nginx }}" ;;
+            esac
+            if [ "$val" == "true" ] || [ "$FULL_BUILD" == "true" ]; then
+              echo "$svc=true" >> $GITHUB_OUTPUT
+            else
+              echo "$svc=false" >> $GITHUB_OUTPUT
+            fi
+          done
+
+          # any-service-changed
+          if [ "$FULL_BUILD" == "true" ] || \
+             [ "${{ steps.changes.outputs.auth }}" == "true" ] || \
+             [ "${{ steps.changes.outputs.gateway }}" == "true" ] || \
+             [ "${{ steps.changes.outputs.ai }}" == "true" ] || \
+             [ "${{ steps.changes.outputs.video }}" == "true" ] || \
+             [ "${{ steps.changes.outputs.notification }}" == "true" ] || \
+             [ "${{ steps.changes.outputs.email }}" == "true" ] || \
+             [ "${{ steps.changes.outputs.file }}" == "true" ] || \
+             [ "${{ steps.changes.outputs.kafka }}" == "true" ] || \
+             [ "${{ steps.changes.outputs.nginx }}" == "true" ]; then
+            echo "any-service-changed=true" >> $GITHUB_OUTPUT
+          else
+            echo "any-service-changed=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Extract version from branch name
+        id: extract-version
+        run: |
+          # release/v0.1.0 → v0.1.0 추출
+          BRANCH_NAME="${{ github.ref_name }}"
+          echo "Branch name: $BRANCH_NAME"
+
+          if [[ $BRANCH_NAME =~ release/v([0-9]+\.[0-9]+\.[0-9]+) ]]; then
+            VERSION="v${BASH_REMATCH[1]}"
+            echo "version=$VERSION" >> $GITHUB_OUTPUT
+            echo "Extracted version: $VERSION"
+          elif [[ $BRANCH_NAME =~ release/(v[0-9]+\.[0-9]+\.[0-9]+) ]]; then
+            VERSION="${BASH_REMATCH[1]}"
+            echo "version=$VERSION" >> $GITHUB_OUTPUT
+            echo "Extracted version: $VERSION"
+          else
+            # 버전 정보가 없으면 latest만 사용
+            echo "version=latest" >> $GITHUB_OUTPUT
+            echo "No version found, using 'latest'"
+          fi
+
+  # Job 2: 변경된 서비스 빌드 및 푸시
+  build-and-push:
+    name: Build and Push Docker Images
+    runs-on: ubuntu-latest
+    needs: detect-changes
+    if: needs.detect-changes.outputs.any-service-changed == 'true'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        if: |
+          needs.detect-changes.outputs.auth == 'true' ||
+          needs.detect-changes.outputs.gateway == 'true' ||
+          needs.detect-changes.outputs.ai == 'true' ||
+          needs.detect-changes.outputs.video == 'true' ||
+          needs.detect-changes.outputs.notification == 'true' ||
+          needs.detect-changes.outputs.email == 'true'
+        uses: actions/setup-java@v4
+        with:
+          distribution: "temurin"
+          java-version: "17"
+
+      - name: Setup Gradle
+        if: |
+          needs.detect-changes.outputs.auth == 'true' ||
+          needs.detect-changes.outputs.gateway == 'true' ||
+          needs.detect-changes.outputs.ai == 'true' ||
+          needs.detect-changes.outputs.video == 'true' ||
+          needs.detect-changes.outputs.notification == 'true' ||
+          needs.detect-changes.outputs.email == 'true'
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          cache-read-only: false
+          gradle-home-cache-excludes: |
+            caches/*/jib-cache
+
+      - name: Login to Docker Hub for Jib
+        if: |
+          needs.detect-changes.outputs.auth == 'true' ||
+          needs.detect-changes.outputs.gateway == 'true' ||
+          needs.detect-changes.outputs.ai == 'true' ||
+          needs.detect-changes.outputs.video == 'true' ||
+          needs.detect-changes.outputs.notification == 'true' ||
+          needs.detect-changes.outputs.email == 'true'
+        run: |
+          export DOCKER_API_VERSION=1.41
+            echo "${{ secrets.DOCKER_PASSWORD }}" | docker login -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
+
+      - name: Build changed Kotlin/Java services with Jib
+        if: |
+          needs.detect-changes.outputs.auth == 'true' ||
+          needs.detect-changes.outputs.gateway == 'true' ||
+          needs.detect-changes.outputs.ai == 'true' ||
+          needs.detect-changes.outputs.video == 'true' ||
+          needs.detect-changes.outputs.notification == 'true' ||
+          needs.detect-changes.outputs.email == 'true'
+        env:
+          DOCKER_REGISTRY_PREFIX: ${{ secrets.DOCKER_USERNAME }}
+          VERSION: ${{ needs.detect-changes.outputs.version }}
+        run: |
+          # 변경된 서비스만 빌드하도록 동적으로 타겟 생성
+          TARGETS=""
+
+          if [ "${{ needs.detect-changes.outputs.auth }}" == "true" ]; then
+            TARGETS="$TARGETS :auth-service:jib"
+          fi
+          if [ "${{ needs.detect-changes.outputs.gateway }}" == "true" ]; then
+            TARGETS="$TARGETS :gateway-service:jib"
+          fi
+          if [ "${{ needs.detect-changes.outputs.ai }}" == "true" ]; then
+            TARGETS="$TARGETS :ai-service:jib"
+          fi
+          if [ "${{ needs.detect-changes.outputs.video }}" == "true" ]; then
+            TARGETS="$TARGETS :video-service:jib"
+          fi
+          if [ "${{ needs.detect-changes.outputs.notification }}" == "true" ]; then
+            TARGETS="$TARGETS :notification-service:jib"
+          fi
+          if [ "${{ needs.detect-changes.outputs.email }}" == "true" ]; then
+            TARGETS="$TARGETS :email-service:jib"
+          fi
+
+          if [ -n "$TARGETS" ]; then
+            echo "Building services:$TARGETS"
+            echo "Docker registry: $DOCKER_REGISTRY_PREFIX"
+            echo "Version tag: $VERSION"
+
+            # 버전 태그와 latest 태그 모두 생성
+            if [ "$VERSION" != "latest" ]; then
+              TAG_LIST="latest,$VERSION"
+            else
+              TAG_LIST="latest"
+            fi
+
+            ./gradlew $TARGETS \
+              -Djib.to.auth.username=${{ secrets.DOCKER_USERNAME }} \
+              -Djib.to.auth.password=${{ secrets.DOCKER_PASSWORD }} \
+              -Djib.to.tags=$TAG_LIST \
+              --parallel \
+              --no-daemon \
+              --no-configuration-cache \
+              -x test
+          else
+            echo "No Kotlin/Java services to build"
+          fi
+
+      - name: Set up Docker Buildx
+        if: needs.detect-changes.outputs.file == 'true'
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to Docker Hub for file-service
+        if: needs.detect-changes.outputs.file == 'true'
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: Build and push file-service (Go)
+        if: needs.detect-changes.outputs.file == 'true'
+        uses: docker/build-push-action@v5
+        with:
+          context: ./file-service
+          file: ./file-service/Dockerfile
+          push: true
+          tags: |
+            ${{ secrets.DOCKER_USERNAME }}/file-service:latest
+            ${{ secrets.DOCKER_USERNAME }}/file-service:${{ needs.detect-changes.outputs.version }}
+          platforms: linux/amd64,linux/arm64
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  # Job 3: GCP 서버에 배포
+  deploy:
+    name: Deploy to GCP Server
+    runs-on: ubuntu-latest
+    needs: [detect-changes, build-and-push]
+    if: always() && needs.detect-changes.result == 'success' && (needs.build-and-push.result == 'success' || needs.build-and-push.result == 'skipped')
+    steps:
+      - name: Deploy to GCP via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.GCP_HOST }}
+          username: ${{ secrets.GCP_USERNAME }}
+          key: ${{ secrets.GCP_SSH_KEY }}
+          port: ${{ secrets.GCP_SSH_PORT }}
+          script: |
+            cd ${{ secrets.GCP_PROJECT_PATH }}
+
+            # Retrieve latest configs
+            git fetch --all
+            git checkout ${{ github.ref_name }}
+            git reset --hard origin/${{ github.ref_name }}
+
+            # Ensure PRIVACY_ENCRYPTION_KEY is in .env file (무조건 덮어쓰기)
+            sed -i '/^PRIVACY_ENCRYPTION_KEY=/d' .env 2>/dev/null || true
+            echo "PRIVACY_ENCRYPTION_KEY=${{ secrets.PRIVACY_ENCRYPTION_KEY }}" >> .env
+            echo "Injected PRIVACY_ENCRYPTION_KEY from GitHub Secret"
+
+            # Ensure LIVEKIT keys are in .env file
+            sed -i '/^LIVEKIT_API_KEY=/d' .env 2>/dev/null || true
+            echo "LIVEKIT_API_KEY=${{ secrets.LIVEKIT_API_KEY }}" >> .env
+            echo "Injected LIVEKIT_API_KEY from GitHub Secret"
+
+            sed -i '/^LIVEKIT_API_SECRET=/d' .env 2>/dev/null || true
+            echo "LIVEKIT_API_SECRET=${{ secrets.LIVEKIT_API_SECRET }}" >> .env
+            echo "Injected LIVEKIT_API_SECRET from GitHub Secret"
+
+            sed -i '/^LIVEKIT_EXTERNAL_IP=/d' .env 2>/dev/null || true
+            echo "LIVEKIT_EXTERNAL_IP=${{ secrets.LIVEKIT_EXTERNAL_IP }}" >> .env
+            echo "Injected LIVEKIT_EXTERNAL_IP from GitHub Secret"
+
+            # Video-service: LiveKit/Kafka 실제 구현체 활성화
+            sed -i '/^LIVEKIT_ENABLED=/d' .env 2>/dev/null || true
+            echo "LIVEKIT_ENABLED=true" >> .env
+
+            sed -i '/^KAFKA_ENABLED=/d' .env 2>/dev/null || true
+            echo "KAFKA_ENABLED=true" >> .env
+
+            sed -i '/^LIVEKIT_URL=/d' .env 2>/dev/null || true
+            echo "LIVEKIT_URL=${{ secrets.LIVEKIT_URL }}" >> .env
+            echo "Injected LIVEKIT_URL from GitHub Secret"
+
+            # TODO: 로컬 개발용 임시 설정. 로컬 개발 완료 후 secret 제거하여 롤백할 것
+            sed -i '/^COOKIE_SAMESITE=/d' .env 2>/dev/null || true
+            echo "COOKIE_SAMESITE=${{ secrets.COOKIE_SAMESITE }}" >> .env
+            echo "Injected COOKIE_SAMESITE from GitHub Secret"
+
+            # Firebase Service Account (FCM 푸시 알림용)
+            sed -i '/^FIREBASE_CREDENTIALS_JSON=/d' .env 2>/dev/null || true
+            FIREBASE_JSON=$(echo "${{ secrets.FIREBASE_SERVICE_ACCOUNT_BASE64 }}" | base64 -d | tr -d '\n')
+            echo "FIREBASE_CREDENTIALS_JSON=${FIREBASE_JSON}" >> .env
+            echo "Injected FIREBASE_CREDENTIALS_JSON from GitHub Secret"
+
+            # AI Service API Keys
+            sed -i '/^OPENAI_API_KEY=/d' .env 2>/dev/null || true
+            echo "OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }}" >> .env
+            echo "Injected OPENAI_API_KEY from GitHub Secret"
+
+            sed -i '/^ANTHROPIC_API_KEY=/d' .env 2>/dev/null || true
+            echo "ANTHROPIC_API_KEY=${{ secrets.ANTHROPIC_API_KEY }}" >> .env
+            echo "Injected ANTHROPIC_API_KEY from GitHub Secret"
+
+            # Email Service 설정
+            sed -i '/^SPRING_MAIL_USERNAME=/d' .env 2>/dev/null || true
+            echo "SPRING_MAIL_USERNAME=evenhancoding@gmail.com" >> .env
+            echo "Injected SPRING_MAIL_USERNAME"
+
+            # Gmail OAuth2 (Email Service)
+            sed -i '/^GMAIL_CLIENT_ID=/d' .env 2>/dev/null || true
+            echo "GMAIL_CLIENT_ID=${{ secrets.GMAIL_CLIENT_ID }}" >> .env
+            echo "Injected GMAIL_CLIENT_ID from GitHub Secret"
+
+            sed -i '/^GMAIL_CLIENT_SECRET=/d' .env 2>/dev/null || true
+            echo "GMAIL_CLIENT_SECRET=${{ secrets.GMAIL_CLIENT_SECRET }}" >> .env
+            echo "Injected GMAIL_CLIENT_SECRET from GitHub Secret"
+
+            sed -i '/^GMAIL_REFRESH_TOKEN=/d' .env 2>/dev/null || true
+            echo "GMAIL_REFRESH_TOKEN=${{ secrets.GMAIL_REFRESH_TOKEN }}" >> .env
+            echo "Injected GMAIL_REFRESH_TOKEN from GitHub Secret"
+
+            # Docker Hub 로그인
+            export DOCKER_API_VERSION=1.41
+            export DOCKER_REGISTRY=${{ secrets.DOCKER_USERNAME }}
+            echo "${{ secrets.DOCKER_PASSWORD }}" | docker login -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
+
+            # 변경된 서비스만 추출
+            TARGETS=""
+            if [ "${{ needs.detect-changes.outputs.auth }}" == "true" ]; then TARGETS="$TARGETS auth-service mysql-auth redis-auth"; fi
+            if [ "${{ needs.detect-changes.outputs.gateway }}" == "true" ]; then TARGETS="$TARGETS gateway-service"; fi
+            if [ "${{ needs.detect-changes.outputs.ai }}" == "true" ]; then TARGETS="$TARGETS ai-service mysql-ai redis"; fi
+            if [ "${{ needs.detect-changes.outputs.video }}" == "true" ]; then TARGETS="$TARGETS video-service livekit mysql-video"; fi
+            if [ "${{ needs.detect-changes.outputs.notification }}" == "true" ]; then TARGETS="$TARGETS notification-service mysql-notification"; fi
+            if [ "${{ needs.detect-changes.outputs.email }}" == "true" ]; then TARGETS="$TARGETS email-service"; fi
+            if [ "${{ needs.detect-changes.outputs.file }}" == "true" ]; then TARGETS="$TARGETS file-service"; fi
+            if [ "${{ needs.detect-changes.outputs.kafka }}" == "true" ]; then TARGETS="$TARGETS kafka zookeeper"; fi
+            if [ "${{ needs.detect-changes.outputs.nginx }}" == "true" ]; then TARGETS="$TARGETS nginx certbot"; fi
+
+            echo "Deploying changed services: $TARGETS"
+
+            # 최신 이미지 pull (변경된 타겟만)
+            if [ -n "$TARGETS" ]; then
+              echo "Pulling targets: $TARGETS"
+              docker compose pull $TARGETS
+            else
+              echo "No service targets to pull."
+            fi
+
+            # 변경된 서비스가 있으면 해당 컨테이너 중지 및 제거 후 재생성
+            if [ -n "$TARGETS" ]; then
+              echo "Stopping and removing changed services: $TARGETS"
+              docker compose stop $TARGETS
+              docker compose rm -f $TARGETS
+              echo "Recreating changed services: $TARGETS"
+              docker compose up -d $TARGETS
+            fi
+
+            # 전체 스택 상태 확인 및 꺼져있는 컨테이너 실행 (재생성 없이)
+            echo "Ensuring all services are running..."
+            docker compose up -d --remove-orphans
+
+            # 사용하지 않는 이미지 정리
+            docker image prune -f
+
+            echo "Deployment completed successfully!"
+
+      - name: Verify deployment
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.GCP_HOST }}
+          username: ${{ secrets.GCP_USERNAME }}
+          key: ${{ secrets.GCP_SSH_KEY }}
+          port: ${{ secrets.GCP_SSH_PORT }}
+          script: |
+            cd ${{ secrets.GCP_PROJECT_PATH }}
+
+            export DOCKER_API_VERSION=1.41
+            export DOCKER_REGISTRY=${{ secrets.DOCKER_USERNAME }}
+
+            # 컨테이너 상태 확인
+            docker compose ps
+
+            # 헬스체크 (gateway-service 기준)
+            max_attempts=120
+            attempt=0
+            until curl -f http://localhost:8080/actuator/health || [ $attempt -eq $max_attempts ]; do
+              attempt=$((attempt+1))
+              echo "Waiting for services to be healthy... ($attempt/$max_attempts)"
+              sleep 2
+            done
+
+            if [ $attempt -eq $max_attempts ]; then
+              echo "Health check failed after $max_attempts attempts"
+              echo "--- Gateway Service Logs ---"
+              docker compose logs --tail=100 gateway-service || true
+              echo "--- Zookeeper Logs ---"
+              docker compose logs --tail=100 zookeeper || true
+              echo "--- MySQL Auth Logs ---"
+              docker compose logs --tail=100 mysql-auth || true
+              exit 1
+            fi
+
+            echo "All services are healthy!"
+
+            # Gateway 재배포 시 Nginx DNS 캐시 갱신 (컨테이너 IP 변경 대응)
+            if [ "${{ needs.detect-changes.outputs.gateway }}" == "true" ]; then
+              echo "Gateway was redeployed, reloading Nginx to refresh DNS cache..."
+              docker exec onmeet-nginx nginx -s reload || echo "Warning: Nginx reload failed"
+              echo "Nginx reloaded successfully"
+            fi
+
+      - name: Update LAST_DEPLOYED_SHA on server
+        if: success()
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.GCP_HOST }}
+          username: ${{ secrets.GCP_USERNAME }}
+          key: ${{ secrets.GCP_SSH_KEY }}
+          port: ${{ secrets.GCP_SSH_PORT }}
+          script: |
+            echo "${{ github.sha }}" > ${{ secrets.GCP_PROJECT_PATH }}/.last_deployed_sha
+            echo "Updated LAST_DEPLOYED_SHA to ${{ github.sha }}"

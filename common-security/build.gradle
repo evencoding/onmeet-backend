@@ -1,5 +1,7 @@
+// Trigger rebuild for CommonSwaggerSecurityConfig fix
 plugins {
     id 'java-library'
+    id 'org.jetbrains.kotlin.jvm' version '1.9.25'
     id 'org.springframework.boot' version '3.3.5'
     id 'io.spring.dependency-management' version '1.1.6'
 }
@@ -18,9 +20,12 @@ repositories {
 }
 
 dependencies {
+    implementation project(':onmeet-common')
     implementation 'org.springframework.boot:spring-boot-starter-security'
     implementation 'org.springframework.boot:spring-boot-starter-web'
     implementation 'org.springframework.boot:spring-boot-starter-oauth2-resource-server'
+    implementation 'org.jetbrains.kotlin:kotlin-reflect'
+    implementation 'org.jetbrains.kotlin:kotlin-stdlib'
 }
 
 bootJar {

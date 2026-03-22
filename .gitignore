@@ -4,34 +4,66 @@ build/
 !gradle/wrapper/gradle-wrapper.jar
 !**/src/main/**/build/
 !**/src/test/**/build/
+.env
+
+# Local Logs & Docs
+# Local Logs & Docs
+*.log
+*_logs.txt
+*_output.txt
+IMPROVEMENTS.md
+
+# Local Docker Data
+.data/
+
+# HTTP Client
+http-client.env.json
+
+### STS ###
+.apt_generated
+.classpath
+.factorypath
+.project
+.settings
+.springBeans
+.sts4-cache
 bin/
-out/
+!**/src/main/**/bin/
+!**/src/test/**/bin/
 
-# Valid for all OS
-.DS_Store
-.AppleDouble
-.LSOverride
-._*
-.Trashes
-.Spotlight-V100
-.fseventsd
-
-# Windows
-Thumbs.db
-ehthumbs.db
-Desktop.ini
-
-# JetBrains
-.idea/
+### IntelliJ IDEA ###
+.idea
 *.iws
 *.iml
 *.ipr
+*.yml
+out/
+!**/src/main/**/out/
+!**/src/test/**/out/
 
-# VS Code
+### NetBeans ###
+/nbproject/private/
+/nbbuild/
+/dist/
+/nbdist/
+/.nb-gradle/
+
+### VS Code ###
 .vscode/
 
-# Environment Variables
-.env
-.env.*
-!.env.example
-auth-service/http/http-client.env.json
+/src/main/resources/application-local.yml
+/src/main/resources/application-test.yml
+/src/main/resources/application.yml
+
+# Agent/AI Tool directories
+.agent/
+.claude/
+.serena/
+# .gemini included as requested
+
+# Firebase credentials
+**/serviceAccountKey.json
+**/firebase-service-account.json
+
+# OS generated files
+.DS_Store

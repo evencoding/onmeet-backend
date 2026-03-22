@@ -2,6 +2,7 @@ plugins {
     id 'java'
     id 'org.springframework.boot' version '3.3.5'
     id 'io.spring.dependency-management' version '1.1.6'
+    id 'org.jetbrains.kotlin.jvm'
 }
 
 group = 'com.onmeet'
@@ -23,13 +24,23 @@ ext {
 }
 
 dependencies {
+    // Common modules
+    implementation project(':common-security')
+    implementation project(':onmeet-common')
+
     // Core
     implementation project(':common-security')
+    implementation project(':onmeet-common')
     implementation 'org.springframework.boot:spring-boot-starter-web'
     implementation 'org.springframework.boot:spring-boot-starter-validation'
     implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
     implementation 'org.springframework.boot:spring-boot-starter-security'
     implementation 'org.springframework.boot:spring-boot-starter-actuator'
+    implementation 'org.springframework.boot:spring-boot-starter-data-redis'
+    implementation 'org.springframework.boot:spring-boot-starter-webflux'
+
+    // Kafka
+    implementation 'org.springframework.kafka:spring-kafka'
 
     // DB & Migration
     runtimeOnly 'com.mysql:mysql-connector-j'
@@ -37,9 +48,9 @@ dependencies {
     implementation 'org.flywaydb:flyway-mysql'
 
     // Tools
-    compileOnly 'org.projectlombok:lombok:1.18.36'
-    annotationProcessor 'org.projectlombok:lombok:1.18.36'
-    
+    compileOnly 'org.projectlombok:lombok'
+    annotationProcessor 'org.projectlombok:lombok'
+
     // MapStruct
     implementation "org.mapstruct:mapstruct:${mapstructVersion}"
     annotationProcessor "org.mapstruct:mapstruct-processor:${mapstructVersion}"
@@ -48,14 +59,50 @@ dependencies {
     // Swagger / OpenAPI
     implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.6.0'
 
+    // Observability
+    implementation 'io.micrometer:micrometer-registry-prometheus'
+    implementation 'io.micrometer:micrometer-tracing-bridge-brave'
+    implementation 'io.zipkin.reporter2:zipkin-reporter-brave'
+
+    // VAD (Voice Activity Detection) - Silero VAD via ONNX Runtime
+    implementation 'com.microsoft.onnxruntime:onnxruntime:1.17.1'
+    implementation 'org.gagravarr:vorbis-java-core:0.8'
+
+    // Jackson for JSON
+    implementation 'com.fasterxml.jackson.core:jackson-databind'
+    implementation 'com.fasterxml.jackson.datatype:jackson-datatype-jsr310'
+
     // Test
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
     testImplementation 'org.springframework.security:spring-security-test'
     testImplementation 'org.springframework.boot:spring-boot-testcontainers'
     testImplementation 'org.testcontainers:junit-jupiter'
     testImplementation 'org.testcontainers:mysql'
+    testImplementation 'io.rest-assured:rest-assured'
+    testImplementation 'org.awaitility:awaitility:4.2.0'
+    testImplementation 'org.springframework.kafka:spring-kafka-test'
+    implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8"
+    testImplementation 'ws.schild:jave-all-deps:3.3.1'
 }
 
 tasks.named('test') {
-    useJUnitPlatform()
+    useJUnitPlatform {
+        excludeTags 'integration'
+    }
+    testLogging {
+        events "passed", "skipped", "failed"
+        showStandardStreams = true
+        exceptionFormat = "full"
+    }
+}
+
+tasks.register('integrationTest', Test) {
+    useJUnitPlatform {
+        includeTags 'integration'
+    }
+    testLogging {
+        events "passed", "skipped", "failed"
+        showStandardStreams = true
+        exceptionFormat = "full"
+    }
 }

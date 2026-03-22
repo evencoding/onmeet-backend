@@ -2,65 +2,50 @@ package com.onmeet.auth.controller
 
 import com.onmeet.auth.config.JwtProperties
 import com.onmeet.auth.dto.*
+import com.onmeet.auth.security.KeyManager
 import com.onmeet.auth.service.AuthService
+import com.onmeet.auth.service.UserService
 import com.fasterxml.jackson.databind.ObjectMapper
-import com.ninjasquad.springmockk.MockkBean
 import io.mockk.every
+import io.mockk.mockk
+import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
-import org.springframework.beans.factory.annotation.Autowired
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc
-import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest
 import org.springframework.http.MediaType
-import org.springframework.security.test.context.support.WithMockUser
 import org.springframework.test.web.servlet.MockMvc
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath
+import org.springframework.test.web.servlet.setup.MockMvcBuilders
 
-@WebMvcTest(AuthController::class)
-@AutoConfigureMockMvc(addFilters = false)
 class AuthControllerTest {
 
-    @Autowired
     private lateinit var mockMvc: MockMvc
+    private val authService: AuthService = mockk()
+    private val userService: UserService = mockk()
+    private val jwtProperties: JwtProperties = mockk()
+    private val keyManager: KeyManager = mockk()
+    private val objectMapper = ObjectMapper()
 
-    @MockkBean
-    private lateinit var authService: AuthService
-
-    @MockkBean
-    private lateinit var jwtProperties: JwtProperties
-
-    @MockkBean
-    private lateinit var jwtTokenProvider: com.onmeet.auth.security.JwtTokenProvider
-
-    @MockkBean
-    private lateinit var gatewayProperties: com.onmeet.auth.config.GatewayProperties
-
-    @MockkBean
-    private lateinit var authGatewayPreAuthFilter: com.onmeet.auth.security.AuthGatewayPreAuthFilter
-
-    @MockkBean
-    private lateinit var jwtAuthenticationFilter: com.onmeet.auth.security.JwtAuthenticationFilter
-
-    @Autowired
-    private lateinit var objectMapper: ObjectMapper
+    @BeforeEach
+    fun setup() {
+        mockMvc = MockMvcBuilders
+            .standaloneSetup(AuthController(authService, userService, jwtProperties, keyManager))
+            .build()
+    }
 
     @Test
-    @WithMockUser
     fun `login should return success and set cookies`() {
         // given
         val request = LoginRequest("test@example.com", "password")
         val tokenResponse = TokenResponse("access_token", "refresh_token")
-        
-        // Mocking jwtProperties for cookie settings
+
         every { jwtProperties.cookie } returns JwtProperties.CookieProperties(true, 3600)
         every { jwtProperties.refreshCookie } returns JwtProperties.RefreshCookieProperties(604800)
-        
         every { authService.login(any()) } returns tokenResponse
 
         // when & then
         mockMvc.perform(
-            post("/login")
+            post("/v1/login")
                 .contentType(MediaType.APPLICATION_JSON_VALUE)
                 .content(objectMapper.writeValueAsString(request))
         )

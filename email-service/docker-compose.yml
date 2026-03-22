@@ -1,12 +1,11 @@
 services:
   email-service:
-    build:
-      context: ../
-      dockerfile: email-service/Dockerfile
+    image: ${DOCKER_REGISTRY:-onmeet}/email-service:latest
     container_name: email-service
     ports:
-      - "${EMAIL_SERVICE_PORT:-8087}:${EMAIL_SERVICE_PORT:-8087}"
+      - "127.0.0.1:8087:8087"
     environment:
+      - JAVA_OPTS=-Xms256m -Xmx512m -XX:+UseG1GC -XX:MaxGCPauseMillis=200
       - SPRING_KAFKA_BOOTSTRAP_SERVERS=${KAFKA_BOOTSTRAP_SERVERS:-kafka:29092}
       - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
       - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
@@ -15,15 +14,28 @@ services:
       - SPRING_MAIL_PORT=${SPRING_MAIL_PORT:-587}
       - SPRING_MAIL_USERNAME=${SPRING_MAIL_USERNAME}
       - SPRING_MAIL_PASSWORD=${SPRING_MAIL_PASSWORD}
+      - GMAIL_CLIENT_ID=${GMAIL_CLIENT_ID}
+      - GMAIL_CLIENT_SECRET=${GMAIL_CLIENT_SECRET}
+      - GMAIL_REFRESH_TOKEN=${GMAIL_REFRESH_TOKEN}
+      - EMAIL_FROM=${EMAIL_FROM:-noreply@onmeet.com}
       - SERVER_PORT=${EMAIL_SERVICE_PORT:-8087}
+      - MANAGEMENT_ENDPOINT_HEALTH_PROBES_ENABLED=true
       - MANAGEMENT_ENDPOINTS_WEB_BASE_PATH=/email/actuator
     depends_on:
       kafka:
         condition: service_healthy
     networks:
-      - msa-network
+      - onmeet-network
+    deploy:
+      resources:
+        limits:
+          cpus: '0.50'
+          memory: 768M
+        reservations:
+          cpus: '0.10'
+          memory: 256M
 
 networks:
-  msa-network:
-    name: onmeet-network
+  onmeet-network:
     external: true
+    name: onmeet-network

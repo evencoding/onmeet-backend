@@ -7,35 +7,60 @@ services:
       MYSQL_DATABASE: notification_db
     ports:
       - "3311:3306"
+    volumes:
+      - mysql-notification-data:/var/lib/mysql
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${DB_ROOT_PASSWORD}"]
+      test: [ "CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${DB_ROOT_PASSWORD}" ]
       interval: 10s
       timeout: 5s
-      retries: 5
+      retries: 10
+      start_period: 60s
     networks:
-      - msa-network
+      - onmeet-network
+    deploy:
+      resources:
+        limits:
+          cpus: '0.25'
+          memory: 512M
+        reservations:
+          cpus: '0.05'
+          memory: 128M
 
   notification-service:
-    build:
-      context: ../
-      dockerfile: notification-service/Dockerfile
+    image: ${DOCKER_REGISTRY:-onmeet}/notification-service:latest
     container_name: notification-service
     ports:
       - "${NOTIFICATION_SERVICE_PORT:-8085}:${NOTIFICATION_SERVICE_PORT:-8085}"
     environment:
+      - JAVA_OPTS=-Xms256m -Xmx512m -XX:+UseG1GC -XX:MaxGCPauseMillis=200
       - SPRING_DATASOURCE_URL=${NOTIFICATION_DB_URL:-jdbc:mysql://mysql-notification:3306/notification_db?useSSL=false&allowPublicKeyRetrieval=true&characterEncoding=UTF-8&serverTimezone=UTC}
       - SPRING_DATASOURCE_USERNAME=${DB_USERNAME}
       - SPRING_DATASOURCE_PASSWORD=${DB_ROOT_PASSWORD}
       - GATEWAY_SHARED_SECRET=${GATEWAY_SHARED_SECRET}
       - SERVER_PORT=${NOTIFICATION_SERVICE_PORT:-8085}
-      - MANAGEMENT_ENDPOINTS_WEB_BASE_PATH=/notification/actuator
+      - SPRING_KAFKA_BOOTSTRAP_SERVERS=kafka:29092
+      - MANAGEMENT_TRACING_ENABLED=false
+      - SPRING_FLYWAY_ENABLED=false
+      - SPRING_JPA_HIBERNATE_DDL_AUTO=update
+      - FIREBASE_CREDENTIALS_JSON=${FIREBASE_CREDENTIALS_JSON:-}
     depends_on:
       mysql-notification:
         condition: service_healthy
     networks:
-      - msa-network
+      - onmeet-network
+    deploy:
+      resources:
+        limits:
+          cpus: '0.50'
+          memory: 768M
+        reservations:
+          cpus: '0.10'
+          memory: 256M
 
 networks:
-  msa-network:
-    name: onmeet-network
+  onmeet-network:
     external: true
+    name: onmeet-network
+
+volumes:
+  mysql-notification-data:

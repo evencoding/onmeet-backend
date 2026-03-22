@@ -4,47 +4,118 @@ server:
 spring:
   application:
     name: gateway-service
+  codec:
+    max-in-memory-size: 100MB
   cloud:
     gateway:
       routes:
         - id: auth-service
           uri: ${AUTH_SERVICE_URL:http://auth-service:8081}
           predicates:
-            - Path=/auth/**
+            - Path=/auth/v1/**
           filters:
             - UserHeaderFilter
         - id: ai-service
           uri: ${AI_SERVICE_URL:http://ai-service:8082}
           predicates:
-            - Path=/ai/**
+            - Path=/ai/v1/**
           filters:
             - UserHeaderFilter
+          metadata:
+            response-timeout: 60000
         - id: video-service
           uri: ${VIDEO_SERVICE_URL:http://video-service:8083}
           predicates:
-            - Path=/video/**
+            - Path=/video/v1/**
           filters:
             - UserHeaderFilter
-        - id: chat-service
-          uri: ${CHAT_SERVICE_URL:http://chat-service:8084}
+        - id: video-service-ws-chat
+          uri: ${VIDEO_SERVICE_WS_URL:ws://video-service:8083}
           predicates:
-            - Path=/chat/**
+            - Path=/ws-chat/**
+          filters:
+            - PrefixPath=/video
+        - id: notification-actuator
+          uri: ${NOTIFICATION_SERVICE_URL:http://notification-service:8085}
+          predicates:
+            - Path=/notification/actuator/**
+        - id: notification-sse
+          uri: ${NOTIFICATION_SERVICE_URL:http://notification-service:8085}
+          predicates:
+            - Path=/notification/v1/sse/**
           filters:
             - UserHeaderFilter
+          metadata:
+            response-timeout: 3600000
         - id: notification-service
           uri: ${NOTIFICATION_SERVICE_URL:http://notification-service:8085}
           predicates:
-            - Path=/notification/**
+            - Path=/notification/v1/**
           filters:
             - UserHeaderFilter
-        - id: image-service
-          uri: ${IMAGE_SERVICE_URL:http://image-service:8086}
+        - id: email-service
+          uri: ${EMAIL_SERVICE_URL:http://email-service:8087}
           predicates:
-            - Path=/image/**
+            - Path=/email/v1/**
           filters:
             - UserHeaderFilter
+        - id: file-service
+          uri: ${FILE_SERVICE_URL:http://file-service:8086}
+          predicates:
+            - Path=/file/v1/**
+          filters:
+            - UserHeaderFilter
+        - id: file-service-public
+          uri: ${FILE_SERVICE_URL:http://file-service:8086}
+          predicates:
+            - Path=/file/swagger/**,/file/actuator/**
+          filters:
+            - UserHeaderFilter
+      default-filters:
+        - name: RequestRateLimiter
+          args:
+            "redis-rate-limiter.replenishRate": 10
+            "redis-rate-limiter.burstCapacity": 20
+            "redis-rate-limiter.requestedTokens": 1
+            key-resolver: "#{@ipKeyResolver}"
+      httpclient:
+        connect-timeout: 3000
+        response-timeout: 10s
+
   security:
     oauth2:
       resourceserver:
         jwt:
-          jwk-set-uri: ${AUTH_SERVICE_URL:http://auth-service:8081}/auth/.well-known/jwks.json
+          jwk-set-uri: ${AUTH_SERVICE_URL:http://auth-service:8081}/auth/v1/.well-known/jwks.json
+
+springdoc:
+  api-docs:
+    enabled: true
+  swagger-ui:
+    enabled: true
+    urls:
+      - name: auth-service
+        url: /auth/v1/v3/api-docs
+      - name: ai-service
+        url: /ai/v1/v3/api-docs
+      - name: video-service
+        url: /video/v1/v3/api-docs
+      - name: notification-service
+        url: /notification/v1/v3/api-docs
+      - name: email-service
+        url: /email/v1/v3/api-docs
+
+      - name: file-service
+        url: /file/swagger/doc.json
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health, info, prometheus
+  zipkin:
+    tracing:
+      endpoint: http://zipkin:9411/api/v2/spans
+  tracing:
+    sampling:
+      probability: 0.0 # Zipkin disabled (observability stack not running)
