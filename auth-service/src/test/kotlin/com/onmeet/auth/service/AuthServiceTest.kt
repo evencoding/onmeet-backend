@@ -158,7 +158,7 @@ class AuthServiceTest {
     @Test
     fun `changePassword should delegate to passwordService`() {
         // given
-        val request = ChangePasswordRequest(oldPassword = "old", newPassword = "new")
+        val request = ChangePasswordRequest(currentPassword = "old", newPassword = "new")
         every { passwordService.changePassword("test@example.com", request) } returns Unit
 
         // when
@@ -171,7 +171,7 @@ class AuthServiceTest {
     @Test
     fun `changePassword should propagate BusinessException from passwordService`() {
         // given
-        val request = ChangePasswordRequest(oldPassword = "wrong", newPassword = "new")
+        val request = ChangePasswordRequest(currentPassword = "wrong", newPassword = "new")
         every { passwordService.changePassword("test@example.com", request) } throws BusinessException(
             com.onmeet.common.exception.errorcode.AuthErrorCode.CURRENT_PASSWORD_MISMATCH
         )

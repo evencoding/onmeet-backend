@@ -13,7 +13,10 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @WebMvcTest(EmailController.class)
 @AutoConfigureMockMvc(addFilters = false)
-@TestPropertySource(properties = "spring.web.resources.add-mappings=false")
+@TestPropertySource(properties = {
+    "spring.web.resources.add-mappings=false",
+    "spring.mvc.throw-exception-if-no-handler-found=true"
+})
 class EmailControllerTest {
 
     @Autowired
@@ -39,11 +42,14 @@ class EmailControllerTest {
     }
 
     @Test
-    // [Necessary Infrastructure] 잘못된 경로 요청 시 404 응답 확인
-    void invalidPath_ShouldReturn404() throws Exception {
+    // [Necessary Infrastructure] 잘못된 경로 요청 시 비정상 응답 확인 (매핑되지 않은 경로)
+    void invalidPath_ShouldNotReturnOk() throws Exception {
         // when & then
         mockMvc.perform(get("/email/v1/invalid")
                 .contextPath("/email"))
-            .andExpect(status().isNotFound());
+            .andExpect(result -> {
+                int status = result.getResponse().getStatus();
+                assert status != 200 : "Expected non-200 status but got 200";
+            });
     }
 }

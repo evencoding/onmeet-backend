@@ -50,7 +50,7 @@ class PasswordServiceTest {
     @Test
     fun `changePassword should update password hash when old password matches`() {
         // given
-        val request = ChangePasswordRequest(oldPassword = "old_pass", newPassword = "new_pass")
+        val request = ChangePasswordRequest(currentPassword = "old_pass", newPassword = "new_pass")
         every { userRepository.findByEmail("test@test.com") } returns Optional.of(user)
         every { passwordEncoder.matches("old_pass", "hashed_old") } returns true
         every { passwordEncoder.encode("new_pass") } returns "hashed_new"
@@ -73,7 +73,7 @@ class PasswordServiceTest {
             id = 1L, email = "test@test.com", passwordHash = "hashed_temp", name = "Test User",
             roles = mutableSetOf(User.Role.USER), company = company, status = User.UserStatus.ACTIVE
         ).apply { isPasswordReset = true }
-        val request = ChangePasswordRequest(oldPassword = "temp_pass", newPassword = "new_pass")
+        val request = ChangePasswordRequest(currentPassword = "temp_pass", newPassword = "new_pass")
 
         every { userRepository.findByEmail("test@test.com") } returns Optional.of(userWithResetFlag)
         every { passwordEncoder.matches("temp_pass", "hashed_temp") } returns true
@@ -91,7 +91,7 @@ class PasswordServiceTest {
     @Test
     fun `changePassword should throw BusinessException when old password does not match`() {
         // given
-        val request = ChangePasswordRequest(oldPassword = "wrong_pass", newPassword = "new_pass")
+        val request = ChangePasswordRequest(currentPassword = "wrong_pass", newPassword = "new_pass")
         every { userRepository.findByEmail("test@test.com") } returns Optional.of(user)
         every { passwordEncoder.matches("wrong_pass", "hashed_old") } returns false
 
@@ -105,7 +105,7 @@ class PasswordServiceTest {
     @Test
     fun `changePassword should throw BusinessException when user not found`() {
         // given
-        val request = ChangePasswordRequest(oldPassword = "old", newPassword = "new")
+        val request = ChangePasswordRequest(currentPassword = "old", newPassword = "new")
         every { userRepository.findByEmail("missing@test.com") } returns Optional.empty()
 
         // when & then
