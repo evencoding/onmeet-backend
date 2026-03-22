@@ -1,7 +1,7 @@
 package com.onmeet.ai.pipeline.transcript;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.onmeet.ai.dto.event.ChatMessageEvent;
+import com.onmeet.common.dto.event.ChatMessageEvent;
 import com.onmeet.ai.dto.event.VoiceSegmentCreatedEvent;
 import com.onmeet.common.exception.BusinessException;
 import com.onmeet.common.exception.errorcode.AiErrorCode;
@@ -50,10 +50,12 @@ public class RedisMeetingEventStore {
 
         try {
             String json = om.writeValueAsString(e);
-            String member = padSeq(e.getSeq()) + "|CHAT|" + e.getMessageId() + "|" + e.getSenderId() + "|" + json;
+            long safeSeq = e.getSeq() != null ? e.getSeq() : 0L;
+            String member = padSeq(safeSeq) + "|CHAT|" + e.getMessageId() + "|" + e.getSenderId() + "|" + json;
 
             // Redis SortedSet score requires double (using epochMilli)
-            redis.opsForZSet().add(eventsKey(e.getRoomId()), member, (double) e.getTimestamp().toEpochMilli());
+            long score = e.getTimestamp() != null ? e.getTimestamp().toEpochMilli() : System.currentTimeMillis();
+            redis.opsForZSet().add(eventsKey(e.getRoomId()), member, (double) score);
             touchTtl(e.getRoomId());
         } catch (Exception ex) {
             // TODO: [AI][AiErrorCode.REDIS_CHAT_SAVE_FAILED] 에러메시지 검수 요청
@@ -73,7 +75,7 @@ public class RedisMeetingEventStore {
             String json = om.writeValueAsString(e);
             // using timestamp for score, or fallback to startMs
             long score = e.getTimestamp() != null ? e.getTimestamp().toEpochMilli() : e.getSegmentStartMs();
-            String member = padSeq(e.getSeq()) + "|VOICE|" + e.getSegmentId() + "|" + e.getParticipantIdentity() + "|" + json;
+            String member = padSeq(e.getSeq()) + "|VOICE|" + e.getSegmentId() + "|" + e.getParticipantName() + "|" + json;
 
             redis.opsForZSet().add(eventsKey(e.getRoomId()), member, (double) score);
             touchTtl(e.getRoomId());

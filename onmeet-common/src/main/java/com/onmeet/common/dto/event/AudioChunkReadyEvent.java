@@ -18,8 +18,11 @@ public class AudioChunkReadyEvent {
     /** 회의실 ID */
     private Long roomId;
 
-    /** 참가자 식별자 (identity) */
-    private String participantIdentity;
+    /** 참가자 회원 ID (회원인 경우에만 존재, 비회원은 null) */
+    private Long participantId;
+
+    /** 참가자 표시 이름 (회원/비회원 모두 사용자가 설정한 이름) */
+    private String participantName;
 
     /** 오디오 청크 세그먼트 인덱스 */
     private int segmentIndex;

@@ -24,9 +24,6 @@ public class Minutes {
     @Column(name = "transcript_id", length = 64, nullable = false)
     private String transcriptId;
 
-    @Column(name = "transcript_s3_key", length = 512, nullable = false)
-    private String transcriptS3Key;
-
     @Column(name = "summary_s3_key", length = 512)
     private String summaryS3Key;
 
@@ -71,7 +68,6 @@ public class Minutes {
 
     private Minutes(Long roomId,
                     String transcriptId,
-                    String transcriptS3Key,
                     String summaryS3Key,
                     String description,
                     String keywords,
@@ -80,7 +76,6 @@ public class Minutes {
                     String summaryJson) {
         this.roomId = roomId;
         this.transcriptId = transcriptId;
-        this.transcriptS3Key = transcriptS3Key;
         this.summaryS3Key = summaryS3Key;
         this.description = description;
         this.keywords = keywords;
@@ -96,18 +91,16 @@ public class Minutes {
 
     public static Minutes createGenerated(Long roomId,
                                           String transcriptId,
-                                          String transcriptS3Key,
                                           String summaryS3Key,
                                           String description,
                                           String keywords,
                                           String decisions,
                                           String actionItems,
                                           String summaryJson) {
-        return new Minutes(roomId, transcriptId, transcriptS3Key, summaryS3Key, description, keywords, decisions, actionItems, summaryJson);
+        return new Minutes(roomId, transcriptId, summaryS3Key, description, keywords, decisions, actionItems, summaryJson);
     }
 
     public void applyGenerated(String transcriptId,
-                               String transcriptS3Key,
                                String summaryS3Key,
                                String description,
                                String keywords,
@@ -115,7 +108,6 @@ public class Minutes {
                                String actionItems,
                                String summaryJson) {
         this.transcriptId = transcriptId;
-        this.transcriptS3Key = transcriptS3Key;
         this.summaryS3Key = summaryS3Key;
         this.description = description;
         this.keywords = keywords;

@@ -4,13 +4,14 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.onmeet.ai.dto.event.MinutesGeneratedEvent;
 import com.onmeet.ai.dto.event.TranscriptFinalizedEvent;
 import com.onmeet.ai.entity.Minutes;
+import com.onmeet.ai.entity.TranscriptEvent;
 import com.onmeet.ai.messaging.producer.MinutesEventsProducer;
 import com.onmeet.ai.pipeline.nlp.SummarizerClient;
 import com.onmeet.ai.pipeline.storage.StorageClient;
 import com.onmeet.ai.pipeline.storage.StorageKeyFactory;
-import com.onmeet.ai.pipeline.transcript.TranscriptDocument;
 import com.onmeet.ai.pipeline.transcript.TranscriptRenderer;
 import com.onmeet.ai.repository.MinutesRepository;
+import com.onmeet.ai.repository.TranscriptEventRepository;
 import com.onmeet.ai.messaging.producer.NotificationEventPublisher;
 import com.onmeet.common.dto.NotificationRequestDto;
 import com.onmeet.common.exception.BusinessException;
@@ -32,6 +33,7 @@ public class SummaryWorkerService {
     private final TranscriptRenderer renderer;
     private final SummarizerClient summarizerClient;
     private final MinutesRepository minutesRepository;
+    private final TranscriptEventRepository transcriptEventRepository;
     private final MinutesEventsProducer producer;
     private final NotificationEventPublisher notificationEventPublisher;
 
@@ -41,6 +43,7 @@ public class SummaryWorkerService {
             TranscriptRenderer renderer,
             SummarizerClient summarizerClient,
             MinutesRepository minutesRepository,
+            TranscriptEventRepository transcriptEventRepository,
             MinutesEventsProducer producer,
             NotificationEventPublisher notificationEventPublisher
     ) {
@@ -49,6 +52,7 @@ public class SummaryWorkerService {
         this.renderer = renderer;
         this.summarizerClient = summarizerClient;
         this.minutesRepository = minutesRepository;
+        this.transcriptEventRepository = transcriptEventRepository;
         this.producer = producer;
         this.notificationEventPublisher = notificationEventPublisher;
     }
@@ -64,21 +68,13 @@ public class SummaryWorkerService {
             )
         );
 
-        String transcriptJson;
-        if (e.getTranscriptFileId() != null) {
-            transcriptJson = storageClient.readText(e.getTranscriptFileId());
-        } else {
-            transcriptJson = storageClient.readText(e.getTranscriptS3Key());
-        }
+        String transcriptId = e.getTranscriptId();
 
-        TranscriptDocument doc;
-        try {
-            doc = om.readValue(transcriptJson, TranscriptDocument.class);
-        } catch (Exception ex) {
-            throw new BusinessException(AiErrorCode.TRANSCRIPT_PARSE_FAILED);
-        }
+        // DB의 transcript_event 테이블에서 직접 조회 (S3 의존 제거)
+        java.util.List<TranscriptEvent> events =
+                transcriptEventRepository.findAllByTranscriptIdOrderBySeqAsc(transcriptId);
 
-        String plain = renderer.toPlainText(doc);
+        String plain = renderer.toPlainText(events);
         if (plain == null || plain.isBlank()) {
             throw new BusinessException(AiErrorCode.TRANSCRIPT_EMPTY);
         }
@@ -109,7 +105,6 @@ public class SummaryWorkerService {
         upsertMinutes(
                 e.getRoomId(),
                 e.getTranscriptId(),
-                e.getTranscriptFileId() != null ? String.valueOf(e.getTranscriptFileId()) : e.getTranscriptS3Key(),
                 summaryFileId,
                 description,
                 keywords,
@@ -140,7 +135,6 @@ public class SummaryWorkerService {
     protected void upsertMinutes(
             Long roomId,
             String transcriptId,
-            String transcriptS3Key,
             String summaryS3Key,
             String description,
             String keywords,
@@ -152,12 +146,12 @@ public class SummaryWorkerService {
 
         if (m == null) {
             minutesRepository.save(
-                    Minutes.createGenerated(roomId, transcriptId, transcriptS3Key, summaryS3Key, description, keywords, decisions, actionItems, summaryJson)
+                    Minutes.createGenerated(roomId, transcriptId, summaryS3Key, description, keywords, decisions, actionItems, summaryJson)
             );
             return;
         }
 
-        m.applyGenerated(transcriptId, transcriptS3Key, summaryS3Key, description, keywords, decisions, actionItems, summaryJson);
+        m.applyGenerated(transcriptId, summaryS3Key, description, keywords, decisions, actionItems, summaryJson);
         minutesRepository.save(m);
     }
 }

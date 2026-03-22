@@ -202,7 +202,7 @@ class RealAudioPipelineE2ETest {
 
             AudioChunkReadyEvent chunkEvent = AudioChunkReadyEvent.builder()
                     .roomId(roomId)
-                    .participantIdentity(participantId)
+                    .participantName(participantId)
                     .segmentIndex(i)
                     .s3Path(s3Key)
                     .startTime(Instant.ofEpochMilli(startMs))

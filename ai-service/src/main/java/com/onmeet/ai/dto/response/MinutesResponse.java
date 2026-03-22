@@ -24,9 +24,6 @@ public class MinutesResponse {
     @Schema(description = "원본 오디오와 연결된 트랜스크립트 ID", example = "transcript-12345")
     private String transcriptId;
 
-    @Schema(description = "트랜스크립트 JSON 파일 S3 경로", example = "s3/transcripts/100/transcript-12345.json")
-    private String transcriptS3Key;
-
     @Schema(description = "요약본 JSON 파일 S3 경로", example = "s3/summaries/100/transcript-12345_summary.json")
     private String summaryS3Key;
 
@@ -67,7 +64,6 @@ public class MinutesResponse {
                 .id(m.getId())
                 .roomId(m.getRoomId())
                 .transcriptId(m.getTranscriptId())
-                .transcriptS3Key(m.getTranscriptS3Key())
                 .summaryS3Key(m.getSummaryS3Key())
                 .summary(parsedSummary)
                 .summaryJson(m.getSummaryJson())

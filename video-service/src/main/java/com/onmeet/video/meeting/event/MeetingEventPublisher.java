@@ -1,8 +1,8 @@
 package com.onmeet.video.meeting.event;
 
-import com.onmeet.video.meeting.event.chat.ChatMessageEvent;
+import com.onmeet.common.dto.event.ChatMessageEvent;
 import com.onmeet.video.meeting.event.participant.ParticipantEvent;
-import com.onmeet.video.meeting.event.recording.AudioSegmentEvent;
+import com.onmeet.common.dto.event.AudioChunkReadyEvent;
 import com.onmeet.video.meeting.event.room.MeetingEvent;
 import com.onmeet.video.meeting.event.screenshare.ScreenShareEvent;
 import org.springframework.stereotype.Component;
@@ -22,7 +22,7 @@ public interface MeetingEventPublisher {
 
     void publishParticipantLeft(ParticipantEvent event);
 
-    void publishAudioSegmentReady(AudioSegmentEvent event);
+    void publishAudioSegmentReady(AudioChunkReadyEvent event);
 
     void publishChatMessage(ChatMessageEvent event);
 

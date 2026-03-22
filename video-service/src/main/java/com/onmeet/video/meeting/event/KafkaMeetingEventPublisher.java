@@ -2,9 +2,9 @@ package com.onmeet.video.meeting.event;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.onmeet.video.meeting.event.chat.ChatMessageEvent;
+import com.onmeet.common.dto.event.ChatMessageEvent;
 import com.onmeet.video.meeting.event.participant.ParticipantEvent;
-import com.onmeet.video.meeting.event.recording.AudioSegmentEvent;
+import com.onmeet.common.dto.event.AudioChunkReadyEvent;
 import com.onmeet.video.meeting.event.room.MeetingEvent;
 import com.onmeet.video.meeting.event.screenshare.ScreenShareEvent;
 import org.slf4j.Logger;
@@ -25,7 +25,7 @@ import org.springframework.stereotype.Component;
 // CHECK [video-담당자]: KafkaMeetingEventPublisher - meeting-ended 토픽 메시지 스키마가
 // ai-service MeetingEndedConsumer와 일치하는지 확인 필요. 특히 roomId, participants 필드.
 // CHECK [video-담당자]: audio-chunk-ready 토픽 스키마가 ai-service AudioChunkConsumer와 일치하는지
-// 확인 필요. AudioSegmentEvent 필드(roomId, s3Path, segmentIndex, participantIdentity)를 검증할 것.
+// 확인 필요. AudioChunkReadyEvent 필드(roomId, participantId, participantName, s3Path, fileId, segmentIndex)를 검증할 것.
 // CHECK [video-담당자]: 실제 Kafka 발행은 kafka.enabled=true 설정 시에만 활성화
 @Component
 @ConditionalOnProperty(name = "kafka.enabled", havingValue = "true")
@@ -69,13 +69,13 @@ public class KafkaMeetingEventPublisher implements MeetingEventPublisher {
     }
 
     @Override
-    public void publishAudioSegmentReady(AudioSegmentEvent event) {
-        publish(TOPIC_AUDIO_CHUNK_READY, String.valueOf(event.roomId()), event);
+    public void publishAudioSegmentReady(AudioChunkReadyEvent event) {
+        publish(TOPIC_AUDIO_CHUNK_READY, String.valueOf(event.getRoomId()), event);
     }
 
     @Override
     public void publishChatMessage(ChatMessageEvent event) {
-        publish(TOPIC_CHAT_EVENTS, event.messageId(), event);
+        publish(TOPIC_CHAT_EVENTS, event.getMessageId(), event);
     }
 
     @Override

@@ -44,7 +44,7 @@ class SttWorkerServiceTest {
     void setUp() {
         sampleEvent = AudioChunkReadyEvent.builder()
                 .roomId(1L)
-                .participantIdentity("김철수")
+                .participantName("김철수")
                 .s3Path("recordings/1/김철수/audio_TR_xxxx.ogg")
                 .segmentIndex(0)
                 .startTime(Instant.ofEpochMilli(0))
@@ -81,7 +81,7 @@ class SttWorkerServiceTest {
         List<VoiceSegmentCreatedEvent> events = captor.getAllValues();
 
         assertThat(events.get(0).getRoomId()).isEqualTo(1L);
-        assertThat(events.get(0).getParticipantIdentity()).isEqualTo("김철수");
+        assertThat(events.get(0).getParticipantName()).isEqualTo("김철수");
         assertThat(events.get(0).getText()).isEqualTo("안녕하세요");
         assertThat(events.get(0).getSegmentStartMs()).isEqualTo(1500L);
         assertThat(events.get(0).getSegmentEndMs()).isEqualTo(2750L);
@@ -143,7 +143,7 @@ class SttWorkerServiceTest {
     void handleAudioChunk_ShouldOffsetTimes_BasedOnStartTime() throws IOException {
         AudioChunkReadyEvent secondSegmentEvent = AudioChunkReadyEvent.builder()
                 .roomId(1L)
-                .participantIdentity("김철수")
+                .participantName("김철수")
                 .s3Path("recordings/1/김철수/audio_TR_yyyy.ogg")
                 .segmentIndex(1)
                 .startTime(Instant.ofEpochMilli(600000))

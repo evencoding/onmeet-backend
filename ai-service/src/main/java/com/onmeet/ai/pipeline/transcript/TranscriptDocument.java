@@ -18,7 +18,12 @@ public class TranscriptDocument {
     public static class Event {
         private String id;      // messageId or segmentId
         private String type;    // CHAT | VOICE
-        private String actorId; // senderId or participantIdentity
+
+        @com.fasterxml.jackson.annotation.JsonAlias({"actorId", "participantId"})
+        private String participantId;
+
+        @com.fasterxml.jackson.annotation.JsonAlias({"actorName", "participantName", "senderIdentity", "participantIdentity"})
+        private String participantName;
 
         private Instant timestamp;
         private Long seq;

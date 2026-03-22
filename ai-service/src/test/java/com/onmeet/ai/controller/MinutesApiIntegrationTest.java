@@ -85,7 +85,6 @@ class MinutesApiIntegrationTest {
         existingMinutes = Minutes.createGenerated(
                 1L,
                 "transcript-1",
-                "s3/transcripts/1/1.json",
                 "s3/summaries/1/1.json",
                 null,
                 null,

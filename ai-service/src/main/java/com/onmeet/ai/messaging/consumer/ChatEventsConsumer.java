@@ -1,6 +1,6 @@
 package com.onmeet.ai.messaging.consumer;
 
-import com.onmeet.ai.dto.event.ChatMessageEvent;
+import com.onmeet.common.dto.event.ChatMessageEvent;
 import com.onmeet.ai.service.TranscriptBuilderService;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.stereotype.Component;
