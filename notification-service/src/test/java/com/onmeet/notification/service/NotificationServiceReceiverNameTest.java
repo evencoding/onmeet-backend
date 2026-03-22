@@ -2,9 +2,8 @@ package com.onmeet.notification.service;
 
 import com.onmeet.notification.dto.NotificationRequestDto;
 import com.onmeet.notification.entity.Notification;
+import com.onmeet.notification.entity.NotificationRecipient;
 import com.onmeet.notification.infra.AuthServiceClient;
-import com.onmeet.notification.repository.NotificationRepository;
-import com.onmeet.notification.repository.NotificationStreamRepository;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -14,9 +13,11 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
 
+import com.onmeet.notification.type.NotificationStatus;
+import com.onmeet.notification.type.NotificationType;
+
 import static org.assertj.core.api.Assertions.assertThatCode;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
 /**
@@ -31,10 +32,7 @@ import static org.mockito.Mockito.*;
 class NotificationServiceReceiverNameTest {
 
     @Mock
-    private NotificationRepository notificationRepository;
-
-    @Mock
-    private NotificationStreamRepository streamRepository;
+    private NotificationPersistenceService persistenceService;
 
     @Mock
     private NotificationSettingService settingService;
@@ -67,7 +65,18 @@ class NotificationServiceReceiverNameTest {
 
         when(authServiceClient.getUserInfo(receiverId)).thenReturn(receiverInfo);
         when(authServiceClient.getUserName(actorId)).thenReturn("발신자");
-        when(notificationRepository.save(any(Notification.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(persistenceService.saveNotification(any(), any(), any(), any(), any(), anyBoolean()))
+                .thenAnswer(inv -> {
+                    Notification n = Notification.builder()
+                            .type(inv.getArgument(1))
+                            .title(inv.getArgument(2))
+                            .body(inv.getArgument(3))
+                            .status(NotificationStatus.SENT)
+                            .build();
+                    NotificationRecipient r = NotificationRecipient.builder().userId(dto.getUserId()).build();
+                    n.addRecipient(r);
+                    return r;
+                });
         when(settingService.shouldSendNotification(eq(receiverId), any())).thenReturn(true);
 
         // when
@@ -94,7 +103,18 @@ class NotificationServiceReceiverNameTest {
         // auth-service 장애 시뮬레이션: getUserInfo 예외 발생 (receiverName 조회 실패)
         when(authServiceClient.getUserInfo(receiverId)).thenThrow(new RuntimeException("auth-service unavailable"));
         when(authServiceClient.getUserName(actorId)).thenReturn("발신자");
-        when(notificationRepository.save(any(Notification.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(persistenceService.saveNotification(any(), any(), any(), any(), any(), anyBoolean()))
+                .thenAnswer(inv -> {
+                    Notification n = Notification.builder()
+                            .type(inv.getArgument(1))
+                            .title(inv.getArgument(2))
+                            .body(inv.getArgument(3))
+                            .status(NotificationStatus.SENT)
+                            .build();
+                    NotificationRecipient r = NotificationRecipient.builder().userId(dto.getUserId()).build();
+                    n.addRecipient(r);
+                    return r;
+                });
         when(settingService.shouldSendNotification(eq(receiverId), any())).thenReturn(true);
 
         // when & then: 예외 없이 처리되어야 함 (graceful fallback to "사용자")
@@ -115,7 +135,18 @@ class NotificationServiceReceiverNameTest {
                 .build();
 
         when(authServiceClient.getUserInfo(receiverId)).thenReturn(null);
-        when(notificationRepository.save(any(Notification.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(persistenceService.saveNotification(any(), any(), any(), any(), any(), anyBoolean()))
+                .thenAnswer(inv -> {
+                    Notification n = Notification.builder()
+                            .type(inv.getArgument(1))
+                            .title(inv.getArgument(2))
+                            .body(inv.getArgument(3))
+                            .status(NotificationStatus.SENT)
+                            .build();
+                    NotificationRecipient r = NotificationRecipient.builder().userId(dto.getUserId()).build();
+                    n.addRecipient(r);
+                    return r;
+                });
         when(settingService.shouldSendNotification(eq(receiverId), any())).thenReturn(true);
 
         // when & then: null 반환 시에도 예외 없이 처리
