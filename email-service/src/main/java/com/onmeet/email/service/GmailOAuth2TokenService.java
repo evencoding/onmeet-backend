@@ -15,6 +15,7 @@ import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.stereotype.Service;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
+import org.springframework.web.client.HttpStatusCodeException;
 import org.springframework.web.client.RestTemplate;
 
 import java.util.Map;
@@ -83,7 +84,11 @@ public class GmailOAuth2TokenService {
             }
         } catch (BusinessException e) {
             throw e;
+        } catch (HttpStatusCodeException e) {
+            log.error("Gmail token refresh failed: status={}, body={}", e.getStatusCode(), e.getResponseBodyAsString());
+            throw new BusinessException(EmailErrorCode.TOKEN_REFRESH_FAILED);
         } catch (Exception e) {
+            log.error("Gmail token server network error", e);
             throw new BusinessException(EmailErrorCode.TOKEN_NETWORK_ERROR);
         }
     }
