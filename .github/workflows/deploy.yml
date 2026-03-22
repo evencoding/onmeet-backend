@@ -481,6 +481,13 @@ jobs:
 
             echo "All services are healthy!"
 
+            # Gateway 재배포 시 Nginx DNS 캐시 갱신 (컨테이너 IP 변경 대응)
+            if [ "${{ needs.detect-changes.outputs.gateway }}" == "true" ]; then
+              echo "Gateway was redeployed, reloading Nginx to refresh DNS cache..."
+              docker exec onmeet-nginx nginx -s reload || echo "Warning: Nginx reload failed"
+              echo "Nginx reloaded successfully"
+            fi
+
       - name: Update LAST_DEPLOYED_SHA on server
         if: success()
         uses: appleboy/ssh-action@v1.0.3
