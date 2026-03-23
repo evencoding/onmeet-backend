@@ -56,6 +56,11 @@ func (m *MockFileService) DeleteMyProfile(ctx context.Context, uploaderId int64)
 	return args.Error(0)
 }
 
+func (m *MockFileService) RegisterS3File(ctx context.Context, s3Key, fileName, contentType string, fileSize int64, category, ownerType, ownerId string) (*model.FileMetadata, error) {
+	args := m.Called(s3Key, fileName, contentType, fileSize, category, ownerType, ownerId)
+	return args.Get(0).(*model.FileMetadata), args.Error(1)
+}
+
 // Ensure MockFileService implements service.FileService
 var _ service.FileService = (*MockFileService)(nil)
 

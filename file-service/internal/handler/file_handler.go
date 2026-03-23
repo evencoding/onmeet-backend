@@ -245,6 +245,46 @@ func (h *FileHandler) GenerateProfileImage(c *gin.Context) {
 	c.JSON(http.StatusOK, model.SuccessResponse(metadata))
 }
 
+// RegisterS3FileRequest defines the body for registering an existing S3 file.
+type RegisterS3FileRequest struct {
+	S3Key       string `json:"s3Key" binding:"required" example:"/recordings/1/2/audio_TR_xxx.ogg"`
+	FileName    string `json:"fileName" example:"audio_TR_xxx.ogg"`
+	ContentType string `json:"contentType" example:"audio/ogg"`
+	FileSize    int64  `json:"fileSize" example:"1048576"`
+	Category    string `json:"category" example:"recording"`
+	OwnerType   string `json:"ownerType" example:"MEETING"`
+	OwnerID     string `json:"ownerId" example:"10"`
+}
+
+// RegisterS3File godoc
+// @Summary      기존 S3 파일 등록
+// @Description  이미 MinIO/S3에 존재하는 파일에 대해 DB 레코드만 생성하여 fileId를 발급합니다.
+// @Description  파일을 재업로드하지 않고, 이미 존재하는 S3 오브젝트를 file-service에 등록합니다.
+// @Tags         file
+// @Accept       json
+// @Produce      json
+// @Param        request  body  handler.RegisterS3FileRequest  true  "S3 파일 등록 요청"
+// @Success      200  {object}  model.FileMetadata  "등록된 파일 메타데이터 (fileId 포함)"
+// @Failure      400  {object}  model.ErrorResponse "FILE_010: 요청 JSON 파싱 실패"
+// @Failure      403  {object}  model.ErrorResponse "FILE_014: X-Gateway-Secret 헤더 누락 또는 불일치"
+// @Failure      500  {object}  model.ErrorResponse "FILE_041: DB 저장 실패"
+// @Router       /register-s3 [post]
+func (h *FileHandler) RegisterS3File(c *gin.Context) {
+	var req RegisterS3FileRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, model.ErrorApiResponseFromAppError(model.ErrRequestParseFail))
+		return
+	}
+
+	metadata, err := h.svc.RegisterS3File(c.Request.Context(), req.S3Key, req.FileName, req.ContentType, req.FileSize, req.Category, req.OwnerType, req.OwnerID)
+	if err != nil {
+		respondError(c, err, model.NewAppError(model.CodeDBSaveFail, http.StatusInternalServerError, "S3 파일 등록에 실패했습니다"))
+		return
+	}
+
+	c.JSON(http.StatusOK, model.SuccessResponse(metadata))
+}
+
 // RenderFile godoc
 // @Summary      파일 렌더링 (다운로드)
 // @Description  파일 ID로 S3에서 실제 파일 바이너리를 가져와 반환합니다.

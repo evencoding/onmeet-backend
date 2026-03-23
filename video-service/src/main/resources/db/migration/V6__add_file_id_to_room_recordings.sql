@@ -1,0 +1,1 @@
+ALTER TABLE room_recordings ADD COLUMN file_id BIGINT DEFAULT NULL;

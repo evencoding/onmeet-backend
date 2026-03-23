@@ -49,8 +49,7 @@ public class RoomRecording {
     @Column(name = "s3_path", length = 500)
     private String s3Path;
 
-    /** TODO: [VIDEO][FILE_SERVICE] 파일 서버 통합을 위해 fileId 필드 추가 필요 (Long fileId) */
-    // private Long fileId;
+    private Long fileId;
 
     private Long fileSizeBytes;
 
@@ -95,10 +94,14 @@ public class RoomRecording {
     }
 
     public void markCompleted(String s3Path, Long fileSizeBytes, Instant endedAt) {
-        /** TODO: [VIDEO][FILE_SERVICE] 파일 서버 연동 시 fileId도 파라미터로 받아 업데이트하도록 수정 필요 */
+        markCompleted(s3Path, fileSizeBytes, endedAt, null);
+    }
+
+    public void markCompleted(String s3Path, Long fileSizeBytes, Instant endedAt, Long fileId) {
         this.status = RecordingStatus.COMPLETED;
         this.s3Path = s3Path;
         this.fileSizeBytes = fileSizeBytes;
+        this.fileId = fileId;
         this.endedAt = endedAt;
         if (this.startedAt != null) {
             this.durationSeconds = (int) Duration.between(this.startedAt, endedAt).getSeconds();

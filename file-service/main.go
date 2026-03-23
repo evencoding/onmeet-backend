@@ -107,6 +107,7 @@ func main() {
 		protectedGroup.POST("/upload-async", h.UploadAsync)
 		protectedGroup.POST("/profile/default", h.GenerateProfileImage)
 		protectedGroup.GET("/render/:fileId", h.RenderFile)
+		protectedGroup.POST("/register-s3", h.RegisterS3File)
 		protectedGroup.GET("/:fileId", h.GetFileInfo)
 		protectedGroup.DELETE("/:fileId", h.DeleteFile)
 		protectedGroup.DELETE("/me/profile", h.DeleteMyProfile)
