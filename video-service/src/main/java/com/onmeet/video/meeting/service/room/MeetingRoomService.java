@@ -255,6 +255,14 @@ public class MeetingRoomService {
         RoomParticipant participant = new RoomParticipant(room, userId, role, initialStatus, now, deviceType);
         participantRepository.save(participant);
 
+        // 즉시 회의: 호스트가 참여하면 자동으로 WAITING → ACTIVE 전환
+        if (room.isWaiting() && room.isHost(userId) && room.getType() == RoomType.INSTANT) {
+            room.start(now);
+            int participantCount = participantRepository.countActiveParticipants(roomId);
+            eventPublisher.publishMeetingStarted(
+                    new MeetingEvent("MEETING_STARTED", roomId, userId, participantCount, now, null));
+        }
+
         if (isWaitingRoom) {
             waitingRoomSseService.notifyHostNewWaiter(roomId, toParticipantResponse(participant));
             return new RoomJoinResponse(null, liveKitProperties.getUrl(), room.getLivekitRoomName(), true);
