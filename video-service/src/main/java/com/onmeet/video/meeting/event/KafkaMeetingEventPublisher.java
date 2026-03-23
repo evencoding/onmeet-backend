@@ -33,9 +33,9 @@ public class KafkaMeetingEventPublisher implements MeetingEventPublisher {
 
     private static final Logger log = LoggerFactory.getLogger(KafkaMeetingEventPublisher.class);
 
-    static final String TOPIC_MEETING_ENDED = "meeting-ended";
-    static final String TOPIC_CHAT_EVENTS = "chat-events";
-    static final String TOPIC_AUDIO_CHUNK_READY = "audio-chunk-ready";
+    static final String TOPIC_MEETING_ENDED = "meeting.ended";
+    static final String TOPIC_CHAT_EVENTS = "chat.events";
+    static final String TOPIC_AUDIO_CHUNK_READY = "audio.chunk.ready";
 
     private final KafkaTemplate<String, String> kafkaTemplate;
     private final ObjectMapper objectMapper;
