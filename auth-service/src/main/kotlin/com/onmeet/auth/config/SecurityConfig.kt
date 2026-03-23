@@ -70,7 +70,7 @@ class SecurityConfig(
     @Order(0)
     fun internalApiFilterChain(http: HttpSecurity): SecurityFilterChain {
         http
-            .securityMatcher("/v1/internal/**")
+            .securityMatcher("/internal/**")
             .cors { it.disable() }
             .csrf { it.disable() }
             .sessionManagement { it.sessionCreationPolicy(SessionCreationPolicy.STATELESS) }
