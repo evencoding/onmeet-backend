@@ -12,7 +12,7 @@ func TestLoadConfig_DefaultValues(t *testing.T) {
 	keysToUnset := []string{
 		"SERVER_PORT", "DB_URL", "GATEWAY_SHARED_SECRET", "AWS_REGION",
 		"S3_BUCKET_NAME", "S3_ENDPOINT", "CLOUDFRONT_DOMAIN", "KAFKA_BROKERS",
-		"AUTH_SERVICE_URL", "CORS_ALLOWED_ORIGINS",
+		"AUTH_SERVICE_URL",
 	}
 	for _, k := range keysToUnset {
 		os.Unsetenv(k)
@@ -29,7 +29,6 @@ func TestLoadConfig_DefaultValues(t *testing.T) {
 	assert.Equal(t, "", cfg.CloudFrontDomain)
 	assert.Equal(t, "kafka:9092", cfg.KafkaBrokers)
 	assert.Equal(t, "http://auth-service:8081", cfg.AuthServiceURL)
-	assert.Equal(t, "http://localhost:8080", cfg.CORSAllowedOrigins)
 }
 
 func TestLoadConfig_CustomValues(t *testing.T) {
@@ -41,8 +40,6 @@ func TestLoadConfig_CustomValues(t *testing.T) {
 	os.Setenv("CLOUDFRONT_DOMAIN", "cdn.example.com")
 	os.Setenv("KAFKA_BROKERS", "kafka1:9092,kafka2:9092")
 	os.Setenv("AUTH_SERVICE_URL", "http://auth:8081")
-	os.Setenv("CORS_ALLOWED_ORIGINS", "https://app.example.com")
-
 	defer func() {
 		os.Unsetenv("SERVER_PORT")
 		os.Unsetenv("GATEWAY_SHARED_SECRET")
@@ -52,7 +49,6 @@ func TestLoadConfig_CustomValues(t *testing.T) {
 		os.Unsetenv("CLOUDFRONT_DOMAIN")
 		os.Unsetenv("KAFKA_BROKERS")
 		os.Unsetenv("AUTH_SERVICE_URL")
-		os.Unsetenv("CORS_ALLOWED_ORIGINS")
 	}()
 
 	cfg := LoadConfig()
@@ -65,7 +61,6 @@ func TestLoadConfig_CustomValues(t *testing.T) {
 	assert.Equal(t, "cdn.example.com", cfg.CloudFrontDomain)
 	assert.Equal(t, "kafka1:9092,kafka2:9092", cfg.KafkaBrokers)
 	assert.Equal(t, "http://auth:8081", cfg.AuthServiceURL)
-	assert.Equal(t, "https://app.example.com", cfg.CORSAllowedOrigins)
 }
 
 func TestLoadConfig_PartialOverride(t *testing.T) {

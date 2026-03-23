@@ -88,7 +88,6 @@ func main() {
 	r := gin.Default()
 
 	// 8. 전역 미들웨어 설정
-	r.Use(CORSMiddleware(cfg.CORSAllowedOrigins))
 	r.Use(middleware.ErrorHandlerMiddleware())
 
 	// 9. 라우팅 설정
@@ -148,18 +147,3 @@ func main() {
 	log.Println("Server exited")
 }
 
-func CORSMiddleware(allowedOrigins string) gin.HandlerFunc {
-	return func(c *gin.Context) {
-		c.Writer.Header().Set("Access-Control-Allow-Origin", allowedOrigins)
-		c.Writer.Header().Set("Access-Control-Allow-Credentials", "true")
-		c.Writer.Header().Set("Access-Control-Allow-Headers", "Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization, accept, origin, Cache-Control, X-Requested-With")
-		c.Writer.Header().Set("Access-Control-Allow-Methods", "POST, OPTIONS, GET, PUT, DELETE")
-
-		if c.Request.Method == "OPTIONS" {
-			c.AbortWithStatus(204)
-			return
-		}
-
-		c.Next()
-	}
-}
