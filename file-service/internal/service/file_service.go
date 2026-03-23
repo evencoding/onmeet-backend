@@ -53,6 +53,7 @@ type FileService interface {
 	UploadFileAsync(ctx context.Context, file *multipart.FileHeader, category string, uploaderId *int64, ownerType, ownerId, callbackTopic, correlationId string)
 	GenerateDefaultProfileImage(ctx context.Context, name string, color string, uploaderId *int64, ownerType, ownerId string) (*model.FileMetadata, error)
 	RenderFile(ctx context.Context, id uint) (io.ReadCloser, int64, string, error)
+	RegisterS3File(ctx context.Context, s3Key, fileName, contentType string, fileSize int64, category, ownerType, ownerId string) (*model.FileMetadata, error)
 }
 
 // cachedFile은 캐시에 저장되는 파일 데이터와 메타데이터를 담는 구조체입니다.
@@ -449,4 +450,55 @@ func (s *fileService) RenderFile(ctx context.Context, id uint) (io.ReadCloser, i
 	}, cache.DefaultExpiration)
 
 	return io.NopCloser(bytes.NewReader(content)), int64(len(content)), contentType, nil
+}
+
+// RegisterS3File은 이미 MinIO/S3에 존재하는 파일에 대해 DB 레코드만 생성합니다.
+// 파일 업로드 없이 기존 S3 오브젝트를 file-service에 등록하여 fileId를 발급합니다.
+func (s *fileService) RegisterS3File(ctx context.Context, s3Key, fileName, contentType string, fileSize int64, category, ownerType, ownerId string) (*model.FileMetadata, error) {
+	// 1. 기본값 처리
+	if ownerType == "" {
+		ownerType = "MEETING"
+	}
+	if ownerId == "" {
+		ownerId = "SYSTEM"
+	}
+
+	// 2. S3 key injection 방어
+	if err := validateS3KeyComponents(ownerType, ownerId); err != nil {
+		return nil, err
+	}
+
+	// 3. 경로 탐색 공격 방어
+	if strings.Contains(s3Key, "..") {
+		return nil, model.NewAppError("FILE_050", http.StatusBadRequest, "invalid S3 key: path traversal not allowed")
+	}
+
+	// 4. S3 URL 생성
+	s3URL := fmt.Sprintf("https://%s/%s", s.cfg.CloudFrontDomain, strings.TrimPrefix(s3Key, "/"))
+
+	// 5. 파일명 추출 (제공되지 않은 경우 S3 키에서 추출)
+	originalFileName := fileName
+	if originalFileName == "" {
+		parts := strings.Split(s3Key, "/")
+		originalFileName = parts[len(parts)-1]
+	}
+
+	// 6. DB 메타데이터 생성
+	metadata := &model.FileMetadata{
+		FileName:         originalFileName,
+		Category:         category,
+		OriginalFileName: originalFileName,
+		S3URL:            s3URL,
+		FileSize:         fileSize,
+		ContentType:      contentType,
+		OwnerType:        ownerType,
+		OwnerID:          ownerId,
+	}
+
+	// 7. DB 저장
+	if err := s.repo.Save(metadata); err != nil {
+		return nil, err
+	}
+
+	return metadata, nil
 }

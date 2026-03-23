@@ -56,12 +56,13 @@ public class FileServerStorageClient implements StorageClient {
 
     @Override
     public byte[] readBytes(String key) {
-        // 하이브리드 지원: key가 숫자로만 되어 있으면 ID로 간주하여 시도 (임시)
+        // fileId 기반 접근만 지원 (S3 key 직접 접근 제거 - fileId 기반 플로우로 전환 완료)
         try {
             Long fileId = Long.parseLong(key);
             return readBytes(fileId);
         } catch (NumberFormatException e) {
-            throw new UnsupportedOperationException("FileServerStorageClient requires fileId for reading bytes. Provided key: " + key);
+            throw new UnsupportedOperationException(
+                    "FileServerStorageClient does not support raw S3 key access. Use fileId instead. key=" + key);
         }
     }
 

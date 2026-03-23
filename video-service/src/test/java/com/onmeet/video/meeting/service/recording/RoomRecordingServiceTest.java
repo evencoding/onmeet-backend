@@ -12,6 +12,7 @@ import static org.mockito.Mockito.when;
 
 import com.onmeet.common.exception.BusinessException;
 import com.onmeet.video.common.util.ClockProvider;
+import com.onmeet.video.infra.auth.AuthServiceClient;
 import com.onmeet.video.infra.livekit.LiveKitClient;
 import com.onmeet.video.infra.livekit.LiveKitClient.ParticipantInfo;
 import com.onmeet.video.infra.livekit.LiveKitClient.TrackInfo;
@@ -19,6 +20,7 @@ import com.onmeet.video.meeting.dto.recording.RoomRecordingResponse;
 import com.onmeet.video.meeting.entity.participant.ParticipantRole;
 import com.onmeet.video.meeting.entity.participant.ParticipantStatus;
 import com.onmeet.video.meeting.entity.participant.RoomParticipant;
+import com.onmeet.video.meeting.event.MeetingEventPublisher;
 import com.onmeet.video.meeting.entity.recording.RecordingStatus;
 import com.onmeet.video.meeting.entity.recording.RecordingType;
 import com.onmeet.video.meeting.entity.recording.RoomRecording;
@@ -50,6 +52,8 @@ class RoomRecordingServiceTest {
     @Mock RoomSettingsRepository settingsRepository;
     @Mock LiveKitClient liveKitClient;
     @Mock ClockProvider clockProvider;
+    @Mock MeetingEventPublisher eventPublisher;
+    @Mock AuthServiceClient authServiceClient;
 
     @InjectMocks
     RoomRecordingService recordingService;
@@ -207,7 +211,7 @@ class RoomRecordingServiceTest {
         @DisplayName("녹화 완료 처리")
         void handleEgressEnded_success() {
             MeetingRoom room = createActiveRoom();
-            RoomRecording recording = new RoomRecording(room, "eg-1", RecordingType.PARTICIPANT_AUDIO, NOW);
+            RoomRecording recording = new RoomRecording(room, "eg-1", RecordingType.PARTICIPANT_AUDIO, NOW, "1", "TR_1");
 
             when(recordingRepository.findByEgressId("eg-1")).thenReturn(Optional.of(recording));
             when(clockProvider.now()).thenReturn(NOW.plusSeconds(600));

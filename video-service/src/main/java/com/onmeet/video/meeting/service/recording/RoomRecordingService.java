@@ -2,7 +2,10 @@ package com.onmeet.video.meeting.service.recording;
 
 import com.onmeet.common.exception.BusinessException;
 import com.onmeet.common.exception.errorcode.VideoErrorCode;
+import com.onmeet.common.dto.event.AudioChunkReadyEvent;
 import com.onmeet.video.common.util.ClockProvider;
+import com.onmeet.video.infra.auth.AuthServiceClient;
+import com.onmeet.video.infra.file.FileServiceClient;
 import com.onmeet.video.infra.livekit.LiveKitClient;
 import com.onmeet.video.infra.livekit.LiveKitClient.ParticipantInfo;
 import com.onmeet.video.infra.livekit.LiveKitClient.TrackInfo;
@@ -13,6 +16,7 @@ import com.onmeet.video.meeting.entity.participant.ParticipantStatus;
 import com.onmeet.video.meeting.entity.recording.RecordingStatus;
 import com.onmeet.video.meeting.entity.recording.RecordingType;
 import com.onmeet.video.meeting.entity.recording.RoomRecording;
+import com.onmeet.video.meeting.event.MeetingEventPublisher;
 import com.onmeet.video.meeting.repository.room.MeetingRoomRepository;
 import com.onmeet.video.meeting.repository.participant.RoomParticipantRepository;
 import com.onmeet.video.meeting.repository.recording.RoomRecordingRepository;
@@ -36,19 +40,28 @@ public class RoomRecordingService {
     private final RoomSettingsRepository settingsRepository;
     private final LiveKitClient liveKitClient;
     private final ClockProvider clockProvider;
+    private final MeetingEventPublisher eventPublisher;
+    private final AuthServiceClient authServiceClient;
+    private final FileServiceClient fileServiceClient;
 
     public RoomRecordingService(RoomRecordingRepository recordingRepository,
                                 MeetingRoomRepository roomRepository,
                                 RoomParticipantRepository participantRepository,
                                 RoomSettingsRepository settingsRepository,
                                 LiveKitClient liveKitClient,
-                                ClockProvider clockProvider) {
+                                ClockProvider clockProvider,
+                                MeetingEventPublisher eventPublisher,
+                                AuthServiceClient authServiceClient,
+                                FileServiceClient fileServiceClient) {
         this.recordingRepository = recordingRepository;
         this.roomRepository = roomRepository;
         this.participantRepository = participantRepository;
         this.settingsRepository = settingsRepository;
         this.liveKitClient = liveKitClient;
         this.clockProvider = clockProvider;
+        this.eventPublisher = eventPublisher;
+        this.authServiceClient = authServiceClient;
+        this.fileServiceClient = fileServiceClient;
     }
 
     // CHECK [recording-담당자]: startRecording 반환 타입 List<RoomRecordingResponse> -> void
@@ -189,10 +202,52 @@ public class RoomRecordingService {
 
     @Transactional
     public void handleEgressEnded(String egressId, String s3Path, Long fileSizeBytes) {
-        /** TODO: [VIDEO][FILE_SERVICE] S3 업로드 완료 후, 파일 서버(file-service)에 해당 정보를 업로드/등록하고 fileId를 발급받는 로직 추가 필요 */
         recordingRepository.findByEgressId(egressId).ifPresent(recording -> {
             Instant now = clockProvider.now();
-            recording.markCompleted(s3Path, fileSizeBytes, now);
+
+            // Register the S3 file with file-service to get a fileId
+            Long fileId = null;
+            try {
+                String fileName = s3Path.contains("/")
+                        ? s3Path.substring(s3Path.lastIndexOf('/') + 1)
+                        : s3Path;
+                fileId = fileServiceClient.registerS3File(
+                        s3Path, fileName, "audio/ogg",
+                        fileSizeBytes != null ? fileSizeBytes : 0L,
+                        "recording", "MEETING",
+                        String.valueOf(recording.getRoom().getId()));
+            } catch (Exception ex) {
+                log.error("Failed to register S3 file with file-service: egressId={}, s3Path={}",
+                        egressId, s3Path, ex);
+            }
+
+            recording.markCompleted(s3Path, fileSizeBytes, now, fileId);
+
+            // Resolve participant name from auth-service
+            String participantName = "user-" + recording.getParticipantIdentity();
+            try {
+                AuthServiceClient.UserInfo userInfo = authServiceClient.getUserInfo(
+                        Long.parseLong(recording.getParticipantIdentity()));
+                if (userInfo != null) {
+                    participantName = userInfo.name();
+                }
+            } catch (Exception ex) {
+                log.warn("Failed to fetch participant name for identity={}",
+                        recording.getParticipantIdentity());
+            }
+
+            AudioChunkReadyEvent event = AudioChunkReadyEvent.builder()
+                    .roomId(recording.getRoom().getId())
+                    .participantId(Long.parseLong(recording.getParticipantIdentity()))
+                    .participantName(participantName)
+                    .segmentIndex(recording.getSegmentIndex() != null ? recording.getSegmentIndex() : 0)
+                    .fileId(fileId)
+                    .s3Path(s3Path)
+                    .startTime(recording.getStartedAt())
+                    .endTime(now)
+                    .timestamp(now)
+                    .build();
+            eventPublisher.publishAudioSegmentReady(event);
         });
     }
 
