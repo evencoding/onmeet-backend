@@ -34,7 +34,9 @@ CREATE TABLE transcript_event
     INDEX idx_transcript_event_transcript_id (transcript_id)
 );
 
--- 3. minutes 테이블: transcript_s3_key 제거, transcript_id 추가
+-- 3. minutes 테이블: transcript_s3_key 제거, transcript_id 위치/NULL 허용으로 변경
 ALTER TABLE minutes
-    DROP COLUMN transcript_s3_key,
-    ADD COLUMN transcript_id VARCHAR(64) NULL COMMENT 'transcript.transcript_id 논리 참조' AFTER room_id;
+    DROP COLUMN transcript_s3_key;
+
+ALTER TABLE minutes
+    MODIFY COLUMN transcript_id VARCHAR(64) NULL COMMENT 'transcript.transcript_id 논리 참조' AFTER room_id;
