@@ -23,6 +23,14 @@ spring:
             - UserHeaderFilter
           metadata:
             response-timeout: 60000
+        - id: video-waiting-sse
+          uri: ${VIDEO_SERVICE_URL:http://video-service:8083}
+          predicates:
+            - Path=/video/v1/rooms/*/waiting/sse/**
+          filters:
+            - UserHeaderFilter
+          metadata:
+            response-timeout: 3600000
         - id: video-service
           uri: ${VIDEO_SERVICE_URL:http://video-service:8083}
           predicates:
