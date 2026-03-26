@@ -8,6 +8,9 @@ rtc:
 # API keys are passed via LIVEKIT_KEYS environment variable in docker-compose.yml
 keys: {}
 
+redis:
+  address: redis:6379
+
 webhook:
   api_key: "devkey"
   urls:
