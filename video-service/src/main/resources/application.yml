@@ -21,6 +21,7 @@ spring:
       connection-timeout: 30000
       initialization-fail-timeout: -1
   jpa:
+    open-in-view: false
     hibernate:
       ddl-auto: validate
     properties:
