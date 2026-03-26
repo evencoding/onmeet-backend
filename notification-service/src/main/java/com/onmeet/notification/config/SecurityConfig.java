@@ -16,6 +16,7 @@ import com.onmeet.common.security.GatewayPreAuthFilter;
  * - Swagger 경로(permitAll)는 common-security의 CommonSwaggerSecurityConfig에서 처리
  * - context-path: /notification
  * - SSE 구독 엔드포인트(/notification/v1/sse/subscribe)는 인증 헤더(X-User-Id)로 처리되므로 인증 필요
+ * - CORS는 Gateway에서 처리하므로 여기서는 비활성화
  */
 @Configuration
 @EnableWebSecurity
@@ -43,3 +44,5 @@ public class SecurityConfig {
         return http.build();
     }
 }
+
+

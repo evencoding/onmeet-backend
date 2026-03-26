@@ -12,13 +12,14 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.data.jpa.repository.Modifying;
 
 import java.time.LocalDateTime;
-import java.util.List;
 import java.util.Optional;
 
 public interface NotificationRecipientRepository extends JpaRepository<NotificationRecipient, Long> {
     List<NotificationRecipient> findAllByUserId(Long userId);
 
-    Page<NotificationRecipient> findAllByUserIdOrderByCreatedAtDesc(Long userId, Pageable pageable);
+    @Query(value = "SELECT r FROM NotificationRecipient r JOIN FETCH r.notification WHERE r.userId = :userId ORDER BY r.createdAt DESC",
+           countQuery = "SELECT COUNT(r) FROM NotificationRecipient r WHERE r.userId = :userId")
+    Page<NotificationRecipient> findAllByUserIdOrderByCreatedAtDesc(@Param("userId") Long userId, Pageable pageable);
 
     long countByUserIdAndReadAtIsNull(Long userId);
 
