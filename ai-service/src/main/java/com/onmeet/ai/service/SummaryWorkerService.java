@@ -120,10 +120,24 @@ public class SummaryWorkerService {
                 .generatedAt(Instant.now())
                 .build());
 
-        // AI 요약 완료 알림 (Kafka 비동기)
+        // AI 요약 완료 알림 — 호스트 + 전체 참가자에게 발송
+        java.util.List<Long> participantUserIds = transcriptEventRepository
+                .findDistinctParticipantIdsByTranscriptId(e.getTranscriptId())
+                .stream()
+                .filter(id -> id != null && !id.isBlank())
+                .map(id -> { try { return Long.parseLong(id); } catch (NumberFormatException ex) { return null; } })
+                .filter(java.util.Objects::nonNull)
+                .distinct()
+                .collect(java.util.stream.Collectors.toList());
+
+        // 호스트도 포함
+        if (e.getHostUserId() != null && !participantUserIds.contains(e.getHostUserId())) {
+            participantUserIds.add(e.getHostUserId());
+        }
+
         notificationEventPublisher.publishNotification(
             new NotificationRequestDto(
-                e.getHostUserId(), null, "AI_SUMMARY_COMPLETED", "AI 요약 완료",
+                null, participantUserIds, "AI_SUMMARY_COMPLETED", "AI 요약 완료",
                 "회의록 AI 요약이 완료되었습니다.",
                 "/meeting/" + e.getRoomId() + "?tab=minutes", "MEETING", String.valueOf(e.getRoomId()), SYSTEM_ACTOR_ID,
                 null, null
