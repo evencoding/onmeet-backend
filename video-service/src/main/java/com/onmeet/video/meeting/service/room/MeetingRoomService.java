@@ -222,42 +222,46 @@ public class MeetingRoomService {
 
         // 다른 회의에 참여 중이면 자동 퇴장 처리
         List<String> warnings = new ArrayList<>();
-        List<RoomParticipant> activeParticipations = participantRepository.findByUserIdAndStatusIn(
-                userId, List.of(ParticipantStatus.JOINED, ParticipantStatus.WAITING));
-        for (RoomParticipant existing : activeParticipations) {
-            Long existingRoomId = existing.getRoom().getId();
-            if (existingRoomId.equals(roomId)) {
-                // 같은 방 재입장: 기존 참가 기록 퇴장 처리 후 새로 입장
-                Instant now = clockProvider.now();
+        try {
+            List<RoomParticipant> activeParticipations = participantRepository.findByUserIdAndStatusIn(
+                    userId, List.of(ParticipantStatus.JOINED, ParticipantStatus.WAITING));
+            for (RoomParticipant existing : activeParticipations) {
+                Long existingRoomId = existing.getRoom().getId();
                 boolean wasWaiting = existing.isWaiting();
-                existing.leave(now);
-                if (wasWaiting) {
-                    waitingRoomSseService.notifyHostWaiterLeft(existingRoomId, userId);
-                } else {
-                    liveKitClient.removeParticipant(existing.getRoom().getLivekitRoomName(), String.valueOf(userId));
+                Instant leaveTime = clockProvider.now();
+                existing.leave(leaveTime);
+
+                try {
+                    if (wasWaiting) {
+                        waitingRoomSseService.notifyHostWaiterLeft(existingRoomId, userId);
+                    } else {
+                        liveKitClient.removeParticipant(existing.getRoom().getLivekitRoomName(), String.valueOf(userId));
+                    }
+                } catch (Exception e) {
+                    // LiveKit/SSE 호출 실패해도 퇴장 처리는 진행
                 }
-                continue;
+
+                if (!existingRoomId.equals(roomId)) {
+                    eventPublisher.publishParticipantLeft(
+                            new ParticipantEvent("PARTICIPANT_LEFT", existingRoomId, userId, leaveTime));
+                    warnings.add("기존 회의 '" + existing.getRoom().getTitle() + "'에서 자동 퇴장되었습니다.");
+                }
             }
-            // 다른 방에 참여 중 → 자동 퇴장
-            Instant now = clockProvider.now();
-            boolean wasWaiting = existing.isWaiting();
-            existing.leave(now);
-            if (wasWaiting) {
-                waitingRoomSseService.notifyHostWaiterLeft(existingRoomId, userId);
-            } else {
-                liveKitClient.removeParticipant(existing.getRoom().getLivekitRoomName(), String.valueOf(userId));
-            }
-            eventPublisher.publishParticipantLeft(
-                    new ParticipantEvent("PARTICIPANT_LEFT", existingRoomId, userId, now));
-            warnings.add("기존 회의 '" + existing.getRoom().getTitle() + "'에서 자동 퇴장되었습니다.");
+        } catch (Exception e) {
+            // 자동 퇴장 실패해도 새 방 입장은 계속 진행
         }
 
-        // 예정된 회의 충돌 확인
         Instant now = clockProvider.now();
-        Instant rangeStart = now.minus(Duration.ofMinutes(30));
-        Instant rangeEnd = now.plus(Duration.ofMinutes(30));
-        if (roomRepository.existsConflictingSchedule(userId, RoomType.SCHEDULED, RoomStatus.WAITING, rangeStart, rangeEnd, roomId)) {
-            warnings.add("현재 시간대에 예정된 다른 회의가 있습니다.");
+
+        // 예정된 회의 충돌 확인
+        try {
+            Instant rangeStart = now.minus(Duration.ofMinutes(30));
+            Instant rangeEnd = now.plus(Duration.ofMinutes(30));
+            if (roomRepository.existsConflictingSchedule(userId, RoomType.SCHEDULED, RoomStatus.WAITING, rangeStart, rangeEnd, roomId)) {
+                warnings.add("현재 시간대에 예정된 다른 회의가 있습니다.");
+            }
+        } catch (Exception e) {
+            // 충돌 확인 실패해도 입장은 계속 진행
         }
 
         // Validate participant's team membership when access scope is TEAM
