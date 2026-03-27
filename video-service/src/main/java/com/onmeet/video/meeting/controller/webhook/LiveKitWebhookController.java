@@ -201,14 +201,28 @@ public class LiveKitWebhookController {
         String error = (String) egressInfo.get("error");
 
         if ("EGRESS_COMPLETE".equals(status)) {
+            log.info("Egress egressInfo keys: {}", egressInfo.keySet());
             String s3Path = null;
             Long fileSize = null;
+            // LiveKit webhook은 snake_case와 camelCase를 혼용할 수 있으므로 둘 다 시도
             List<?> fileResults = (List<?>) egressInfo.get("file_results");
+            if (fileResults == null) {
+                fileResults = (List<?>) egressInfo.get("fileResults");
+            }
             if (fileResults != null && !fileResults.isEmpty()) {
                 Map<String, Object> firstFile = (Map<String, Object>) fileResults.get(0);
                 s3Path = (String) firstFile.get("filename");
                 Number size = (Number) firstFile.get("size");
                 fileSize = size != null ? size.longValue() : null;
+            }
+            // file_results에서 못 찾으면 file 필드도 시도 (단건 결과)
+            if (s3Path == null) {
+                Map<String, Object> file = (Map<String, Object>) egressInfo.get("file");
+                if (file != null) {
+                    s3Path = (String) file.get("filename");
+                    Number size = (Number) file.get("size");
+                    fileSize = size != null ? size.longValue() : null;
+                }
             }
             recordingService.handleEgressEnded(egressId, s3Path, fileSize);
             log.info("Egress completed: egressId={}, s3Path={}", egressId, s3Path);
