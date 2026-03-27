@@ -306,9 +306,16 @@ public class MeetingRoomService {
             return new RoomJoinResponse(null, liveKitProperties.getUrl(), room.getLivekitRoomName(), true, warnings);
         }
 
-        // Get user name from auth service
-        AuthServiceClient.UserInfo userInfo = authServiceClient.getUserInfo(userId);
-        String participantName = userInfo != null ? userInfo.name() : "user-" + userId;
+        // Get user name from auth service (실패해도 입장은 진행)
+        String participantName = "user-" + userId;
+        try {
+            AuthServiceClient.UserInfo userInfo = authServiceClient.getUserInfo(userId);
+            if (userInfo != null && userInfo.name() != null) {
+                participantName = userInfo.name();
+            }
+        } catch (Exception e) {
+            // auth 서비스 호출 실패 시 기본 이름 사용
+        }
 
         TokenGrants grants = room.isHost(userId) ? TokenGrants.forHost() : TokenGrants.forParticipant();
         String token = liveKitClient.generateToken(
