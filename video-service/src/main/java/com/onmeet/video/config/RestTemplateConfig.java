@@ -17,4 +17,12 @@ public class RestTemplateConfig {
                 .setReadTimeout(Duration.ofSeconds(5))
                 .build();
     }
+
+    @Bean("livekitRestTemplate")
+    public RestTemplate livekitRestTemplate(RestTemplateBuilder builder) {
+        return builder
+                .setConnectTimeout(Duration.ofSeconds(5))
+                .setReadTimeout(Duration.ofSeconds(30))
+                .build();
+    }
 }
