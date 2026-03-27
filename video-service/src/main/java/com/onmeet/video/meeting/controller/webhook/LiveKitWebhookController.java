@@ -232,6 +232,9 @@ public class LiveKitWebhookController {
                     fileSize = parseLong(file.get("size"));
                 }
             }
+            if (s3Path != null && s3Path.startsWith("/")) {
+                s3Path = s3Path.substring(1);
+            }
             recordingService.handleEgressEnded(egressId, s3Path, fileSize);
             log.info("Egress completed: egressId={}, s3Path={}", egressId, s3Path);
         } else {

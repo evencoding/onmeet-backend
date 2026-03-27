@@ -281,7 +281,7 @@ public class RoomRecordingService {
     }
 
     private String buildS3Path(Long roomId, String participantIdentity, String trackSid) {
-        return "/recordings/" + roomId + "/" + participantIdentity + "/audio_" + trackSid + ".ogg";
+        return "recordings/" + roomId + "/" + participantIdentity + "/audio_" + trackSid + ".ogg";
     }
 
     private void validateRecordingPreconditions(Long roomId, MeetingRoom room) {
