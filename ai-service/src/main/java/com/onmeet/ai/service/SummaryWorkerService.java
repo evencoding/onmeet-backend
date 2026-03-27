@@ -104,7 +104,7 @@ public class SummaryWorkerService {
             String summaryFilename = e.getTranscriptId() + "_summary.json";
             summaryFileId = storageClient.writeText(summaryFilename, summaryJson, "application/json", "summary", "MEETING", String.valueOf(e.getRoomId()));
         } catch (Exception ex) {
-            log.warn("Failed to upload summary to file-service, proceeding with DB-only storage: {}", ex.getMessage());
+            System.err.println("Failed to upload summary to file-service, proceeding with DB-only storage: " + ex.getMessage());
         }
 
         upsertMinutes(
