@@ -286,6 +286,7 @@ public class RoomRecordingService {
     public void setPendingMeetingEnded(Long roomId, MeetingEvent event) {
         pendingMeetingEndedEvents.put(roomId, event);
         log.info("Meeting ended event deferred until all egress complete: roomId={}", roomId);
+        checkAndPublishPendingMeetingEnded(roomId);
     }
 
     private void checkAndPublishPendingMeetingEnded(Long roomId) {
