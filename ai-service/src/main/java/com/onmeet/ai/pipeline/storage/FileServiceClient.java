@@ -36,7 +36,9 @@ public class FileServiceClient {
      */
     public byte[] downloadFile(Long fileId) {
         log.debug("Downloading file from file-service: fileId={}", fileId);
-        return webClientBuilder.build()
+        return webClientBuilder
+                .codecs(configurer -> configurer.defaultCodecs().maxInMemorySize(50 * 1024 * 1024))
+                .build()
                 .get()
                 .uri(fileServiceUrl + "/file/v1/render/{id}", fileId)
                 .header("X-Gateway-Secret", gatewaySecret)
