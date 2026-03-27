@@ -25,7 +25,7 @@ public class FileServiceClient {
 
     private final WebClient.Builder webClientBuilder;
 
-    @Value("${app.storage.file-service.internal-url:http://file-service:8084}")
+    @Value("${app.storage.file-service.internal-url:http://file-service:8086}")
     private String fileServiceUrl;
 
     @Value("${gateway.shared-secret}")
