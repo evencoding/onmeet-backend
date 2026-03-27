@@ -98,9 +98,14 @@ public class SummaryWorkerService {
             System.err.println("Failed to parse summaryJson in SummaryWorkerService: " + ignored.getMessage());
         }
 
-        // 파일 서버에 요약본 업로드
-        String summaryFilename = e.getTranscriptId() + "_summary.json";
-        String summaryFileId = storageClient.writeText(summaryFilename, summaryJson, "application/json", "summary", "MEETING", String.valueOf(e.getRoomId()));
+        // 파일 서버에 요약본 업로드 (실패 시 DB에만 저장)
+        String summaryFileId = null;
+        try {
+            String summaryFilename = e.getTranscriptId() + "_summary.json";
+            summaryFileId = storageClient.writeText(summaryFilename, summaryJson, "application/json", "summary", "MEETING", String.valueOf(e.getRoomId()));
+        } catch (Exception ex) {
+            log.warn("Failed to upload summary to file-service, proceeding with DB-only storage: {}", ex.getMessage());
+        }
 
         upsertMinutes(
                 e.getRoomId(),
