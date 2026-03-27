@@ -132,13 +132,25 @@ public class LiveKitClientImpl implements LiveKitClient {
 
     @Override
     public String startTrackEgress(String roomName, String trackSid, String s3Path) {
-        // CHECK [video-담당자]: S3 경로 형식과 AWS 접근 키가 LiveKit 서버에서 사용 가능한 값인지 확인 필요.
-        // LiveKit Egress S3 설정은 별도 egress.yaml 또는 environment로 주입되어야 함.
-        Map<String, Object> s3Output = Map.of("filepath", s3Path);
+        LiveKitProperties.S3 s3 = properties.getS3();
+        Map<String, Object> s3Upload = new HashMap<>();
+        s3Upload.put("access_key", s3.getAccessKey());
+        s3Upload.put("secret", s3.getSecret());
+        s3Upload.put("bucket", s3.getBucket());
+        s3Upload.put("region", s3.getRegion());
+        if (s3.getEndpoint() != null) {
+            s3Upload.put("endpoint", s3.getEndpoint());
+        }
+        s3Upload.put("force_path_style", s3.isForcePathStyle());
+
+        Map<String, Object> fileOutput = new HashMap<>();
+        fileOutput.put("filepath", s3Path);
+        fileOutput.put("s3", s3Upload);
+
         Map<String, Object> request = Map.of(
                 "room_name", roomName,
                 "track_id", trackSid,
-                "file", s3Output
+                "file", fileOutput
         );
         EgressResponse response = callLiveKit("/twirp/livekit.Egress/StartTrackEgress",
                 request, EgressResponse.class, roomName);
