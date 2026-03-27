@@ -667,6 +667,17 @@ public class MeetingRoomController {
         return ApiResponse.ok(null);
     }
 
+    @Operation(summary = "내 회의 목록 조회", description = "내가 호스트이거나 초대받은 또는 참여 중인 회의 목록을 조회합니다. status 파라미터로 필터링 가능합니다.")
+    @ApiResponses(value = {
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "내 회의 목록 조회 성공")
+    })
+    @GetMapping("/my")
+    public ApiResponse<List<MeetingRoomResponse>> listMyRooms(
+            @RequestHeader("X-User-Id") Long userId,
+            @RequestParam(required = false) RoomStatus status) {
+        return ApiResponse.ok(meetingRoomService.listMyRooms(userId, status));
+    }
+
     @Operation(summary = "참가했던 회의 이력 조회", description = "내가 참가했던 과거 회의 목록을 조회합니다.")
     @ApiResponses(value = {
         @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "이력 조회 성공")

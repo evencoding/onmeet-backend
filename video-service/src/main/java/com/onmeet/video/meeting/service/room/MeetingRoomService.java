@@ -41,8 +41,11 @@ import com.onmeet.video.meeting.repository.room.MeetingRoomRepository;
 import com.onmeet.video.meeting.repository.room.RoomFavoriteRepository;
 import com.onmeet.video.meeting.repository.participant.RoomParticipantRepository;
 import com.onmeet.video.meeting.repository.recording.RoomRecordingRepository;
+import com.onmeet.video.meeting.repository.invitation.RoomInvitationRepository;
 import com.onmeet.video.meeting.repository.room.RoomSettingsRepository;
 import com.onmeet.video.meeting.repository.room.RoomTagRepository;
+import com.onmeet.video.meeting.entity.invitation.InvitationStatus;
+import com.onmeet.video.meeting.entity.invitation.RoomInvitation;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.YearMonth;
@@ -65,6 +68,7 @@ public class MeetingRoomService {
     private final RoomRecordingRepository recordingRepository;
     private final RoomTagRepository tagRepository;
     private final RoomFavoriteRepository favoriteRepository;
+    private final RoomInvitationRepository invitationRepository;
     private final LiveKitClient liveKitClient;
     private final LiveKitProperties liveKitProperties;
     private final MeetingEventPublisher eventPublisher;
@@ -78,6 +82,7 @@ public class MeetingRoomService {
             RoomRecordingRepository recordingRepository,
             RoomTagRepository tagRepository,
             RoomFavoriteRepository favoriteRepository,
+            RoomInvitationRepository invitationRepository,
             LiveKitClient liveKitClient,
             LiveKitProperties liveKitProperties,
             MeetingEventPublisher eventPublisher,
@@ -90,6 +95,7 @@ public class MeetingRoomService {
         this.recordingRepository = recordingRepository;
         this.tagRepository = tagRepository;
         this.favoriteRepository = favoriteRepository;
+        this.invitationRepository = invitationRepository;
         this.liveKitClient = liveKitClient;
         this.liveKitProperties = liveKitProperties;
         this.eventPublisher = eventPublisher;
@@ -581,6 +587,44 @@ public class MeetingRoomService {
     public Page<MeetingRoomResponse> listHistory(Long userId, Pageable pageable) {
         return roomRepository.findByHostUserIdOrderByCreatedAtDesc(userId, pageable)
                 .map(this::toResponse);
+    }
+
+    /**
+     * 사용자가 관련된 회의 목록 (호스트 + 초대받은 + 참여한).
+     * 선택적으로 상태 필터 적용 가능.
+     */
+    @Transactional(readOnly = true)
+    public List<MeetingRoomResponse> listMyRooms(Long userId, RoomStatus status) {
+        // 1) 호스트인 방
+        List<MeetingRoom> hostRooms = status != null
+                ? roomRepository.findAllWithFilters(status, null, null, userId, Pageable.unpaged()).getContent()
+                : roomRepository.findByHostUserIdOrderByCreatedAtDesc(userId);
+
+        // 2) 초대받은 방 (PENDING 또는 ACCEPTED)
+        List<RoomInvitation> invitations = invitationRepository.findByInviteeUserIdAndStatusIn(
+                userId, List.of(InvitationStatus.PENDING, InvitationStatus.ACCEPTED));
+        List<MeetingRoom> invitedRooms = invitations.stream()
+                .map(RoomInvitation::getRoom)
+                .filter(room -> status == null || room.getStatus() == status)
+                .collect(Collectors.toList());
+
+        // 3) 참여 이력이 있는 방
+        List<RoomParticipant> participations = participantRepository.findByUserIdAndStatusIn(
+                userId, List.of(ParticipantStatus.JOINED, ParticipantStatus.WAITING));
+        List<MeetingRoom> participatedRooms = participations.stream()
+                .map(RoomParticipant::getRoom)
+                .filter(room -> status == null || room.getStatus() == status)
+                .collect(Collectors.toList());
+
+        // 중복 제거 후 반환
+        Map<Long, MeetingRoom> uniqueRooms = new java.util.LinkedHashMap<>();
+        for (MeetingRoom r : hostRooms) uniqueRooms.putIfAbsent(r.getId(), r);
+        for (MeetingRoom r : invitedRooms) uniqueRooms.putIfAbsent(r.getId(), r);
+        for (MeetingRoom r : participatedRooms) uniqueRooms.putIfAbsent(r.getId(), r);
+
+        return uniqueRooms.values().stream()
+                .map(this::toResponse)
+                .collect(Collectors.toList());
     }
 
     @Transactional(readOnly = true)
