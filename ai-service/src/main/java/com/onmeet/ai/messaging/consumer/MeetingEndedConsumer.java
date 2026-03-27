@@ -28,13 +28,8 @@ public class MeetingEndedConsumer {
     public void onMessage(String message) {
         try {
             MeetingEndedEvent event = objectMapper.readValue(message, MeetingEndedEvent.class);
-            log.info("Received meeting.ended event: roomId={}, title={}, waiting 30s for STT completion...",
-                    event.getRoomId(), event.getTitle());
-            Thread.sleep(30_000);
+            log.info("Received meeting.ended event: roomId={}, title={}", event.getRoomId(), event.getTitle());
             builder.finalizeMeeting(event);
-        } catch (InterruptedException ie) {
-            Thread.currentThread().interrupt();
-            log.warn("Meeting ended processing interrupted: {}", ie.getMessage());
         } catch (Exception e) {
             log.error("Failed to process meeting.ended event: {}", e.getMessage(), e);
             throw new RuntimeException(e);
