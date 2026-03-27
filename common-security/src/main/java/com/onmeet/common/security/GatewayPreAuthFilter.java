@@ -34,7 +34,7 @@ public class GatewayPreAuthFilter extends OncePerRequestFilter {
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) throws ServletException {
         String path = request.getRequestURI();
-        return ALLOWED_PATHS.contains(path) || path.startsWith("/actuator/");
+        return ALLOWED_PATHS.contains(path) || path.startsWith("/actuator/") || path.contains("/webhook/");
     }
 
     @Override
