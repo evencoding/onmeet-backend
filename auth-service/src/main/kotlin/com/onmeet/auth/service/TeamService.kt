@@ -20,4 +20,5 @@ interface TeamService {
     // Internal API - No permission check
     fun teamExists(teamId: Long): Boolean
     fun isTeamMember(teamId: Long, userId: Long): Boolean
+    fun getTeamMemberIds(teamId: Long): List<Long>
 }

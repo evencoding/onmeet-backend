@@ -272,4 +272,7 @@ class TeamServiceImpl(
 
     override fun isTeamMember(teamId: Long, userId: Long): Boolean =
         teamMemberRepository.findByUserIdAndTeamId(userId, teamId) != null
+
+    override fun getTeamMemberIds(teamId: Long): List<Long> =
+        teamMemberRepository.findByTeamId(teamId).mapNotNull { it.user.id }
 }

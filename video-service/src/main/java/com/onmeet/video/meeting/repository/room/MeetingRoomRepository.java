@@ -47,6 +47,8 @@ public interface MeetingRoomRepository extends JpaRepository<MeetingRoom, Long> 
     @Query("SELECT r FROM MeetingRoom r JOIN RoomTag t ON t.room = r WHERE t.tagName = :tagName")
     Page<MeetingRoom> findByTagName(@Param("tagName") String tagName, Pageable pageable);
 
+    List<MeetingRoom> findByTeamIdInAndAccessScopeAndStatusNot(List<Long> teamIds, RoomAccessScope accessScope, RoomStatus status);
+
     List<MeetingRoom> findByStatusIn(List<RoomStatus> statuses);
 
     @Query("SELECT r FROM MeetingRoom r WHERE r.type = :type AND r.status = :status AND r.scheduledAt BETWEEN :start AND :end")

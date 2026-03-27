@@ -32,10 +32,14 @@ import com.onmeet.video.meeting.entity.participant.RoomParticipant;
 import com.onmeet.video.meeting.entity.room.RoomSettings;
 import com.onmeet.video.meeting.entity.room.RoomStatus;
 import com.onmeet.video.meeting.entity.room.RoomTag;
+import com.onmeet.video.meeting.entity.invitation.InvitationStatus;
+import com.onmeet.video.meeting.entity.invitation.RoomInvitation;
 import com.onmeet.video.meeting.entity.room.RoomAccessScope;
 import com.onmeet.video.meeting.entity.room.RoomType;
 import com.onmeet.video.meeting.event.room.MeetingEvent;
 import com.onmeet.video.meeting.event.MeetingEventPublisher;
+import com.onmeet.video.meeting.event.NotificationEventPublisher;
+import com.onmeet.common.dto.NotificationRequestDto;
 import com.onmeet.video.meeting.event.participant.ParticipantEvent;
 import com.onmeet.video.meeting.repository.room.MeetingRoomRepository;
 import com.onmeet.video.meeting.repository.room.RoomFavoriteRepository;
@@ -79,6 +83,7 @@ public class MeetingRoomService {
     private final ClockProvider clockProvider;
     private final AuthServiceClient authServiceClient;
     private final WaitingRoomSseService waitingRoomSseService;
+    private final NotificationEventPublisher notificationEventPublisher;
 
     public MeetingRoomService(MeetingRoomRepository roomRepository,
             RoomSettingsRepository settingsRepository,
@@ -92,7 +97,8 @@ public class MeetingRoomService {
             MeetingEventPublisher eventPublisher,
             ClockProvider clockProvider,
             AuthServiceClient authServiceClient,
-            WaitingRoomSseService waitingRoomSseService) {
+            WaitingRoomSseService waitingRoomSseService,
+            NotificationEventPublisher notificationEventPublisher) {
         this.roomRepository = roomRepository;
         this.settingsRepository = settingsRepository;
         this.participantRepository = participantRepository;
@@ -106,6 +112,7 @@ public class MeetingRoomService {
         this.clockProvider = clockProvider;
         this.authServiceClient = authServiceClient;
         this.waitingRoomSseService = waitingRoomSseService;
+        this.notificationEventPublisher = notificationEventPublisher;
     }
 
     @Transactional
@@ -146,6 +153,35 @@ public class MeetingRoomService {
         MeetingRoom saved = roomRepository.save(room);
         settingsRepository.save(RoomSettings.createDefault(saved));
         liveKitClient.createRoom(saved.getLivekitRoomName(), maxParticipants);
+
+        // TEAM 회의: 팀원 자동 초대 + 알림 발송
+        if (accessScope == RoomAccessScope.TEAM && request.teamId() != null) {
+            try {
+                List<Long> memberIds = authServiceClient.getTeamMemberIds(request.teamId());
+                for (Long memberId : memberIds) {
+                    if (memberId.equals(hostUserId)) continue;
+                    if (invitationRepository.existsByRoomIdAndInviteeUserIdAndStatus(
+                            saved.getId(), memberId, InvitationStatus.PENDING)) continue;
+
+                    invitationRepository.save(new RoomInvitation(saved, hostUserId, memberId));
+                }
+
+                List<Long> inviteeIds = memberIds.stream()
+                        .filter(id -> !id.equals(hostUserId))
+                        .collect(Collectors.toList());
+                if (!inviteeIds.isEmpty()) {
+                    notificationEventPublisher.publishNotification(
+                            new NotificationRequestDto(
+                                    null, inviteeIds, "MEETING_INVITATION", "팀 회의 초대",
+                                    saved.getTitle() + " 회의에 초대되었습니다.",
+                                    "/meeting/" + saved.getId(), "MEETING", String.valueOf(saved.getId()), hostUserId,
+                                    null, null));
+                }
+            } catch (Exception e) {
+                log.warn("Failed to auto-invite team members: roomId={}, teamId={}, error={}",
+                        saved.getId(), request.teamId(), e.getMessage());
+            }
+        }
 
         return toResponse(saved);
     }
@@ -297,8 +333,8 @@ public class MeetingRoomService {
         RoomParticipant participant = new RoomParticipant(room, userId, role, initialStatus, now, deviceType);
         participantRepository.save(participant);
 
-        // 즉시 회의: 호스트가 참여하면 자동으로 WAITING → ACTIVE 전환
-        if (room.isWaiting() && room.isHost(userId) && room.getType() == RoomType.INSTANT) {
+        // 호스트가 참여하면 자동으로 WAITING → ACTIVE 전환 (INSTANT/SCHEDULED 모두)
+        if (room.isWaiting() && room.isHost(userId)) {
             room.start(now);
             int participantCount = participantRepository.countActiveParticipants(roomId);
             eventPublisher.publishMeetingStarted(
@@ -659,11 +695,29 @@ public class MeetingRoomService {
                 .filter(room -> status == null || room.getStatus() == status)
                 .collect(Collectors.toList());
 
+        // 4) 사용자가 속한 팀의 TEAM 회의 (종료되지 않은)
+        List<MeetingRoom> teamRooms = List.of();
+        try {
+            List<Long> teamIds = authServiceClient.getUserTeamIds(userId);
+            if (!teamIds.isEmpty()) {
+                teamRooms = roomRepository.findByTeamIdInAndAccessScopeAndStatusNot(
+                        teamIds, RoomAccessScope.TEAM, RoomStatus.ENDED);
+                if (status != null) {
+                    teamRooms = teamRooms.stream()
+                            .filter(room -> room.getStatus() == status)
+                            .collect(Collectors.toList());
+                }
+            }
+        } catch (Exception e) {
+            log.warn("Failed to fetch team rooms for userId={}: {}", userId, e.getMessage());
+        }
+
         // 중복 제거 후 반환
         Map<Long, MeetingRoom> uniqueRooms = new java.util.LinkedHashMap<>();
         for (MeetingRoom r : hostRooms) uniqueRooms.putIfAbsent(r.getId(), r);
         for (MeetingRoom r : invitedRooms) uniqueRooms.putIfAbsent(r.getId(), r);
         for (MeetingRoom r : participatedRooms) uniqueRooms.putIfAbsent(r.getId(), r);
+        for (MeetingRoom r : teamRooms) uniqueRooms.putIfAbsent(r.getId(), r);
 
         return uniqueRooms.values().stream()
                 .map(this::toResponse)

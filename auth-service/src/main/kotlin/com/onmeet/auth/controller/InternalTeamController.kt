@@ -111,6 +111,11 @@ class InternalTeamController(
             )]
         )
     ])
+    @GetMapping("/{teamId}/member-ids")
+    fun getTeamMemberIds(@PathVariable teamId: Long): ResponseEntity<List<Long>> {
+        return ResponseEntity.ok(teamService.getTeamMemberIds(teamId))
+    }
+
     @PostMapping("/membership/check")
     fun checkTeamMembership(
         @RequestBody request: TeamMembershipRequest
