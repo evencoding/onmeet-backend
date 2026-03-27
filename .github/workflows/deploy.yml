@@ -360,6 +360,10 @@ jobs:
             echo "LIVEKIT_URL=${{ secrets.LIVEKIT_URL }}" >> .env
             echo "Injected LIVEKIT_URL from GitHub Secret"
 
+            sed -i '/^LIVEKIT_INTERNAL_URL=/d' .env 2>/dev/null || true
+            echo "LIVEKIT_INTERNAL_URL=ws://livekit:7880" >> .env
+            echo "Injected LIVEKIT_INTERNAL_URL"
+
             # TODO: 로컬 개발용 임시 설정. 로컬 개발 완료 후 secret 제거하여 롤백할 것
             sed -i '/^COOKIE_SAMESITE=/d' .env 2>/dev/null || true
             echo "COOKIE_SAMESITE=${{ secrets.COOKIE_SAMESITE }}" >> .env
@@ -408,7 +412,7 @@ jobs:
             if [ "${{ needs.detect-changes.outputs.auth }}" == "true" ]; then TARGETS="$TARGETS auth-service mysql-auth redis-auth"; fi
             if [ "${{ needs.detect-changes.outputs.gateway }}" == "true" ]; then TARGETS="$TARGETS gateway-service"; fi
             if [ "${{ needs.detect-changes.outputs.ai }}" == "true" ]; then TARGETS="$TARGETS ai-service mysql-ai redis"; fi
-            if [ "${{ needs.detect-changes.outputs.video }}" == "true" ]; then TARGETS="$TARGETS video-service livekit mysql-video"; fi
+            if [ "${{ needs.detect-changes.outputs.video }}" == "true" ]; then TARGETS="$TARGETS video-service livekit livekit-egress mysql-video"; fi
             if [ "${{ needs.detect-changes.outputs.notification }}" == "true" ]; then TARGETS="$TARGETS notification-service mysql-notification"; fi
             if [ "${{ needs.detect-changes.outputs.email }}" == "true" ]; then TARGETS="$TARGETS email-service"; fi
             if [ "${{ needs.detect-changes.outputs.file }}" == "true" ]; then TARGETS="$TARGETS file-service"; fi
@@ -481,9 +485,9 @@ jobs:
 
             echo "All services are healthy!"
 
-            # Gateway 재배포 시 Nginx DNS 캐시 갱신 (컨테이너 IP 변경 대응)
-            if [ "${{ needs.detect-changes.outputs.gateway }}" == "true" ]; then
-              echo "Gateway was redeployed, reloading Nginx to refresh DNS cache..."
+            # Gateway 또는 Video/LiveKit 재배포 시 Nginx DNS 캐시 갱신 (컨테이너 IP 변경 대응)
+            if [ "${{ needs.detect-changes.outputs.gateway }}" == "true" ] || [ "${{ needs.detect-changes.outputs.video }}" == "true" ]; then
+              echo "Gateway/Video was redeployed, reloading Nginx to refresh DNS cache..."
               docker exec onmeet-nginx nginx -s reload || echo "Warning: Nginx reload failed"
               echo "Nginx reloaded successfully"
             fi
