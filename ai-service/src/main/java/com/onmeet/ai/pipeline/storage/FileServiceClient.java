@@ -38,7 +38,7 @@ public class FileServiceClient {
         log.debug("Downloading file from file-service: fileId={}", fileId);
         return webClientBuilder.build()
                 .get()
-                .uri(fileServiceUrl + "/file/render/{id}", fileId)
+                .uri(fileServiceUrl + "/file/v1/render/{id}", fileId)
                 .header("X-Gateway-Secret", gatewaySecret)
                 .retrieve()
                 .bodyToMono(byte[].class)
@@ -65,7 +65,7 @@ public class FileServiceClient {
         FileMetadataResponse[] response = webClientBuilder.build()
                 .post()
                 .uri(uriBuilder -> uriBuilder
-                        .path(fileServiceUrl + "/file/upload")
+                        .path(fileServiceUrl + "/file/v1/upload")
                         .queryParam("category", category)
                         .queryParam("ownerType", ownerType)
                         .queryParam("ownerId", ownerId)
