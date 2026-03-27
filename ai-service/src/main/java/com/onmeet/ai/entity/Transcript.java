@@ -24,6 +24,9 @@ public class Transcript {
     @Column(name = "transcript_id", length = 64, nullable = false, unique = true)
     private String transcriptId;
 
+    @Column(name = "meeting_title", length = 255)
+    private String meetingTitle;
+
     @Column(name = "version", nullable = false)
     private int version;
 
@@ -38,19 +41,21 @@ public class Transcript {
     private Instant updatedAt;
 
     @Builder
-    private Transcript(Long roomId, String transcriptId, int version, TranscriptStatus status) {
+    private Transcript(Long roomId, String transcriptId, String meetingTitle, int version, TranscriptStatus status) {
         this.roomId = roomId;
         this.transcriptId = transcriptId;
+        this.meetingTitle = meetingTitle;
         this.version = version;
         this.status = status;
         this.createdAt = Instant.now();
         this.updatedAt = this.createdAt;
     }
 
-    public static Transcript create(Long roomId, String transcriptId, int version) {
+    public static Transcript create(Long roomId, String transcriptId, String meetingTitle, int version) {
         return Transcript.builder()
                 .roomId(roomId)
                 .transcriptId(transcriptId)
+                .meetingTitle(meetingTitle)
                 .version(version)
                 .status(TranscriptStatus.COMPLETED)
                 .build();

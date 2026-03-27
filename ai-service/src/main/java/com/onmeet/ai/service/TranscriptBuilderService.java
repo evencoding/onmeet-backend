@@ -2,6 +2,7 @@ package com.onmeet.ai.service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.onmeet.common.dto.event.ChatMessageEvent;
+import com.onmeet.ai.dto.event.MeetingEndedEvent;
 import com.onmeet.ai.dto.event.TranscriptFinalizedEvent;
 import com.onmeet.ai.dto.event.VoiceSegmentCreatedEvent;
 import com.onmeet.ai.entity.Transcript;
@@ -52,7 +53,10 @@ public class TranscriptBuilderService {
     }
 
     @Transactional
-    public void finalizeMeeting(Long roomId, Long hostUserId, Instant endedAt) {
+    public void finalizeMeeting(MeetingEndedEvent meetingEvent) {
+        Long roomId = meetingEvent.getRoomId();
+        Long hostUserId = meetingEvent.getHostUserId();
+
         List<RedisMeetingEventStore.StoredEvent> items = store.readAll(roomId);
 
         String transcriptId = UUID.randomUUID().toString();
@@ -95,8 +99,8 @@ public class TranscriptBuilderService {
                 ev.getTimestamp() != null ? ev.getTimestamp().toEpochMilli() : 0L)
                 .thenComparingLong(ev -> ev.getSeq() != null ? ev.getSeq() : 0L));
 
-        // DB 저장: transcript 헤더 + transcript_event 배치 Insert
-        transcriptRepository.save(Transcript.create(roomId, transcriptId, version));
+        // DB 저장: transcript 헤더 (회의 제목 포함) + transcript_event 배치 Insert
+        transcriptRepository.save(Transcript.create(roomId, transcriptId, meetingEvent.getTitle(), version));
         transcriptEventRepository.saveAll(eventEntities);
 
         producer.publish(TranscriptFinalizedEvent.builder()
@@ -106,6 +110,8 @@ public class TranscriptBuilderService {
                 .transcriptS3Key(null)  // DB 전환 후 불필요, null 처리
                 .version(version)
                 .finalizedAt(Instant.now())
+                .meetingTitle(meetingEvent.getTitle())
+                .participants(meetingEvent.getParticipants())
                 .build());
 
         store.clearMeeting(roomId);

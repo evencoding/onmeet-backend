@@ -2,6 +2,7 @@ package com.onmeet.ai.dto.event;
 
 import lombok.*;
 import java.time.Instant;
+import java.util.List;
 
 @Getter @NoArgsConstructor @AllArgsConstructor @Builder
 public class TranscriptFinalizedEvent {
@@ -12,4 +13,6 @@ public class TranscriptFinalizedEvent {
     private Long transcriptFileId;
     private int version;
     private Instant finalizedAt;
+    private String meetingTitle;
+    private List<MeetingEndedEvent.ParticipantInfo> participants;
 }

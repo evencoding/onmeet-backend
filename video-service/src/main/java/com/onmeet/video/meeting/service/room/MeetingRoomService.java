@@ -389,10 +389,33 @@ public class MeetingRoomService {
 
         waitingRoomSseService.cleanupRoom(roomId);
 
-        // TODO: [Minutes Service] 회의 메타데이터(참가자, 시간, 녹음 등)를 회의록 서비스로 전달
+        // 회의 메타데이터(참가자 목록)를 회의록 서비스로 전달
+        List<RoomParticipant> allParticipants = participantRepository.findByRoomId(roomId);
+        List<Long> participantUserIds = allParticipants.stream()
+                .map(RoomParticipant::getUserId).distinct().collect(Collectors.toList());
+
+        Map<Long, String> userNameMap = Map.of();
+        if (!participantUserIds.isEmpty()) {
+            List<AuthServiceClient.UserInfo> userInfos = authServiceClient.getBatchUserInfo(participantUserIds);
+            if (userInfos != null) {
+                userNameMap = userInfos.stream()
+                        .collect(Collectors.toMap(AuthServiceClient.UserInfo::userId, AuthServiceClient.UserInfo::name, (a, b) -> a));
+            }
+        }
+
+        Map<Long, String> finalUserNameMap = userNameMap;
+        List<MeetingEvent.ParticipantInfo> participantInfos = allParticipants.stream()
+                .collect(Collectors.toMap(RoomParticipant::getUserId, p -> p, (a, b) -> a))
+                .values().stream()
+                .map(p -> new MeetingEvent.ParticipantInfo(
+                        p.getUserId(),
+                        finalUserNameMap.getOrDefault(p.getUserId(), "user-" + p.getUserId()),
+                        p.getRole().name()))
+                .collect(Collectors.toList());
+
         eventPublisher.publishMeetingEnded(
                 new MeetingEvent("MEETING_ENDED", roomId, userId, activeParticipants.size(),
-                        room.getStartedAt(), now));
+                        room.getStartedAt(), now, room.getTitle(), room.getDescription(), participantInfos));
 
         return toResponse(room);
     }

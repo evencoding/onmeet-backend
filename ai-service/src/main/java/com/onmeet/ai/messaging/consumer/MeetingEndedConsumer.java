@@ -20,7 +20,7 @@ public class MeetingEndedConsumer {
     )
     public void onMessage(MeetingEndedEvent event) {
         try {
-            builder.finalizeMeeting(event.getRoomId(), event.getHostUserId(), event.getEndedAt());
+            builder.finalizeMeeting(event);
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
