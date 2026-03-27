@@ -192,6 +192,20 @@ public class RoomInvitationService {
     }
 
     @Transactional
+    public InvitationResponse acceptByRoom(Long roomId, Long userId) {
+        RoomInvitation invitation = invitationRepository.findByRoomIdAndInviteeUserId(roomId, userId)
+                .orElseThrow(() -> new BusinessException(VideoErrorCode.INVITATION_NOT_FOUND));
+        return accept(invitation.getId(), userId);
+    }
+
+    @Transactional
+    public InvitationResponse declineByRoom(Long roomId, Long userId) {
+        RoomInvitation invitation = invitationRepository.findByRoomIdAndInviteeUserId(roomId, userId)
+                .orElseThrow(() -> new BusinessException(VideoErrorCode.INVITATION_NOT_FOUND));
+        return decline(invitation.getId(), userId);
+    }
+
+    @Transactional
     public void cancelInvitation(Long roomId, Long inviteeUserId, Long requesterId) {
         MeetingRoom room = findRoom(roomId);
 

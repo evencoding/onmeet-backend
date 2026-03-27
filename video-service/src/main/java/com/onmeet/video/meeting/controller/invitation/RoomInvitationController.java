@@ -173,6 +173,32 @@ public class RoomInvitationController {
         return ApiResponse.ok(invitationService.decline(invitationId, userId));
     }
 
+    @Operation(summary = "회의방 초대 수락 (roomId 기반)", description = "알림의 resourceId(roomId)로 초대를 수락합니다.")
+    @ApiResponses(value = {
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "초대 수락 성공"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404",
+            description = "초대장을 찾을 수 없는 경우",
+            content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class)))
+    })
+    @PostMapping("/v1/rooms/{roomId}/invitations/accept")
+    public ApiResponse<InvitationResponse> acceptByRoom(@PathVariable Long roomId,
+                                                         @RequestHeader("X-User-Id") Long userId) {
+        return ApiResponse.ok(invitationService.acceptByRoom(roomId, userId));
+    }
+
+    @Operation(summary = "회의방 초대 거절 (roomId 기반)", description = "알림의 resourceId(roomId)로 초대를 거절합니다.")
+    @ApiResponses(value = {
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "초대 거절 성공"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404",
+            description = "초대장을 찾을 수 없는 경우",
+            content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class)))
+    })
+    @PostMapping("/v1/rooms/{roomId}/invitations/decline")
+    public ApiResponse<InvitationResponse> declineByRoom(@PathVariable Long roomId,
+                                                          @RequestHeader("X-User-Id") Long userId) {
+        return ApiResponse.ok(invitationService.declineByRoom(roomId, userId));
+    }
+
     @Operation(summary = "초대 취소", description = "내가 보낸 초대를 취소합니다.")
     @ApiResponses(value = {
         @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "초대 취소 성공"),
