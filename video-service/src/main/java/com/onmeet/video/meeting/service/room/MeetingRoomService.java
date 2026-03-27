@@ -57,10 +57,14 @@ import java.util.stream.Collectors;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class MeetingRoomService {
+
+    private static final Logger log = LoggerFactory.getLogger(MeetingRoomService.class);
 
     private final MeetingRoomRepository roomRepository;
     private final RoomSettingsRepository settingsRepository;
@@ -389,7 +393,12 @@ public class MeetingRoomService {
                 .findByRoomIdAndStatus(roomId, ParticipantStatus.JOINED);
         for (RoomParticipant p : activeParticipants) {
             p.leave(now);
-            liveKitClient.removeParticipant(room.getLivekitRoomName(), String.valueOf(p.getUserId()));
+            try {
+                liveKitClient.removeParticipant(room.getLivekitRoomName(), String.valueOf(p.getUserId()));
+            } catch (Exception e) {
+                log.warn("Failed to remove participant from LiveKit: roomId={}, userId={}, error={}",
+                        roomId, p.getUserId(), e.getMessage());
+            }
         }
 
         List<RoomParticipant> waitingParticipants = participantRepository
