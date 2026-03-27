@@ -230,6 +230,7 @@ public class LiveKitClientImpl implements LiveKitClient {
         videoGrant.put("roomCreate", true);
         videoGrant.put("roomList", true);
         videoGrant.put("roomAdmin", true);
+        videoGrant.put("roomRecord", true);
         if (roomName != null && !roomName.isEmpty()) {
             videoGrant.put("room", roomName);
         }
