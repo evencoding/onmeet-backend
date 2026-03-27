@@ -64,14 +64,16 @@ public class FileServiceClient {
 
         MultiValueMap<String, HttpEntity<?>> multipartBody = builder.build();
 
-        FileMetadataResponse[] response = webClientBuilder.build()
+        String uploadUrl = fileServiceUrl + "/file/v1/upload"
+                + "?category=" + category
+                + "&ownerType=" + ownerType
+                + "&ownerId=" + ownerId;
+
+        FileMetadataResponse[] response = webClientBuilder
+                .codecs(configurer -> configurer.defaultCodecs().maxInMemorySize(50 * 1024 * 1024))
+                .build()
                 .post()
-                .uri(uriBuilder -> uriBuilder
-                        .path(fileServiceUrl + "/file/v1/upload")
-                        .queryParam("category", category)
-                        .queryParam("ownerType", ownerType)
-                        .queryParam("ownerId", ownerId)
-                        .build())
+                .uri(uploadUrl)
                 .header("X-Gateway-Secret", gatewaySecret)
                 .contentType(MediaType.MULTIPART_FORM_DATA)
                 .bodyValue(multipartBody)
