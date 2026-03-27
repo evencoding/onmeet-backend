@@ -33,5 +33,8 @@ public interface RoomParticipantRepository extends JpaRepository<RoomParticipant
     @Query("SELECT p FROM RoomParticipant p WHERE p.userId = :userId AND p.status = 'JOINED'")
     Optional<RoomParticipant> findActiveByUserId(@Param("userId") Long userId);
 
+    @Query("SELECT p FROM RoomParticipant p WHERE p.userId = :userId AND p.status IN :statuses")
+    List<RoomParticipant> findByUserIdAndStatusIn(@Param("userId") Long userId, @Param("statuses") List<ParticipantStatus> statuses);
+
     List<RoomParticipant> findByRoomIdAndScreenSharingTrue(Long roomId);
 }
