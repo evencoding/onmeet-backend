@@ -12,6 +12,15 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 public abstract class BaseGlobalExceptionHandler {
     protected final Logger logger = LoggerFactory.getLogger(getClass());
 
+    @ExceptionHandler(BusinessException.class)
+    public ResponseEntity<ErrorResponse> handleBusinessException(BusinessException e) {
+        ErrorCode errorCode = e.getErrorCode();
+        HttpStatus status = errorCode.getStatus();
+        logger.warn("Business Exception: code={}, message={}", errorCode.getCode(), errorCode.getMessage());
+        return ResponseEntity.status(status)
+                .body(new ErrorResponse(status.value(), errorCode.getMessage()));
+    }
+
     @ExceptionHandler(IllegalArgumentException.class)
     public ResponseEntity<ErrorResponse> handleIllegalArgumentException(IllegalArgumentException e) {
         logger.error("Illegal Argument: {}", e.getMessage());
