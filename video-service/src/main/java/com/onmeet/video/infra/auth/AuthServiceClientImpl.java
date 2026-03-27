@@ -195,6 +195,63 @@ public class AuthServiceClientImpl implements AuthServiceClient {
         }
     }
 
+    @Override
+    public List<Long> getTeamMemberIds(Long teamId) {
+        String url = authServiceProperties.getInternalUrl() + "/auth/internal/teams/" + teamId + "/member-ids";
+
+        try {
+            HttpHeaders headers = createHeaders();
+            HttpEntity<Void> entity = new HttpEntity<>(headers);
+
+            ResponseEntity<Long[]> response = restTemplate.exchange(
+                    url,
+                    HttpMethod.GET,
+                    entity,
+                    Long[].class
+            );
+
+            Long[] body = response.getBody();
+            return body != null ? List.of(body) : Collections.emptyList();
+        } catch (Exception e) {
+            logger.error("Failed to get team member IDs for teamId: {}", teamId, e);
+            return Collections.emptyList();
+        }
+    }
+
+    @Override
+    public List<Long> getUserTeamIds(Long userId) {
+        String url = authServiceProperties.getInternalUrl() + "/auth/internal/users/" + userId + "/teams";
+
+        try {
+            HttpHeaders headers = createHeaders();
+            HttpEntity<Void> entity = new HttpEntity<>(headers);
+
+            @SuppressWarnings("rawtypes")
+            ResponseEntity<List> response = restTemplate.exchange(
+                    url,
+                    HttpMethod.GET,
+                    entity,
+                    List.class
+            );
+
+            List<?> body = response.getBody();
+            if (body == null) return Collections.emptyList();
+            return body.stream()
+                    .map(item -> {
+                        if (item instanceof Map) {
+                            Object id = ((Map<?, ?>) item).get("id");
+                            return id instanceof Number ? ((Number) id).longValue() : null;
+                        }
+                        return null;
+                    })
+                    .filter(java.util.Objects::nonNull)
+                    .collect(Collectors.toList());
+        } catch (Exception e) {
+            logger.error("Failed to get user team IDs for userId: {}", userId, e);
+            return Collections.emptyList();
+        }
+    }
+
     private HttpHeaders createHeaders() {
         HttpHeaders headers = new HttpHeaders();
         headers.set("X-Gateway-Secret", gatewaySharedSecret);

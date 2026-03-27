@@ -16,9 +16,11 @@ public class NotificationEventPublisher {
     public void publishNotification(NotificationRequestDto request) {
         try {
             kafkaTemplate.send("notification.send", request);
-            log.info("Successfully published notification event for User ID: {}, Type: {}", request.getUserId(), request.getType());
+            log.info("Published notification event: type={}, userId={}, userIds={}",
+                    request.getType(), request.getUserId(), request.getUserIds());
         } catch (Exception e) {
-            log.error("Failed to publish notification event for User ID: {}, Type: {}", request.getUserId(), request.getType(), e);
+            log.error("Failed to publish notification event: type={}, error={}",
+                    request.getType(), e.getMessage());
         }
     }
 }

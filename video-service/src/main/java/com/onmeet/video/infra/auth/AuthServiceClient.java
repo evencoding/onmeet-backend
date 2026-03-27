@@ -16,6 +16,10 @@ public interface AuthServiceClient {
 
     boolean isTeamMember(Long teamId, Long userId);
 
+    List<Long> getTeamMemberIds(Long teamId);
+
+    List<Long> getUserTeamIds(Long userId);
+
     record UserInfo(
             Long userId,
             String name,
