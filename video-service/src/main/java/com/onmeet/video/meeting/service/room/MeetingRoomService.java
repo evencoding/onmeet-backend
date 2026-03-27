@@ -293,8 +293,8 @@ public class MeetingRoomService {
         RoomParticipant participant = new RoomParticipant(room, userId, role, initialStatus, now, deviceType);
         participantRepository.save(participant);
 
-        // 즉시 회의: 호스트가 참여하면 자동으로 WAITING → ACTIVE 전환
-        if (room.isWaiting() && room.isHost(userId) && room.getType() == RoomType.INSTANT) {
+        // 호스트가 참여하면 자동으로 WAITING → ACTIVE 전환 (즉시/예약 모두)
+        if (room.isWaiting() && room.isHost(userId)) {
             room.start(now);
             int participantCount = participantRepository.countActiveParticipants(roomId);
             eventPublisher.publishMeetingStarted(
