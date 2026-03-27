@@ -293,8 +293,12 @@ public class RoomRecordingService {
         if (!hasActiveRecordings(roomId)) {
             MeetingEvent pending = pendingMeetingEndedEvents.remove(roomId);
             if (pending != null) {
-                eventPublisher.publishMeetingEnded(pending);
-                log.info("All egress completed, publishing deferred meeting.ended: roomId={}", roomId);
+                log.info("All egress completed, scheduling deferred meeting.ended in 15s: roomId={}", roomId);
+                java.util.concurrent.CompletableFuture.delayedExecutor(15, java.util.concurrent.TimeUnit.SECONDS)
+                        .execute(() -> {
+                            eventPublisher.publishMeetingEnded(pending);
+                            log.info("Deferred meeting.ended published: roomId={}", roomId);
+                        });
             }
         }
     }
