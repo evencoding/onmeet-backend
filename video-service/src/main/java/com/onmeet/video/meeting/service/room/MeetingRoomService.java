@@ -211,35 +211,64 @@ public class MeetingRoomService {
         MeetingRoom room = findRoom(roomId);
 
         if (room.isEnded()) {
-            // TODO: [VIDEO][VideoErrorCode.ROOM_ALREADY_ENDED] 에러메시지 검수 요청
             throw new BusinessException(VideoErrorCode.ROOM_ALREADY_ENDED);
         }
 
-        boolean alreadyJoined = participantRepository.existsByRoomIdAndUserIdAndStatusIn(
-                roomId, userId, List.of(ParticipantStatus.JOINED, ParticipantStatus.WAITING));
-        if (alreadyJoined) {
-            // TODO: [VIDEO][VideoErrorCode.ALREADY_JOINED] 에러메시지 검수 요청
-            throw new BusinessException(VideoErrorCode.ALREADY_JOINED);
+        // 다른 회의에 참여 중이면 자동 퇴장 처리
+        List<String> warnings = new ArrayList<>();
+        List<RoomParticipant> activeParticipations = participantRepository.findByUserIdAndStatusIn(
+                userId, List.of(ParticipantStatus.JOINED, ParticipantStatus.WAITING));
+        for (RoomParticipant existing : activeParticipations) {
+            Long existingRoomId = existing.getRoom().getId();
+            if (existingRoomId.equals(roomId)) {
+                // 같은 방 재입장: 기존 참가 기록 퇴장 처리 후 새로 입장
+                Instant now = clockProvider.now();
+                boolean wasWaiting = existing.isWaiting();
+                existing.leave(now);
+                if (wasWaiting) {
+                    waitingRoomSseService.notifyHostWaiterLeft(existingRoomId, userId);
+                } else {
+                    liveKitClient.removeParticipant(existing.getRoom().getLivekitRoomName(), String.valueOf(userId));
+                }
+                continue;
+            }
+            // 다른 방에 참여 중 → 자동 퇴장
+            Instant now = clockProvider.now();
+            boolean wasWaiting = existing.isWaiting();
+            existing.leave(now);
+            if (wasWaiting) {
+                waitingRoomSseService.notifyHostWaiterLeft(existingRoomId, userId);
+            } else {
+                liveKitClient.removeParticipant(existing.getRoom().getLivekitRoomName(), String.valueOf(userId));
+            }
+            eventPublisher.publishParticipantLeft(
+                    new ParticipantEvent("PARTICIPANT_LEFT", existingRoomId, userId, now));
+            warnings.add("기존 회의 '" + existing.getRoom().getTitle() + "'에서 자동 퇴장되었습니다.");
+        }
+
+        // 예정된 회의 충돌 확인
+        Instant now = clockProvider.now();
+        Instant rangeStart = now.minus(Duration.ofMinutes(30));
+        Instant rangeEnd = now.plus(Duration.ofMinutes(30));
+        if (roomRepository.existsConflictingSchedule(userId, RoomType.SCHEDULED, RoomStatus.WAITING, rangeStart, rangeEnd, roomId)) {
+            warnings.add("현재 시간대에 예정된 다른 회의가 있습니다.");
         }
 
         // Validate participant's team membership when access scope is TEAM
         if (room.getAccessScope() == RoomAccessScope.TEAM && room.getTeamId() != null && !room.isHost(userId)) {
             if (!authServiceClient.isTeamMember(room.getTeamId(), userId)) {
-                // TODO: [VIDEO][VideoErrorCode.NOT_TEAM_MEMBER] 에러메시지 검수 요청
                 throw new BusinessException(VideoErrorCode.NOT_TEAM_MEMBER);
             }
         }
 
         if (room.isLocked() && !room.isHost(userId)) {
             if (request == null || request.password() == null || !request.password().equals(room.getPassword())) {
-                // TODO: [VIDEO][VideoErrorCode.WRONG_PASSWORD] 에러메시지 검수 요청
                 throw new BusinessException(VideoErrorCode.WRONG_PASSWORD);
             }
         }
 
         int currentCount = participantRepository.countActiveParticipants(roomId);
         if (currentCount >= room.getMaxParticipants()) {
-            // TODO: [VIDEO][VideoErrorCode.ROOM_FULL] 에러메시지 검수 요청
             throw new BusinessException(VideoErrorCode.ROOM_FULL);
         }
 
@@ -247,7 +276,6 @@ public class MeetingRoomService {
         boolean isWaitingRoom = settings != null && settings.isWaitingRoom() && !room.isHost(userId);
 
         DeviceType deviceType = request != null ? request.deviceType() : null;
-        Instant now = clockProvider.now();
 
         ParticipantStatus initialStatus = isWaitingRoom ? ParticipantStatus.WAITING : ParticipantStatus.JOINED;
         ParticipantRole role = room.isHost(userId) ? ParticipantRole.HOST : ParticipantRole.PARTICIPANT;
@@ -265,7 +293,7 @@ public class MeetingRoomService {
 
         if (isWaitingRoom) {
             waitingRoomSseService.notifyHostNewWaiter(roomId, toParticipantResponse(participant));
-            return new RoomJoinResponse(null, liveKitProperties.getUrl(), room.getLivekitRoomName(), true);
+            return new RoomJoinResponse(null, liveKitProperties.getUrl(), room.getLivekitRoomName(), true, warnings);
         }
 
         // Get user name from auth service
@@ -282,7 +310,7 @@ public class MeetingRoomService {
         eventPublisher.publishParticipantJoined(
                 new ParticipantEvent("PARTICIPANT_JOINED", roomId, userId, now));
 
-        return new RoomJoinResponse(token, liveKitProperties.getUrl(), room.getLivekitRoomName(), false);
+        return new RoomJoinResponse(token, liveKitProperties.getUrl(), room.getLivekitRoomName(), false, warnings);
     }
 
     @Transactional
