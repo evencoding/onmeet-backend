@@ -35,9 +35,13 @@ services:
     environment:
       LIVEKIT_KEYS: "${LIVEKIT_API_KEY:-devkey}: ${LIVEKIT_API_SECRET:-devsecret}"
       LIVEKIT_EXTERNAL_IP: ${LIVEKIT_EXTERNAL_IP}
+      LIVEKIT_API_KEY: ${LIVEKIT_API_KEY:-devkey}
     volumes:
-      - ./livekit.yaml:/etc/livekit.yaml
-    command: --config /etc/livekit.yaml --node-ip ${LIVEKIT_EXTERNAL_IP}
+      - ./livekit.yaml:/etc/livekit-template.yaml:ro
+    entrypoint: /bin/sh
+    command: >
+      -c "sed 's/$${LIVEKIT_API_KEY}/'\"$$LIVEKIT_API_KEY\"'/' /etc/livekit-template.yaml > /tmp/livekit.yaml
+      && exec livekit-server --config /tmp/livekit.yaml --node-ip $$LIVEKIT_EXTERNAL_IP"
     healthcheck:
       test: [ "CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:7880" ]
       interval: 10s
