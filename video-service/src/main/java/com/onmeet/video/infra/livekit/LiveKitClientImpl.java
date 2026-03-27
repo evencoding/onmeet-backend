@@ -221,7 +221,7 @@ public class LiveKitClientImpl implements LiveKitClient {
         claims.put("nbf", now);
         claims.put("exp", now + ADMIN_TOKEN_TTL_SECONDS);
         claims.put("jti", UUID.randomUUID().toString());
-        claims.put("video", Map.of("roomCreate", true, "roomList", true, "roomAdmin", true));
+        claims.put("video", Map.of("roomCreate", true, "roomList", true, "roomAdmin", true, "room", ""));
         return buildJwt(claims, properties.getApiSecret());
     }
 
