@@ -37,6 +37,8 @@ spring:
             - Path=/video/v1/**
           filters:
             - UserHeaderFilter
+          metadata:
+            response-timeout: 60000
         - id: video-service-ws-chat
           uri: ${VIDEO_SERVICE_WS_URL:ws://video-service:8083}
           predicates:
