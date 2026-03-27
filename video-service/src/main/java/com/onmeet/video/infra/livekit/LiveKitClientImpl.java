@@ -140,7 +140,7 @@ public class LiveKitClientImpl implements LiveKitClient {
                 "track_id", trackSid,
                 "file", s3Output
         );
-        EgressResponse response = callLiveKit("/twirp/livekit.EgressService/StartTrackEgress",
+        EgressResponse response = callLiveKit("/twirp/livekit.Egress/StartTrackEgress",
                 request, EgressResponse.class, roomName);
         String egressId = response != null ? response.egressId : "egress_" + UUID.randomUUID();
         log.info("LiveKit track egress started: room={}, trackSid={}, egressId={}", roomName, trackSid, egressId);
@@ -171,7 +171,7 @@ public class LiveKitClientImpl implements LiveKitClient {
     @Override
     public void stopEgress(String egressId) {
         Map<String, Object> request = Map.of("egress_id", egressId);
-        callLiveKit("/twirp/livekit.EgressService/StopEgress", request);
+        callLiveKit("/twirp/livekit.Egress/StopEgress", request);
         log.info("LiveKit egress stopped: egressId={}", egressId);
     }
 
