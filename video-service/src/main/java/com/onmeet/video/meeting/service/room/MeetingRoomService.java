@@ -84,6 +84,7 @@ public class MeetingRoomService {
     private final AuthServiceClient authServiceClient;
     private final WaitingRoomSseService waitingRoomSseService;
     private final NotificationEventPublisher notificationEventPublisher;
+    private final com.onmeet.video.meeting.service.recording.RoomRecordingService roomRecordingService;
 
     public MeetingRoomService(MeetingRoomRepository roomRepository,
             RoomSettingsRepository settingsRepository,
@@ -98,7 +99,8 @@ public class MeetingRoomService {
             ClockProvider clockProvider,
             AuthServiceClient authServiceClient,
             WaitingRoomSseService waitingRoomSseService,
-            NotificationEventPublisher notificationEventPublisher) {
+            NotificationEventPublisher notificationEventPublisher,
+            com.onmeet.video.meeting.service.recording.RoomRecordingService roomRecordingService) {
         this.roomRepository = roomRepository;
         this.settingsRepository = settingsRepository;
         this.participantRepository = participantRepository;
@@ -113,6 +115,7 @@ public class MeetingRoomService {
         this.authServiceClient = authServiceClient;
         this.waitingRoomSseService = waitingRoomSseService;
         this.notificationEventPublisher = notificationEventPublisher;
+        this.roomRecordingService = roomRecordingService;
     }
 
     @Transactional
@@ -469,9 +472,16 @@ public class MeetingRoomService {
                         p.getRole().name()))
                 .collect(Collectors.toList());
 
-        eventPublisher.publishMeetingEnded(
-                new MeetingEvent("MEETING_ENDED", roomId, userId, activeParticipants.size(),
-                        room.getStartedAt(), now, room.getTitle(), room.getDescription(), participantInfos));
+        MeetingEvent meetingEndedEvent = new MeetingEvent("MEETING_ENDED", roomId, userId,
+                activeParticipants.size(), room.getStartedAt(), now, room.getTitle(), room.getDescription(),
+                participantInfos);
+
+        if (roomRecordingService.hasActiveRecordings(roomId)) {
+            roomRecordingService.setPendingMeetingEnded(roomId, meetingEndedEvent);
+            log.info("Meeting ended deferred: roomId={} (waiting for egress completion)", roomId);
+        } else {
+            eventPublisher.publishMeetingEnded(meetingEndedEvent);
+        }
 
         return toResponse(room);
     }
