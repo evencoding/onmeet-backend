@@ -476,9 +476,9 @@ public class MeetingRoomService {
                 activeParticipants.size(), room.getStartedAt(), now, room.getTitle(), room.getDescription(),
                 participantInfos);
 
-        if (roomRecordingService.hasActiveRecordings(roomId)) {
+        if (roomRecordingService.hasAnyRecordings(roomId)) {
             roomRecordingService.setPendingMeetingEnded(roomId, meetingEndedEvent);
-            log.info("Meeting ended deferred: roomId={} (waiting for egress completion)", roomId);
+            log.info("Meeting ended deferred: roomId={} (waiting for egress + STT completion)", roomId);
         } else {
             eventPublisher.publishMeetingEnded(meetingEndedEvent);
         }

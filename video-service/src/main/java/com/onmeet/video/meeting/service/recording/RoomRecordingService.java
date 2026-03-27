@@ -279,6 +279,10 @@ public class RoomRecordingService {
                 || !recordingRepository.findByRoomIdAndStatus(roomId, RecordingStatus.PROCESSING).isEmpty();
     }
 
+    public boolean hasAnyRecordings(Long roomId) {
+        return !recordingRepository.findByRoomId(roomId).isEmpty();
+    }
+
     public void setPendingMeetingEnded(Long roomId, MeetingEvent event) {
         pendingMeetingEndedEvents.put(roomId, event);
         log.info("Meeting ended event deferred until all egress complete: roomId={}", roomId);
