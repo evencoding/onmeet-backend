@@ -67,7 +67,7 @@ public class LiveKitClientImpl implements LiveKitClient {
     @Override
     public void deleteRoom(String roomName) {
         Map<String, Object> request = Map.of("room", roomName);
-        callLiveKit("/twirp/livekit.RoomService/DeleteRoom", request);
+        callLiveKit("/twirp/livekit.RoomService/DeleteRoom", request, roomName);
         log.info("LiveKit room deleted: name={}", roomName);
     }
 
@@ -100,7 +100,7 @@ public class LiveKitClientImpl implements LiveKitClient {
     @Override
     public void removeParticipant(String roomName, String identity) {
         Map<String, Object> request = Map.of("room", roomName, "identity", identity);
-        callLiveKit("/twirp/livekit.RoomService/RemoveParticipant", request);
+        callLiveKit("/twirp/livekit.RoomService/RemoveParticipant", request, roomName);
     }
 
     @Override
@@ -111,7 +111,7 @@ public class LiveKitClientImpl implements LiveKitClient {
                 "track_sid", trackSid,
                 "muted", muted
         );
-        callLiveKit("/twirp/livekit.RoomService/MutePublishedTrack", request);
+        callLiveKit("/twirp/livekit.RoomService/MutePublishedTrack", request, roomName);
     }
 
     // CHECK [video-담당자]: startRoomCompositeEgress 미구현 — S3 자격증명(access_key, secret, bucket) 및
@@ -141,7 +141,7 @@ public class LiveKitClientImpl implements LiveKitClient {
                 "file", s3Output
         );
         EgressResponse response = callLiveKit("/twirp/livekit.EgressService/StartTrackEgress",
-                request, EgressResponse.class);
+                request, EgressResponse.class, roomName);
         String egressId = response != null ? response.egressId : "egress_" + UUID.randomUUID();
         log.info("LiveKit track egress started: room={}, trackSid={}, egressId={}", roomName, trackSid, egressId);
         return egressId;
@@ -151,7 +151,7 @@ public class LiveKitClientImpl implements LiveKitClient {
     public List<ParticipantInfo> listParticipants(String roomName) {
         Map<String, Object> request = Map.of("room", roomName);
         ListParticipantsResponse response = callLiveKit(
-                "/twirp/livekit.RoomService/ListParticipants", request, ListParticipantsResponse.class);
+                "/twirp/livekit.RoomService/ListParticipants", request, ListParticipantsResponse.class, roomName);
         if (response == null || response.participants == null) {
             return Collections.emptyList();
         }
@@ -189,7 +189,7 @@ public class LiveKitClientImpl implements LiveKitClient {
         if (destinationIdentity != null) {
             request.put("destination_sids", List.of(destinationIdentity));
         }
-        callLiveKit("/twirp/livekit.RoomService/SendData", request);
+        callLiveKit("/twirp/livekit.RoomService/SendData", request, roomName);
     }
 
     // --- JWT helpers (standard Java HMAC-SHA256, no external library) ---
@@ -213,6 +213,10 @@ public class LiveKitClientImpl implements LiveKitClient {
     }
 
     private String generateAdminToken() {
+        return generateAdminToken(null);
+    }
+
+    private String generateAdminToken(String roomName) {
         long now = System.currentTimeMillis() / 1000;
         Map<String, Object> claims = new HashMap<>();
         claims.put("iss", properties.getApiKey());
@@ -221,7 +225,15 @@ public class LiveKitClientImpl implements LiveKitClient {
         claims.put("nbf", now);
         claims.put("exp", now + ADMIN_TOKEN_TTL_SECONDS);
         claims.put("jti", UUID.randomUUID().toString());
-        claims.put("video", Map.of("roomCreate", true, "roomList", true, "roomAdmin", true));
+
+        Map<String, Object> videoGrant = new HashMap<>();
+        videoGrant.put("roomCreate", true);
+        videoGrant.put("roomList", true);
+        videoGrant.put("roomAdmin", true);
+        if (roomName != null && !roomName.isEmpty()) {
+            videoGrant.put("room", roomName);
+        }
+        claims.put("video", videoGrant);
         return buildJwt(claims, properties.getApiSecret());
     }
 
@@ -238,12 +250,20 @@ public class LiveKitClientImpl implements LiveKitClient {
     // --- LiveKit REST helpers ---
 
     private void callLiveKit(String path, Object requestBody) {
-        callLiveKit(path, requestBody, Void.class);
+        callLiveKit(path, requestBody, Void.class, null);
+    }
+
+    private void callLiveKit(String path, Object requestBody, String roomName) {
+        callLiveKit(path, requestBody, Void.class, roomName);
     }
 
     private <T> T callLiveKit(String path, Object requestBody, Class<T> responseType) {
+        return callLiveKit(path, requestBody, responseType, null);
+    }
+
+    private <T> T callLiveKit(String path, Object requestBody, Class<T> responseType, String roomName) {
         String url = buildUrl(path);
-        String adminToken = generateAdminToken();
+        String adminToken = generateAdminToken(roomName);
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
