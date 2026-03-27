@@ -47,7 +47,7 @@ public class LiveKitClientImpl implements LiveKitClient {
     private final ObjectMapper objectMapper;
 
     public LiveKitClientImpl(LiveKitProperties properties,
-                             RestTemplate restTemplate,
+                             @org.springframework.beans.factory.annotation.Qualifier("livekitRestTemplate") RestTemplate restTemplate,
                              ObjectMapper objectMapper) {
         this.properties = properties;
         this.restTemplate = restTemplate;
@@ -272,13 +272,15 @@ public class LiveKitClientImpl implements LiveKitClient {
 
         try {
             String json = objectMapper.writeValueAsString(requestBody);
+            log.debug("LiveKit API call: url={}, apiKey={}, roomName={}", url, properties.getApiKey(), roomName);
             HttpEntity<String> entity = new HttpEntity<>(json, headers);
             return restTemplate.postForObject(url, entity, responseType);
         } catch (JsonProcessingException e) {
             log.error("Failed to serialize LiveKit request: path={}, error={}", path, e.getMessage());
             throw new RuntimeException("LiveKit request serialization failed", e);
         } catch (Exception e) {
-            log.error("LiveKit API call failed: path={}, error={}", path, e.getMessage());
+            log.error("LiveKit API call failed: url={}, path={}, apiKey={}, error={}",
+                    url, path, properties.getApiKey(), e.getMessage());
             throw new RuntimeException("LiveKit API call failed: " + path, e);
         }
     }
