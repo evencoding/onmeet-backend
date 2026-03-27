@@ -266,7 +266,8 @@ jobs:
             echo "Version tag: $VERSION"
 
             # 버전 태그와 latest 태그 모두 생성
-            if [ "$VERSION" != "latest" ]; then
+            # VERSION이 비어있을 수 있음 (GitHub Actions secret masking)
+            if [ -n "$VERSION" ] && [ "$VERSION" != "latest" ]; then
               TAG_LIST="latest,$VERSION"
             else
               TAG_LIST="latest"
@@ -302,9 +303,7 @@ jobs:
           context: ./file-service
           file: ./file-service/Dockerfile
           push: true
-          tags: |
-            ${{ secrets.DOCKER_USERNAME }}/file-service:latest
-            ${{ secrets.DOCKER_USERNAME }}/file-service:${{ needs.detect-changes.outputs.version }}
+          tags: ${{ needs.detect-changes.outputs.version != '' && needs.detect-changes.outputs.version != 'latest' && format('{0}/file-service:latest,{0}/file-service:{1}', secrets.DOCKER_USERNAME, needs.detect-changes.outputs.version) || format('{0}/file-service:latest', secrets.DOCKER_USERNAME) }}
           platforms: linux/amd64,linux/arm64
           cache-from: type=gha
           cache-to: type=gha,mode=max
