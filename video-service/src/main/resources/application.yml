@@ -48,6 +48,7 @@ cors:
 livekit:
   enabled: ${LIVEKIT_ENABLED:false}
   url: ${LIVEKIT_URL:ws://localhost:7880}
+  internal-url: ${LIVEKIT_INTERNAL_URL:${LIVEKIT_URL:ws://localhost:7880}}
   api-key: ${LIVEKIT_API_KEY:devkey}
   api-secret: ${LIVEKIT_API_SECRET:devsecret}
 

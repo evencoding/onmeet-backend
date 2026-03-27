@@ -263,7 +263,10 @@ public class LiveKitClientImpl implements LiveKitClient {
     }
 
     private String buildUrl(String path) {
-        String baseUrl = properties.getUrl()
+        String raw = properties.getInternalUrl() != null
+                ? properties.getInternalUrl()
+                : properties.getUrl();
+        String baseUrl = raw
                 .replace("ws://", "http://")
                 .replace("wss://", "https://");
         return baseUrl + path;

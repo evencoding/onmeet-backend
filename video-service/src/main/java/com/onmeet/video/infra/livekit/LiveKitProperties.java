@@ -8,6 +8,7 @@ import org.springframework.stereotype.Component;
 public class LiveKitProperties {
 
     private String url;
+    private String internalUrl;
     private String apiKey;
     private String apiSecret;
 
@@ -17,6 +18,14 @@ public class LiveKitProperties {
 
     public void setUrl(String url) {
         this.url = url;
+    }
+
+    public String getInternalUrl() {
+        return internalUrl;
+    }
+
+    public void setInternalUrl(String internalUrl) {
+        this.internalUrl = internalUrl;
     }
 
     public String getApiKey() {
