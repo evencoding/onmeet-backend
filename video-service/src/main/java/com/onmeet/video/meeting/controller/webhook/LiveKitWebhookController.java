@@ -5,6 +5,7 @@ import com.onmeet.video.meeting.service.recording.RoomRecordingService;
 import com.onmeet.video.meeting.service.screenshare.ScreenShareService;
 import java.nio.charset.StandardCharsets;
 import java.util.Base64;
+import java.util.List;
 import java.util.Map;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -200,16 +201,17 @@ public class LiveKitWebhookController {
         String error = (String) egressInfo.get("error");
 
         if ("EGRESS_COMPLETE".equals(status)) {
-            Map<String, Object> fileResults = (Map<String, Object>) egressInfo.get("fileResults");
             String s3Path = null;
             Long fileSize = null;
-            if (fileResults != null) {
-                s3Path = (String) fileResults.get("filename");
-                Number size = (Number) fileResults.get("size");
+            List<?> fileResults = (List<?>) egressInfo.get("file_results");
+            if (fileResults != null && !fileResults.isEmpty()) {
+                Map<String, Object> firstFile = (Map<String, Object>) fileResults.get(0);
+                s3Path = (String) firstFile.get("filename");
+                Number size = (Number) firstFile.get("size");
                 fileSize = size != null ? size.longValue() : null;
             }
             recordingService.handleEgressEnded(egressId, s3Path, fileSize);
-            log.info("Egress completed: egressId={}", egressId);
+            log.info("Egress completed: egressId={}, s3Path={}", egressId, s3Path);
         } else {
             recordingService.handleEgressFailed(egressId, error);
             log.warn("Egress failed: egressId={}, error={}", egressId, error);
