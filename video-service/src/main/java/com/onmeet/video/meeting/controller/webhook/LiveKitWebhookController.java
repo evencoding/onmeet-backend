@@ -179,6 +179,16 @@ public class LiveKitWebhookController {
         }
     }
 
+    private Long parseLong(Object value) {
+        if (value == null) return null;
+        if (value instanceof Number) return ((Number) value).longValue();
+        try {
+            return Long.parseLong(value.toString());
+        } catch (NumberFormatException e) {
+            return null;
+        }
+    }
+
     @SuppressWarnings("unchecked")
     private void handleEgressStarted(Map<String, Object> payload) {
         Map<String, Object> egressInfo = (Map<String, Object>) payload.get("egressInfo");
@@ -212,16 +222,14 @@ public class LiveKitWebhookController {
             if (fileResults != null && !fileResults.isEmpty()) {
                 Map<String, Object> firstFile = (Map<String, Object>) fileResults.get(0);
                 s3Path = (String) firstFile.get("filename");
-                Number size = (Number) firstFile.get("size");
-                fileSize = size != null ? size.longValue() : null;
+                fileSize = parseLong(firstFile.get("size"));
             }
             // file_results에서 못 찾으면 file 필드도 시도 (단건 결과)
             if (s3Path == null) {
                 Map<String, Object> file = (Map<String, Object>) egressInfo.get("file");
                 if (file != null) {
                     s3Path = (String) file.get("filename");
-                    Number size = (Number) file.get("size");
-                    fileSize = size != null ? size.longValue() : null;
+                    fileSize = parseLong(file.get("size"));
                 }
             }
             recordingService.handleEgressEnded(egressId, s3Path, fileSize);
