@@ -79,7 +79,12 @@ public class RoomRecordingService {
                 if (!MICROPHONE_SOURCE.equals(track.source())) {
                     continue;
                 }
-                startTrackEgressForParticipant(room, roomId, participant.identity(), track.sid(), now);
+                try {
+                    startTrackEgressForParticipant(room, roomId, participant.identity(), track.sid(), now);
+                } catch (Exception e) {
+                    log.warn("Failed to start egress for participant: identity={}, trackSid={}, error={}",
+                        participant.identity(), track.sid(), e.getMessage());
+                }
             }
         }
     }
