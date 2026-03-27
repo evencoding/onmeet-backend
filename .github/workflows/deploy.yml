@@ -266,7 +266,8 @@ jobs:
             echo "Version tag: $VERSION"
 
             # 버전 태그와 latest 태그 모두 생성
-            if [ "$VERSION" != "latest" ]; then
+            # VERSION이 비어있을 수 있음 (GitHub Actions secret masking)
+            if [ -n "$VERSION" ] && [ "$VERSION" != "latest" ]; then
               TAG_LIST="latest,$VERSION"
             else
               TAG_LIST="latest"
