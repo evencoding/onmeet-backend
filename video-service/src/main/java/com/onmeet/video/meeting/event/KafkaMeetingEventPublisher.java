@@ -1,7 +1,5 @@
 package com.onmeet.video.meeting.event;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.onmeet.common.dto.event.ChatMessageEvent;
 import com.onmeet.video.meeting.event.participant.ParticipantEvent;
 import com.onmeet.common.dto.event.AudioChunkReadyEvent;
@@ -37,13 +35,10 @@ public class KafkaMeetingEventPublisher implements MeetingEventPublisher {
     static final String TOPIC_CHAT_EVENTS = "chat.events";
     static final String TOPIC_AUDIO_CHUNK_READY = "audio.chunk.ready";
 
-    private final KafkaTemplate<String, String> kafkaTemplate;
-    private final ObjectMapper objectMapper;
+    private final KafkaTemplate<String, Object> kafkaTemplate;
 
-    public KafkaMeetingEventPublisher(KafkaTemplate<String, String> kafkaTemplate,
-                                      ObjectMapper objectMapper) {
+    public KafkaMeetingEventPublisher(KafkaTemplate<String, Object> kafkaTemplate) {
         this.kafkaTemplate = kafkaTemplate;
-        this.objectMapper = objectMapper;
     }
 
     @Override
@@ -89,19 +84,14 @@ public class KafkaMeetingEventPublisher implements MeetingEventPublisher {
     }
 
     private void publish(String topic, String key, Object payload) {
-        try {
-            String json = objectMapper.writeValueAsString(payload);
-            kafkaTemplate.send(topic, key, json)
-                    .whenComplete((result, ex) -> {
-                        if (ex != null) {
-                            log.error("Kafka publish failed: topic={}, key={}, error={}", topic, key, ex.getMessage());
-                        } else {
-                            log.debug("Kafka published: topic={}, key={}, offset={}",
-                                    topic, key, result.getRecordMetadata().offset());
-                        }
-                    });
-        } catch (JsonProcessingException e) {
-            log.error("Failed to serialize Kafka event: topic={}, key={}, error={}", topic, key, e.getMessage());
-        }
+        kafkaTemplate.send(topic, key, payload)
+                .whenComplete((result, ex) -> {
+                    if (ex != null) {
+                        log.error("Kafka publish failed: topic={}, key={}, error={}", topic, key, ex.getMessage());
+                    } else {
+                        log.debug("Kafka published: topic={}, key={}, offset={}",
+                                topic, key, result.getRecordMetadata().offset());
+                    }
+                });
     }
 }
