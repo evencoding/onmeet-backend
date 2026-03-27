@@ -36,6 +36,8 @@ public class RoomRecordingService {
     private static final Logger log = LoggerFactory.getLogger(RoomRecordingService.class);
     private static final String MICROPHONE_SOURCE = "MICROPHONE";
     private final ConcurrentHashMap<Long, MeetingEvent> pendingMeetingEndedEvents = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<Long, Integer> expectedChunkCounts = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<Long, java.util.concurrent.atomic.AtomicInteger> completedSttCounts = new ConcurrentHashMap<>();
 
     private final RoomRecordingRepository recordingRepository;
     private final MeetingRoomRepository roomRepository;
@@ -261,7 +263,9 @@ public class RoomRecordingService {
                     .timestamp(now)
                     .build();
             eventPublisher.publishAudioSegmentReady(event);
-            checkAndPublishPendingMeetingEnded(recording.getRoom().getId());
+            Long rid = recording.getRoom().getId();
+            expectedChunkCounts.merge(rid, 1, Integer::sum);
+            log.info("Audio chunk published: roomId={}, expectedChunks={}", rid, expectedChunkCounts.get(rid));
         });
     }
 
@@ -289,17 +293,37 @@ public class RoomRecordingService {
         checkAndPublishPendingMeetingEnded(roomId);
     }
 
-    private void checkAndPublishPendingMeetingEnded(Long roomId) {
-        if (!hasActiveRecordings(roomId)) {
+    public void handleSttChunkCompleted(Long roomId, Long participantId) {
+        int completed = completedSttCounts
+                .computeIfAbsent(roomId, k -> new java.util.concurrent.atomic.AtomicInteger(0))
+                .incrementAndGet();
+        int expected = expectedChunkCounts.getOrDefault(roomId, 0);
+        log.info("STT chunk completed: roomId={}, completed={}/{}", roomId, completed, expected);
+
+        if (expected > 0 && completed >= expected) {
             MeetingEvent pending = pendingMeetingEndedEvents.remove(roomId);
             if (pending != null) {
-                log.info("All egress completed, scheduling deferred meeting.ended in 15s: roomId={}", roomId);
-                java.util.concurrent.CompletableFuture.delayedExecutor(15, java.util.concurrent.TimeUnit.SECONDS)
-                        .execute(() -> {
-                            eventPublisher.publishMeetingEnded(pending);
-                            log.info("Deferred meeting.ended published: roomId={}", roomId);
-                        });
+                eventPublisher.publishMeetingEnded(pending);
+                log.info("All STT chunks completed, publishing meeting.ended: roomId={}", roomId);
             }
+            expectedChunkCounts.remove(roomId);
+            completedSttCounts.remove(roomId);
+        }
+    }
+
+    private void checkAndPublishPendingMeetingEnded(Long roomId) {
+        // setPendingMeetingEnded에서 호출됨 — egress가 먼저 끝나고 STT도 이미 완료된 경우
+        int expected = expectedChunkCounts.getOrDefault(roomId, 0);
+        int completed = completedSttCounts.containsKey(roomId)
+                ? completedSttCounts.get(roomId).get() : 0;
+        if (expected > 0 && completed >= expected) {
+            MeetingEvent pending = pendingMeetingEndedEvents.remove(roomId);
+            if (pending != null) {
+                eventPublisher.publishMeetingEnded(pending);
+                log.info("All STT chunks already completed, publishing meeting.ended: roomId={}", roomId);
+            }
+            expectedChunkCounts.remove(roomId);
+            completedSttCounts.remove(roomId);
         }
     }
 

@@ -39,6 +39,7 @@ app:
       meeting-ended: ${KAFKA_TOPIC_MEETING_ENDED:meeting.ended}
       chat-events: ${KAFKA_TOPIC_CHAT_EVENTS:chat.events}
       minutes-generated: ${KAFKA_TOPIC_MINUTES_GENERATED:minutes.generated}
+      stt-chunk-completed: ${KAFKA_TOPIC_STT_CHUNK_COMPLETED:stt.chunk.completed}
   vad:
     enabled: ${VAD_ENABLED:true}
     model-path: classpath:models/silero_vad.onnx
