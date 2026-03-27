@@ -109,6 +109,11 @@ services:
       - LIVEKIT_API_SECRET=${LIVEKIT_API_SECRET:-devsecret}
       - KAFKA_ENABLED=${KAFKA_ENABLED:-false}
       - SPRING_KAFKA_BOOTSTRAP_SERVERS=${KAFKA_BOOTSTRAP_SERVERS:-kafka:29092}
+      - EGRESS_S3_ACCESS_KEY=${EGRESS_S3_ACCESS_KEY:-minioadmin}
+      - EGRESS_S3_SECRET=${EGRESS_S3_SECRET:-minioadmin}
+      - EGRESS_S3_BUCKET=${EGRESS_S3_BUCKET:-onmeet-dev-media-origin}
+      - EGRESS_S3_ENDPOINT=${EGRESS_S3_ENDPOINT:-http://minio:9000}
+      - EGRESS_S3_REGION=${EGRESS_S3_REGION:-ap-northeast-2}
       - MANAGEMENT_ENDPOINT_HEALTH_PROBES_ENABLED=true
     depends_on:
       mysql-video:
