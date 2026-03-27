@@ -21,8 +21,10 @@ import com.onmeet.video.meeting.repository.room.MeetingRoomRepository;
 import com.onmeet.video.meeting.repository.participant.RoomParticipantRepository;
 import com.onmeet.video.meeting.repository.recording.RoomRecordingRepository;
 import com.onmeet.video.meeting.repository.room.RoomSettingsRepository;
+import com.onmeet.video.meeting.event.room.MeetingEvent;
 import java.time.Instant;
 import java.util.List;
+import java.util.concurrent.ConcurrentHashMap;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -33,6 +35,7 @@ public class RoomRecordingService {
 
     private static final Logger log = LoggerFactory.getLogger(RoomRecordingService.class);
     private static final String MICROPHONE_SOURCE = "MICROPHONE";
+    private final ConcurrentHashMap<Long, MeetingEvent> pendingMeetingEndedEvents = new ConcurrentHashMap<>();
 
     private final RoomRecordingRepository recordingRepository;
     private final MeetingRoomRepository roomRepository;
@@ -253,6 +256,7 @@ public class RoomRecordingService {
                     .timestamp(now)
                     .build();
             eventPublisher.publishAudioSegmentReady(event);
+            checkAndPublishPendingMeetingEnded(recording.getRoom().getId());
         });
     }
 
@@ -261,7 +265,28 @@ public class RoomRecordingService {
         recordingRepository.findByEgressId(egressId).ifPresent(recording -> {
             Instant now = clockProvider.now();
             recording.markFailed(errorMessage, now);
+            checkAndPublishPendingMeetingEnded(recording.getRoom().getId());
         });
+    }
+
+    public boolean hasActiveRecordings(Long roomId) {
+        return !recordingRepository.findByRoomIdAndStatus(roomId, RecordingStatus.RECORDING).isEmpty()
+                || !recordingRepository.findByRoomIdAndStatus(roomId, RecordingStatus.PROCESSING).isEmpty();
+    }
+
+    public void setPendingMeetingEnded(Long roomId, MeetingEvent event) {
+        pendingMeetingEndedEvents.put(roomId, event);
+        log.info("Meeting ended event deferred until all egress complete: roomId={}", roomId);
+    }
+
+    private void checkAndPublishPendingMeetingEnded(Long roomId) {
+        if (!hasActiveRecordings(roomId)) {
+            MeetingEvent pending = pendingMeetingEndedEvents.remove(roomId);
+            if (pending != null) {
+                eventPublisher.publishMeetingEnded(pending);
+                log.info("All egress completed, publishing deferred meeting.ended: roomId={}", roomId);
+            }
+        }
     }
 
     private RoomRecording startTrackEgressForParticipant(MeetingRoom room, Long roomId,
