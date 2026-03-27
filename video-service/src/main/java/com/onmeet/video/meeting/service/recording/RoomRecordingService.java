@@ -120,8 +120,13 @@ public class RoomRecordingService {
         }
 
         for (RoomRecording recording : activeRecordings) {
-            liveKitClient.stopEgress(recording.getEgressId());
-            recording.markProcessing();
+            try {
+                liveKitClient.stopEgress(recording.getEgressId());
+                recording.markProcessing();
+            } catch (Exception e) {
+                log.warn("Failed to stop egress: egressId={}, error={}", recording.getEgressId(), e.getMessage());
+                recording.markFailed(e.getMessage(), clockProvider.now());
+            }
         }
     }
 
