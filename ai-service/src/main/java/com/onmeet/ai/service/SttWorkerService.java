@@ -39,14 +39,31 @@ public class SttWorkerService {
         this.producer = producer;
     }
 
+    @org.springframework.beans.factory.annotation.Value("${app.storage.minio-url:http://minio:9000}")
+    private String minioUrl;
+
+    @org.springframework.beans.factory.annotation.Value("${app.storage.minio-bucket:onmeet-dev-media-origin}")
+    private String minioBucket;
+
     public void handleAudioChunk(AudioChunkReadyEvent e) {
         byte[] audioBytes;
-        if (e.getFileId() != null) {
-            log.debug("Found fileId in event, using FileServerStorageClient: roomId={}, fileId={}", e.getRoomId(), e.getFileId());
-            audioBytes = storageClient.readBytes(e.getFileId());
-        } else {
-            log.debug("fileId not found, falling back to S3 path: roomId={}, s3Path={}", e.getRoomId(), e.getS3Path());
-            audioBytes = storageClient.readBytes(e.getS3Path());
+        try {
+            if (e.getFileId() != null) {
+                log.debug("Found fileId in event, using FileServerStorageClient: roomId={}, fileId={}", e.getRoomId(), e.getFileId());
+                audioBytes = storageClient.readBytes(e.getFileId());
+            } else {
+                log.debug("fileId not found, falling back to S3 path: roomId={}, s3Path={}", e.getRoomId(), e.getS3Path());
+                audioBytes = storageClient.readBytes(e.getS3Path());
+            }
+        } catch (Exception ex) {
+            log.warn("file-service download failed, falling back to direct MinIO: {}", ex.getMessage());
+            String s3Path = e.getS3Path();
+            if (s3Path == null || s3Path.isBlank()) {
+                throw new RuntimeException("No S3 path available for MinIO fallback");
+            }
+            String url = minioUrl + "/" + minioBucket + "/" + s3Path;
+            audioBytes = org.springframework.web.client.RestTemplate.class.cast(new org.springframework.web.client.RestTemplate())
+                    .getForObject(url, byte[].class);
         }
 
         float[] pcmSamples = null;

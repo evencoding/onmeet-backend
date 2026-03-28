@@ -75,6 +75,9 @@ services:
           endpoint: http://minio:9000
           region: ap-northeast-2
           force_path_style: true
+        cpu_cost:
+          track_cpu_cost: 0.1
+          max_cpu_utilization: 0.95
     depends_on:
       livekit:
         condition: service_healthy

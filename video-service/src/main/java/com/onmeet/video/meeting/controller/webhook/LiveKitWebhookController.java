@@ -5,6 +5,7 @@ import com.onmeet.video.meeting.service.recording.RoomRecordingService;
 import com.onmeet.video.meeting.service.screenshare.ScreenShareService;
 import java.nio.charset.StandardCharsets;
 import java.util.Base64;
+import java.util.List;
 import java.util.Map;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -178,6 +179,16 @@ public class LiveKitWebhookController {
         }
     }
 
+    private Long parseLong(Object value) {
+        if (value == null) return null;
+        if (value instanceof Number) return ((Number) value).longValue();
+        try {
+            return Long.parseLong(value.toString());
+        } catch (NumberFormatException e) {
+            return null;
+        }
+    }
+
     @SuppressWarnings("unchecked")
     private void handleEgressStarted(Map<String, Object> payload) {
         Map<String, Object> egressInfo = (Map<String, Object>) payload.get("egressInfo");
@@ -200,16 +211,32 @@ public class LiveKitWebhookController {
         String error = (String) egressInfo.get("error");
 
         if ("EGRESS_COMPLETE".equals(status)) {
-            Map<String, Object> fileResults = (Map<String, Object>) egressInfo.get("fileResults");
+            log.info("Egress egressInfo keys: {}", egressInfo.keySet());
             String s3Path = null;
             Long fileSize = null;
-            if (fileResults != null) {
-                s3Path = (String) fileResults.get("filename");
-                Number size = (Number) fileResults.get("size");
-                fileSize = size != null ? size.longValue() : null;
+            // LiveKit webhook은 snake_case와 camelCase를 혼용할 수 있으므로 둘 다 시도
+            List<?> fileResults = (List<?>) egressInfo.get("file_results");
+            if (fileResults == null) {
+                fileResults = (List<?>) egressInfo.get("fileResults");
+            }
+            if (fileResults != null && !fileResults.isEmpty()) {
+                Map<String, Object> firstFile = (Map<String, Object>) fileResults.get(0);
+                s3Path = (String) firstFile.get("filename");
+                fileSize = parseLong(firstFile.get("size"));
+            }
+            // file_results에서 못 찾으면 file 필드도 시도 (단건 결과)
+            if (s3Path == null) {
+                Map<String, Object> file = (Map<String, Object>) egressInfo.get("file");
+                if (file != null) {
+                    s3Path = (String) file.get("filename");
+                    fileSize = parseLong(file.get("size"));
+                }
+            }
+            if (s3Path != null && s3Path.startsWith("/")) {
+                s3Path = s3Path.substring(1);
             }
             recordingService.handleEgressEnded(egressId, s3Path, fileSize);
-            log.info("Egress completed: egressId={}", egressId);
+            log.info("Egress completed: egressId={}, s3Path={}", egressId, s3Path);
         } else {
             recordingService.handleEgressFailed(egressId, error);
             log.warn("Egress failed: egressId={}, error={}", egressId, error);

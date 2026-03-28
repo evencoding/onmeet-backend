@@ -56,6 +56,9 @@ services:
       # Anthropic (Claude API)
       - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
 
+      # File Service
+      - APP_STORAGE_FILE_SERVICE_INTERNAL_URL=http://file-service:8086
+
       # Application
       - SPRING_PROFILES_ACTIVE=docker
       - GATEWAY_SHARED_SECRET=${GATEWAY_SHARED_SECRET:-my-super-secret-gateway-key-1234!}

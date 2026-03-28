@@ -25,7 +25,7 @@ public class FileServiceClient {
 
     private final WebClient.Builder webClientBuilder;
 
-    @Value("${app.storage.file-service.internal-url:http://file-service:8084}")
+    @Value("${app.storage.file-service.internal-url:http://file-service:8086}")
     private String fileServiceUrl;
 
     @Value("${gateway.shared-secret}")
@@ -36,9 +36,11 @@ public class FileServiceClient {
      */
     public byte[] downloadFile(Long fileId) {
         log.debug("Downloading file from file-service: fileId={}", fileId);
-        return webClientBuilder.build()
+        return webClientBuilder
+                .codecs(configurer -> configurer.defaultCodecs().maxInMemorySize(50 * 1024 * 1024))
+                .build()
                 .get()
-                .uri(fileServiceUrl + "/file/render/{id}", fileId)
+                .uri(fileServiceUrl + "/file/v1/render/{id}", fileId)
                 .header("X-Gateway-Secret", gatewaySecret)
                 .retrieve()
                 .bodyToMono(byte[].class)
@@ -62,14 +64,16 @@ public class FileServiceClient {
 
         MultiValueMap<String, HttpEntity<?>> multipartBody = builder.build();
 
-        FileMetadataResponse[] response = webClientBuilder.build()
+        String uploadUrl = fileServiceUrl + "/file/v1/upload"
+                + "?category=" + category
+                + "&ownerType=" + ownerType
+                + "&ownerId=" + ownerId;
+
+        FileMetadataResponse[] response = webClientBuilder
+                .codecs(configurer -> configurer.defaultCodecs().maxInMemorySize(50 * 1024 * 1024))
+                .build()
                 .post()
-                .uri(uriBuilder -> uriBuilder
-                        .path(fileServiceUrl + "/file/upload")
-                        .queryParam("category", category)
-                        .queryParam("ownerType", ownerType)
-                        .queryParam("ownerId", ownerId)
-                        .build())
+                .uri(uploadUrl)
                 .header("X-Gateway-Secret", gatewaySecret)
                 .contentType(MediaType.MULTIPART_FORM_DATA)
                 .bodyValue(multipartBody)

@@ -484,11 +484,17 @@ jobs:
 
             echo "All services are healthy!"
 
-            # Gateway 또는 Video/LiveKit 재배포 시 Nginx DNS 캐시 갱신 (컨테이너 IP 변경 대응)
+            # 서비스 재배포 시 DNS 캐시 갱신 (컨테이너 IP 변경 대응)
             if [ "${{ needs.detect-changes.outputs.gateway }}" == "true" ] || [ "${{ needs.detect-changes.outputs.video }}" == "true" ]; then
-              echo "Gateway/Video was redeployed, reloading Nginx to refresh DNS cache..."
+              echo "Reloading Nginx to refresh DNS cache..."
               docker exec onmeet-nginx nginx -s reload || echo "Warning: Nginx reload failed"
-              echo "Nginx reloaded successfully"
+            fi
+            # Gateway가 아닌 다른 서비스 재배포 시 Gateway DNS 캐시도 갱신
+            if [ "${{ needs.detect-changes.outputs.video }}" == "true" ] || [ "${{ needs.detect-changes.outputs.ai }}" == "true" ] || [ "${{ needs.detect-changes.outputs.notification }}" == "true" ] || [ "${{ needs.detect-changes.outputs.auth }}" == "true" ]; then
+              if [ "${{ needs.detect-changes.outputs.gateway }}" != "true" ]; then
+                echo "Restarting Gateway to refresh DNS cache..."
+                docker compose restart gateway-service || echo "Warning: Gateway restart failed"
+              fi
             fi
 
       - name: Update LAST_DEPLOYED_SHA on server
