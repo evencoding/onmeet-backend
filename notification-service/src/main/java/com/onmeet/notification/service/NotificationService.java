@@ -37,7 +37,7 @@ public class NotificationService {
     private final Map<Long, Map<String, SseEmitter>> emitters = new ConcurrentHashMap<>();
 
     private static final Long DEFAULT_TIMEOUT = 60L * 1000 * 60; // 60 minutes
-    private static final long HEARTBEAT_INTERVAL = 30_000L; // 30 seconds
+    private static final long HEARTBEAT_INTERVAL = 5_000L; // 5 seconds (gateway 10s timeout 이내)
 
     // ──────────────────────────────────────────────
     // SSE Subscribe

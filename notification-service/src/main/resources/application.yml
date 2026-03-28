@@ -4,6 +4,9 @@ server:
     context-path: /notification
   forward-headers-strategy: framework
 spring:
+  mvc:
+    async:
+      request-timeout: 3600000
   application:
     name: notification-service
   datasource:
