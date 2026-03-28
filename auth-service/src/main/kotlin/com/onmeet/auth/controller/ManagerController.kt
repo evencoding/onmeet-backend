@@ -158,13 +158,12 @@ class ManagerController(
             )]
         )
     ])
-    @PreAuthorize("isAuthenticated()")
     @GetMapping("/employees")
     fun getAllEmployees(
         @AuthenticationPrincipal user: User,
         @PageableDefault(size = 20) pageable: Pageable
     ): ResponseEntity<PageResponse<UserResponseDto>> =
-        ResponseEntity.ok(userService.getInvitableMembers(user, pageable))
+        ResponseEntity.ok(userService.getAllEmployees(user, pageable))
 
     @Operation(summary = "사원 계정 비활성화", description = "특정 사원의 계정을 비활성화합니다.")
     @ApiResponses(value = [
