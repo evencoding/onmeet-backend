@@ -37,6 +37,17 @@ class UserController(
     ): ResponseEntity<PageResponse<UserResponseDto>> =
         ResponseEntity.ok(userService.getAllEmployees(user, pageable))
 
+    @Operation(summary = "초대 가능한 멤버 목록", description = "MANAGER/ADMIN: 전체 사원, USER: 자신이 속한 팀의 팀원 목록을 반환합니다.")
+    @ApiResponses(value = [
+        ApiResponse(responseCode = "200", description = "조회 성공")
+    ])
+    @GetMapping("/members/invitable")
+    fun getInvitableMembers(
+        @AuthenticationPrincipal user: User,
+        @PageableDefault(size = 100) pageable: Pageable
+    ): ResponseEntity<PageResponse<UserResponseDto>> =
+        ResponseEntity.ok(userService.getInvitableMembers(user, pageable))
+
     @Operation(summary = "사용자 정보 조회", description = "특정 사용자의 정보를 상세 조회합니다.")
     @ApiResponses(value = [
         ApiResponse(responseCode = "200", description = "조회 성공"),

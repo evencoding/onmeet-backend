@@ -19,7 +19,8 @@ class UserServiceImpl(
     private val userRepository: UserRepository,
     private val jobTitleRepository: JobTitleRepository,
     private val fileClient: com.onmeet.auth.client.FileClient,
-    private val notificationEventPublisher: NotificationEventPublisher
+    private val notificationEventPublisher: NotificationEventPublisher,
+    private val teamMemberRepository: com.onmeet.auth.repository.jpa.TeamMemberRepository
 ) : UserService {
 
     @Transactional
@@ -89,6 +90,22 @@ class UserServiceImpl(
         } else {
             userRepository.findByCompany(manager.company, pageable)
                 .let { PageResponse.from(it) { user -> user.toResponseDto() } }
+        }
+
+    override fun getInvitableMembers(user: User, pageable: Pageable): PageResponse<UserResponseDto> =
+        if (user.isManager()) {
+            // MANAGER/ADMIN: 전체 사원 목록
+            userRepository.findByCompany(user.company, pageable)
+                .let { PageResponse.from(it) { u -> u.toResponseDto() } }
+        } else {
+            // USER: 자신이 속한 팀의 팀원 목록
+            val teamMembers = user.getTeams().flatMap { team ->
+                teamMemberRepository.findByTeamId(team.id!!).map { it.user }
+            }.distinctBy { it.id }
+            val page = org.springframework.data.domain.PageImpl(
+                teamMembers.map { it.toResponseDto() }, pageable, teamMembers.size.toLong()
+            )
+            PageResponse.from(page) { it }
         }
 
     override fun getCompanyIdByUserId(userId: Long): Long =

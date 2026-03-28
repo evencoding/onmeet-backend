@@ -34,6 +34,10 @@ public class GatewayPreAuthFilter extends OncePerRequestFilter {
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) throws ServletException {
         String path = request.getRequestURI();
+        // async dispatch (SSE heartbeat 등)에서는 이미 인증된 SecurityContext가 유지되므로 스킵
+        if (request.getDispatcherType() == jakarta.servlet.DispatcherType.ASYNC) {
+            return true;
+        }
         return ALLOWED_PATHS.contains(path) || path.startsWith("/actuator/") || path.contains("/webhook/");
     }
 
