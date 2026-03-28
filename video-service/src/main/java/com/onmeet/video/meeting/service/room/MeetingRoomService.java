@@ -57,6 +57,7 @@ import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -671,11 +672,25 @@ public class MeetingRoomService {
         room.cancel();
     }
 
-    // CHECK [video-담당자]: listHistory 반환 타입 List -> Page
     @Transactional(readOnly = true)
     public Page<MeetingRoomResponse> listHistory(Long userId, Pageable pageable) {
-        return roomRepository.findByHostUserIdOrderByCreatedAtDesc(userId, pageable)
-                .map(this::toResponse);
+        // 호스트 + 참여 이력 모두 포함
+        List<RoomParticipant> allParticipations = participantRepository.findByUserIdAndStatusIn(
+                userId, List.of(ParticipantStatus.JOINED, ParticipantStatus.WAITING,
+                        ParticipantStatus.LEFT, ParticipantStatus.KICKED, ParticipantStatus.DISCONNECTED));
+        Set<Long> participatedRoomIds = allParticipations.stream()
+                .map(p -> p.getRoom().getId()).collect(Collectors.toSet());
+
+        Page<MeetingRoom> hostRooms = roomRepository.findByHostUserIdOrderByCreatedAtDesc(userId, pageable);
+
+        // 호스트 방 + 참여 방 합쳐서 중복 제거
+        Map<Long, MeetingRoom> uniqueRooms = new java.util.LinkedHashMap<>();
+        for (MeetingRoom r : hostRooms) uniqueRooms.putIfAbsent(r.getId(), r);
+        for (RoomParticipant p : allParticipations) uniqueRooms.putIfAbsent(p.getRoom().getId(), p.getRoom());
+
+        List<MeetingRoomResponse> responses = uniqueRooms.values().stream()
+                .map(this::toResponse).collect(Collectors.toList());
+        return new org.springframework.data.domain.PageImpl<>(responses, pageable, responses.size());
     }
 
     /**
@@ -697,9 +712,10 @@ public class MeetingRoomService {
                 .filter(room -> status == null || room.getStatus() == status)
                 .collect(Collectors.toList());
 
-        // 3) 참여 이력이 있는 방
+        // 3) 참여 이력이 있는 방 (현재 참여 중 + 과거 참여 완료 포함)
         List<RoomParticipant> participations = participantRepository.findByUserIdAndStatusIn(
-                userId, List.of(ParticipantStatus.JOINED, ParticipantStatus.WAITING));
+                userId, List.of(ParticipantStatus.JOINED, ParticipantStatus.WAITING,
+                        ParticipantStatus.LEFT, ParticipantStatus.KICKED, ParticipantStatus.DISCONNECTED));
         List<MeetingRoom> participatedRooms = participations.stream()
                 .map(RoomParticipant::getRoom)
                 .filter(room -> status == null || room.getStatus() == status)
