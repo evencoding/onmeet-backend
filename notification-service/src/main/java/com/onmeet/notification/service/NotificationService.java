@@ -87,8 +87,8 @@ public class NotificationService {
 
     public void send(NotificationRequestDto dto) {
         // HTTP 호출은 트랜잭션 밖에서 수행 (DB 커넥션 점유 방지)
-        String actorName = "알 수 없는 사용자";
-        if (dto.getActorUserId() != null) {
+        String actorName = "시스템";
+        if (dto.getActorUserId() != null && dto.getActorUserId() > 0) {
             actorName = authServiceClient.getUserName(dto.getActorUserId());
         }
 
