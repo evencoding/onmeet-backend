@@ -98,23 +98,31 @@ public class NotificationService {
             Map<Long, String> userTokenMap = userInfos.stream()
                     .filter(u -> u.fcmDeviceToken() != null && !u.fcmDeviceToken().isBlank())
                     .collect(Collectors.toMap(AuthServiceClient.UserInfoResponse::userId, AuthServiceClient.UserInfoResponse::fcmDeviceToken, (a, b) -> a));
+            Map<Long, String> userNameMap = userInfos.stream()
+                    .filter(u -> u.name() != null && !u.name().isBlank())
+                    .collect(Collectors.toMap(AuthServiceClient.UserInfoResponse::userId, AuthServiceClient.UserInfoResponse::name, (a, b) -> a));
 
             for (Long userId : targetUserIds) {
                 NotificationRequestDto singleDto = copyForSingleUser(dto, userId);
                 String latestToken = userTokenMap.get(userId);
-                sendSingle(singleDto, actorName, latestToken);
+                String receiverName = userNameMap.getOrDefault(userId, "사용자");
+                sendSingle(singleDto, actorName, latestToken, receiverName);
             }
         } else if (dto.getUserId() != null) {
             String latestToken = null;
+            String receiverName = "사용자";
             try {
                 AuthServiceClient.UserInfoResponse userInfo = authServiceClient.getUserInfo(dto.getUserId());
                 if (userInfo != null) {
                     latestToken = userInfo.fcmDeviceToken();
+                    if (userInfo.name() != null && !userInfo.name().isBlank()) {
+                        receiverName = userInfo.name();
+                    }
                 }
             } catch (Exception e) {
                 log.warn("Failed to fetch latest token for userId={}", dto.getUserId());
             }
-            sendSingle(dto, actorName, latestToken);
+            sendSingle(dto, actorName, latestToken, receiverName);
         }
     }
 
@@ -133,7 +141,7 @@ public class NotificationService {
                 .build();
     }
 
-    private void sendSingle(NotificationRequestDto dto, String actorName, String latestToken) {
+    private void sendSingle(NotificationRequestDto dto, String actorName, String latestToken, String receiverName) {
         boolean isScheduled = dto.getScheduledAt() != null;
 
         if (dto.getType() == null) {
@@ -159,7 +167,7 @@ public class NotificationService {
         }
 
         NotificationTemplate template = NotificationTemplate.fromType(type);
-        Map<String, String> params = buildTemplateParams(dto, actorName);
+        Map<String, String> params = buildTemplateParams(dto, actorName, receiverName);
 
         String renderedTitle = template.getDefaultTitle();
         String renderedBody = template.renderBody(params);
@@ -299,27 +307,12 @@ public class NotificationService {
     // Template Params
     // ──────────────────────────────────────────────
 
-    private Map<String, String> buildTemplateParams(NotificationRequestDto dto, String actorName) {
+    private Map<String, String> buildTemplateParams(NotificationRequestDto dto, String actorName, String receiverName) {
         Map<String, String> params = new HashMap<>();
-
         params.put("senderName", actorName);
-
-        String receiverName = "사용자";
-        if (dto.getUserId() != null) {
-            try {
-                AuthServiceClient.UserInfoResponse receiverInfo = authServiceClient.getUserInfo(dto.getUserId());
-                if (receiverInfo != null && receiverInfo.name() != null && !receiverInfo.name().isBlank()) {
-                    receiverName = receiverInfo.name();
-                }
-            } catch (Exception e) {
-                log.warn("Failed to fetch receiver name for userId={}, using fallback '사용자'", dto.getUserId());
-            }
-        }
         params.put("receiverName", receiverName);
-
         params.put("title", dto.getTitle() != null ? dto.getTitle() : "");
         params.put("body", dto.getBody() != null ? dto.getBody() : "");
-
         return params;
     }
 }
