@@ -14,6 +14,8 @@ interface TeamService {
     fun rejectTeam(teamId: Long, approver: User, reason: String? = null): Unit
     fun assignLeader(teamId: Long, manager: User, newLeaderId: Long)
     fun delegateLeader(teamId: Long, currentLeader: User, newLeaderId: Long)
+    fun addMember(teamId: Long, userId: Long, requester: User)
+    fun removeMember(teamId: Long, userId: Long, requester: User)
     fun dissolveTeam(teamId: Long, requester: User): Unit
     fun cancelTeamRequest(teamId: Long, requester: User): Unit
 

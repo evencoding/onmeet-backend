@@ -146,6 +146,80 @@ class TeamServiceImpl(
     }
 
     @Transactional
+    override fun addMember(teamId: Long, userId: Long, requester: User) {
+        val team = teamRepository.findByIdOrNull(teamId)
+            ?: throw BusinessException(AuthErrorCode.TEAM_NOT_FOUND)
+
+        if (!team.isActive()) {
+            throw BusinessException(AuthErrorCode.TEAM_NOT_ACTIVE)
+        }
+
+        if (!team.belongsToCompany(requester.company.requireId())) {
+            throw BusinessException(AuthErrorCode.TEAM_COMPANY_MISMATCH)
+        }
+
+        val targetUser = userRepository.findByIdOrNull(userId)
+            ?: throw BusinessException(AuthErrorCode.USER_NOT_FOUND)
+
+        if (targetUser.company.requireId() != requester.company.requireId()) {
+            throw BusinessException(AuthErrorCode.TEAM_MEMBER_COMPANY_MISMATCH)
+        }
+
+        if (teamMemberRepository.findByUserIdAndTeamId(userId, teamId) != null) {
+            throw BusinessException(AuthErrorCode.TEAM_MEMBER_ALREADY_EXISTS)
+        }
+
+        teamMemberRepository.save(TeamMember(user = targetUser, team = team, role = TeamMember.TeamRole.MEMBER))
+
+        notificationEventPublisher.publishNotification(
+            NotificationRequestDto(
+                userId = targetUser.id,
+                type = "TEAM_MEMBER_ADDED",
+                title = team.name,
+                body = "새로운 팀에 초대되었습니다.",
+                resourceType = "TEAM",
+                resourceId = team.id?.toString(),
+                actorUserId = requester.id
+            )
+        )
+    }
+
+    @Transactional
+    override fun removeMember(teamId: Long, userId: Long, requester: User) {
+        val team = teamRepository.findByIdOrNull(teamId)
+            ?: throw BusinessException(AuthErrorCode.TEAM_NOT_FOUND)
+
+        if (!team.isActive()) {
+            throw BusinessException(AuthErrorCode.TEAM_NOT_ACTIVE)
+        }
+
+        if (!team.belongsToCompany(requester.company.requireId())) {
+            throw BusinessException(AuthErrorCode.TEAM_COMPANY_MISMATCH)
+        }
+
+        val membership = teamMemberRepository.findByUserIdAndTeamId(userId, teamId)
+            ?: throw BusinessException(AuthErrorCode.TEAM_MEMBER_NOT_FOUND)
+
+        if (membership.isLeader()) {
+            throw BusinessException(AuthErrorCode.TEAM_LEADER_CANNOT_REMOVE)
+        }
+
+        teamMemberRepository.deleteByUserIdAndTeamId(userId, teamId)
+
+        notificationEventPublisher.publishNotification(
+            NotificationRequestDto(
+                userId = userId,
+                type = "SYSTEM",
+                title = "팀 제외",
+                body = "'${team.name}' 팀에서 제외되었습니다.",
+                resourceType = "TEAM",
+                resourceId = team.id?.toString(),
+                actorUserId = requester.id
+            )
+        )
+    }
+
+    @Transactional
     override fun assignLeader(teamId: Long, manager: User, newLeaderId: Long) {
         val team = teamRepository.findByIdOrNull(teamId)
             ?: throw BusinessException(AuthErrorCode.TEAM_NOT_FOUND)

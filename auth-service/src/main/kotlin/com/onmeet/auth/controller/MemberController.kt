@@ -381,6 +381,159 @@ class MemberController(
     ): ResponseEntity<Long> =
         ResponseEntity.ok(teamService.createTeam(user, request).id)
 
+    @Operation(summary = "팀원 추가", description = "기존 팀에 팀원을 추가합니다 (매니저 또는 팀 리더만 가능).")
+    @ApiResponses(value = [
+        ApiResponse(
+            responseCode = "200",
+            description = "팀원 추가 성공"
+        ),
+        ApiResponse(
+            responseCode = "400",
+            description = "잘못된 요청 - 다른 회사 소속이거나 팀이 비활성 상태",
+            content = [Content(
+                mediaType = "application/json",
+                schema = Schema(implementation = ErrorResponse::class),
+                examples = [ExampleObject(
+                    value = """{"code":"AUTH_023","status":400,"message":"모든 팀원은 같은 회사에 속해야 합니다","timestamp":1710000000000}"""
+                )]
+            )]
+        ),
+        ApiResponse(
+            responseCode = "401",
+            description = "인증 실패 - 로그인이 필요합니다",
+            content = [Content(
+                mediaType = "application/json",
+                schema = Schema(implementation = ErrorResponse::class),
+                examples = [ExampleObject(
+                    value = """{"code":"AUTH_004","status":401,"message":"인증에 실패했습니다","timestamp":1710000000000}"""
+                )]
+            )]
+        ),
+        ApiResponse(
+            responseCode = "403",
+            description = "권한 없음 - 매니저 또는 팀 리더 권한이 필요함",
+            content = [Content(
+                mediaType = "application/json",
+                schema = Schema(implementation = ErrorResponse::class),
+                examples = [ExampleObject(
+                    value = """{"code":"COMMON_ACCESS_DENIED","status":403,"message":"접근이 거부되었습니다","timestamp":1710000000000}"""
+                )]
+            )]
+        ),
+        ApiResponse(
+            responseCode = "404",
+            description = "팀 또는 사용자를 찾을 수 없음",
+            content = [Content(
+                mediaType = "application/json",
+                schema = Schema(implementation = ErrorResponse::class),
+                examples = [ExampleObject(
+                    value = """{"code":"AUTH_025","status":404,"message":"해당 팀을 찾을 수 없습니다","timestamp":1710000000000}"""
+                )]
+            )]
+        ),
+        ApiResponse(
+            responseCode = "409",
+            description = "충돌 - 이미 팀에 소속된 멤버",
+            content = [Content(
+                mediaType = "application/json",
+                schema = Schema(implementation = ErrorResponse::class),
+                examples = [ExampleObject(
+                    value = """{"code":"AUTH_047","status":409,"message":"이미 해당 팀에 소속된 멤버입니다","timestamp":1710000000000}"""
+                )]
+            )]
+        ),
+        ApiResponse(
+            responseCode = "500",
+            description = "서버 내부 오류",
+            content = [Content(
+                mediaType = "application/json",
+                schema = Schema(implementation = ErrorResponse::class),
+                examples = [ExampleObject(
+                    value = """{"code":"COMMON_INTERNAL_ERROR","status":500,"message":"서버 내부 오류가 발생했습니다","timestamp":1710000000000}"""
+                )]
+            )]
+        )
+    ])
+    @PreAuthorize("hasRole('MANAGER') or @teamSecurity.isLeaderOf(#teamId, principal)")
+    @PostMapping("/teams/{teamId}/members/{userId}")
+    fun addMember(
+        @AuthenticationPrincipal user: User,
+        @PathVariable teamId: Long,
+        @PathVariable userId: Long
+    ): ResponseEntity<Void> =
+        teamService.addMember(teamId, userId, user).let { ResponseEntity.ok().build() }
+
+    @Operation(summary = "팀원 제거", description = "팀에서 특정 팀원을 제거합니다 (매니저 또는 팀 리더만 가능). 팀 리더는 제거할 수 없습니다.")
+    @ApiResponses(value = [
+        ApiResponse(
+            responseCode = "200",
+            description = "팀원 제거 성공"
+        ),
+        ApiResponse(
+            responseCode = "400",
+            description = "잘못된 요청 - 팀 리더를 제거하려 하거나 팀이 비활성 상태",
+            content = [Content(
+                mediaType = "application/json",
+                schema = Schema(implementation = ErrorResponse::class),
+                examples = [ExampleObject(
+                    value = """{"code":"AUTH_049","status":400,"message":"팀 리더는 제거할 수 없습니다. 먼저 리더를 위임하세요","timestamp":1710000000000}"""
+                )]
+            )]
+        ),
+        ApiResponse(
+            responseCode = "401",
+            description = "인증 실패 - 로그인이 필요합니다",
+            content = [Content(
+                mediaType = "application/json",
+                schema = Schema(implementation = ErrorResponse::class),
+                examples = [ExampleObject(
+                    value = """{"code":"AUTH_004","status":401,"message":"인증에 실패했습니다","timestamp":1710000000000}"""
+                )]
+            )]
+        ),
+        ApiResponse(
+            responseCode = "403",
+            description = "권한 없음 - 매니저 또는 팀 리더 권한이 필요함",
+            content = [Content(
+                mediaType = "application/json",
+                schema = Schema(implementation = ErrorResponse::class),
+                examples = [ExampleObject(
+                    value = """{"code":"COMMON_ACCESS_DENIED","status":403,"message":"접근이 거부되었습니다","timestamp":1710000000000}"""
+                )]
+            )]
+        ),
+        ApiResponse(
+            responseCode = "404",
+            description = "팀 또는 팀원을 찾을 수 없음",
+            content = [Content(
+                mediaType = "application/json",
+                schema = Schema(implementation = ErrorResponse::class),
+                examples = [ExampleObject(
+                    value = """{"code":"AUTH_022","status":404,"message":"일부 팀원을 찾을 수 없습니다","timestamp":1710000000000}"""
+                )]
+            )]
+        ),
+        ApiResponse(
+            responseCode = "500",
+            description = "서버 내부 오류",
+            content = [Content(
+                mediaType = "application/json",
+                schema = Schema(implementation = ErrorResponse::class),
+                examples = [ExampleObject(
+                    value = """{"code":"COMMON_INTERNAL_ERROR","status":500,"message":"서버 내부 오류가 발생했습니다","timestamp":1710000000000}"""
+                )]
+            )]
+        )
+    ])
+    @PreAuthorize("hasRole('MANAGER') or @teamSecurity.isLeaderOf(#teamId, principal)")
+    @DeleteMapping("/teams/{teamId}/members/{userId}")
+    fun removeMember(
+        @AuthenticationPrincipal user: User,
+        @PathVariable teamId: Long,
+        @PathVariable userId: Long
+    ): ResponseEntity<Void> =
+        teamService.removeMember(teamId, userId, user).let { ResponseEntity.ok().build() }
+
     @Operation(summary = "팀장 위임", description = "팀장직을 다른 팀원에게 위임합니다 (현 팀장 또는 매니저 가능).")
     @ApiResponses(value = [
         ApiResponse(

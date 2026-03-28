@@ -55,6 +55,9 @@ enum class AuthErrorCode(
     TEAM_DISSOLVE_COMPANY_MISMATCH("AUTH_032", "다른 회사의 팀을 해체할 수 없습니다", HttpStatus.BAD_REQUEST),
     TEAM_CANCEL_NOT_PENDING("AUTH_033", "승인 대기 중인 팀 요청만 취소할 수 있습니다", HttpStatus.BAD_REQUEST),
     TEAM_CANCEL_FORBIDDEN("AUTH_034", "팀 생성 요청자만 취소할 수 있습니다", HttpStatus.FORBIDDEN),
+    TEAM_MEMBER_ALREADY_EXISTS("AUTH_047", "이미 해당 팀에 소속된 멤버입니다", HttpStatus.CONFLICT),
+    TEAM_NOT_ACTIVE("AUTH_048", "활성화된 팀에서만 팀원을 관리할 수 있습니다", HttpStatus.BAD_REQUEST),
+    TEAM_LEADER_CANNOT_REMOVE("AUTH_049", "팀 리더는 제거할 수 없습니다. 먼저 리더를 위임하세요", HttpStatus.BAD_REQUEST),
 
     // === 회사 ===
     COMPANY_NOT_FOUND("AUTH_035", "해당 회사를 찾을 수 없습니다", HttpStatus.NOT_FOUND),
